@@ -28,9 +28,9 @@
 class ProcessingMultiTest : public ::testing::Test
 {
 protected:
-    static sgns::GeniusNode *node_main;
-    static sgns::GeniusNode *node_proc1;
-    static sgns::GeniusNode *node_proc2;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -56,20 +56,20 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = new sgns::GeniusNode( DEV_CONFIG,
-                                          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                          false,
-                                          false );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
-                                           true );
+                                           false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = new sgns::GeniusNode( DEV_CONFIG3,
-                                           "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           true );
+        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true );
 
         node_proc1->StopProcessing();
         node_proc2->StopProcessing();
@@ -111,9 +111,9 @@ protected:
 };
 
 // Static member initialization
-sgns::GeniusNode *ProcessingMultiTest::node_main  = nullptr;
-sgns::GeniusNode *ProcessingMultiTest::node_proc1 = nullptr;
-sgns::GeniusNode *ProcessingMultiTest::node_proc2 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_main  = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc1 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc2 = nullptr;
 
 DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",

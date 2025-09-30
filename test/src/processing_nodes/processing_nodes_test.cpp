@@ -31,9 +31,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static sgns::GeniusNode *node_main;
-    static sgns::GeniusNode *node_proc1;
-    static sgns::GeniusNode *node_proc2;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -59,20 +59,24 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = new sgns::GeniusNode( DEV_CONFIG,
-                                          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                          false,
-                                          false );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
-                                           true );
+                                           false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = new sgns::GeniusNode( DEV_CONFIG3,
-                                           "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           true );
+        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true,
+                                            40054,
+                                            true );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true,
+                                            40060,
+                                            true );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
@@ -89,21 +93,21 @@ protected:
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
-        delete node_main;
+        node_main.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete main node files\n";
         // }
 
         std::cout << "Tear down 2" << std::endl;
-        delete node_proc1;
+        node_proc1.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 2 files\n";
         // }
 
         std::cout << "Tear down 3" << std::endl;
-        delete node_proc2;
+        node_proc2.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 3 files\n";
@@ -112,9 +116,9 @@ protected:
 };
 
 // Static member initialization
-sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
-sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
-sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",
@@ -165,7 +169,19 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } )  );
+    test::assertWaitForCondition(
+        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Main node not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 1 not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 2 not synched" );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
@@ -299,7 +315,8 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
-    EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ) );
+    EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
+               TransactionManager::TransactionStatus::CONFIRMED );
 
     //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 

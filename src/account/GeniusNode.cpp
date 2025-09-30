@@ -85,13 +85,70 @@ using namespace boost::multiprecision;
 
 namespace sgns
 {
+    base::Logger GeniusNodeLogger()
+    {
+        static base::Logger static_logger = base::createLogger( "GeniusNode" );
+        return static_logger;
+    }
+
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
+                                                 const char         *eth_private_key,
+                                                 bool                autodht,
+                                                 bool                isprocessor,
+                                                 uint16_t            base_port,
+                                                 bool                is_full_node )
+    {
+        auto instance = std::shared_ptr<GeniusNode>(
+            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node ) );
+
+        instance->processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
+            instance->pubsub_,                                                          //
+            MAX_NODES_COUNT,                                                            //
+            std::make_shared<processing::SubTaskEnqueuerImpl>( instance->task_queue_ ), //
+            std::make_shared<processing::ProcessSubTaskStateStorage>(),                 //
+            instance->task_result_storage_,                                             //
+            instance->processing_core_,                                                 //
+            [wptr( std::weak_ptr<GeniusNode>( instance ) )]( const std::string              &var,
+                                                             const SGProcessing::TaskResult &taskresult )
+            {
+                if ( auto strong = wptr.lock() )
+                {
+                    strong->ProcessingDone( var, taskresult );
+                }
+            },
+            [wptr( std::weak_ptr<GeniusNode>( instance ) )]( const std::string &var )
+            {
+                if ( auto strong = wptr.lock() )
+                {
+                    strong->ProcessingError( var );
+                }
+            },
+            instance->account_->GetAddress() );
+        instance->processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+        instance->transaction_manager_->Start();
+        if ( instance->isprocessor_ )
+        {
+            instance->processing_service_->StartProcessing( instance->processing_grid_chanel_topic_ );
+        }
+
+        if ( instance->autodht_ )
+        {
+            instance->DHTInit();
+        }
+        instance->RefreshUPNP( instance->pubsubport_ );
+
+        instance->io_thread = std::thread( [ctx = instance->io_]() { ctx->run(); } );
+        return instance;
+    }
+
     GeniusNode::GeniusNode( const DevConfig_st &dev_config,
                             const char         *eth_private_key,
                             bool                autodht,
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( std::make_shared<GeniusAccount>( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
+        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -102,100 +159,24 @@ namespace sgns
         processing_grid_chanel_topic_(
             ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
                 .str() ),
-        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
+        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
 
     {
         // Rotate log files before initializing logging system
-        rotateLogFiles(write_base_path_);
+        rotateLogFiles( write_base_path_ );
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
-            // Original LibP2P logging config
-            std::make_shared<libp2p::log::Configurator>(),
-            // Additional logging config for application
-            GetLoggingSystem( write_base_path_ ) ) );
-        auto result    = logging_system->configure();
-        if ( result.has_error )
-        {
-            throw std::runtime_error( "Could not configure logger" );
-        }
-        std::cout << "Log Result: " << result.message << std::endl;
-        libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
-        std::string logdir = "";
-#ifndef SGNS_DEBUGLOGS
-        logdir = write_base_path_ + "/sgnslog2.log";
-#endif
-        node_logger               = base::createLogger( "SuperGeniusNode", logdir );
-        auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
-        auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
-        auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
-        auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
-        auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
-        auto loggerCRDTHeads      = base::createLogger( "CrdtHeads", logdir );
-        auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
-        auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
-        auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
-        auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
-        auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
-        auto logkad               = base::createLogger( "Kademlia", logdir );
-        auto logNoise             = base::createLogger( "Noise", logdir );
-        auto logProcessingEngine  = base::createLogger( "ProcessingEngine", logdir );
-        auto loggerSubQueue       = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
-        auto loggerProcServ       = base::createLogger( "ProcessingService", logdir );
-        auto loggerProcqm         = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
-        auto loggerUPNP           = base::createLogger( "UPNP", logdir );
-        auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
-        auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
-#ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
-        loggerCRDTHeads->set_level( spdlog::level::debug );
-        loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::debug );
-        loggerMigrationStep->set_level( spdlog::level::debug );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
-#else
-        node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerCRDTHeads->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
-#endif
-        node_logger->info( sgns::version::SuperGeniusVersionText() );
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() );
+        if ( !InitLoggers( write_base_path_ ) )
+        {
+            throw std::runtime_error( "Could not configure loggers" );
+        }
+
+        node_logger_->info( sgns::version::SuperGeniusVersionText() );
+
+        pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
 
         std::vector<std::string> addresses;
         // UPNP
@@ -206,8 +187,8 @@ namespace sgns
         {
             std::string wanip = upnp->GetWanIP();
             lanip             = upnp->GetLocalIP();
-            node_logger->info( "Wan IP: {}", wanip );
-            node_logger->info( "Lan IP: {}", lanip );
+            node_logger_->info( "Wan IP: {}", wanip );
+            node_logger_->info( "Lan IP: {}", lanip );
 
             bool        success = false;
             std::string owner;
@@ -215,43 +196,43 @@ namespace sgns
             constexpr int max_attempts = 10;
             for ( int i = 0; i < max_attempts; ++i )
             {
-                int candidate_port = pubsubport + i;
+                int candidate_port = pubsubport_ + i;
                 if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
                 {
                     if ( owner == lanip )
                     {
-                        node_logger->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
                         if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
                             addresses.push_back( wanip );
-                            success    = true;
-                            pubsubport = candidate_port;
+                            success     = true;
+                            pubsubport_ = candidate_port;
                             break;
                         }
 
-                        node_logger->error(
+                        node_logger_->error(
                             "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
                             candidate_port );
                         continue;
                     }
-                    node_logger->warn( "Port {} already in use by {}", candidate_port, owner );
+                    node_logger_->warn( "Port {} already in use by {}", candidate_port, owner );
                     continue;
                 }
 
                 if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                 {
-                    node_logger->info( "Successfully opened port {}", candidate_port );
+                    node_logger_->info( "Successfully opened port {}", candidate_port );
                     addresses.push_back( wanip );
-                    success    = true;
-                    pubsubport = candidate_port;
+                    success     = true;
+                    pubsubport_ = candidate_port;
                     break;
                 }
-                node_logger->warn( "Failed to open port {}", candidate_port );
+                node_logger_->warn( "Failed to open port {}", candidate_port );
             }
 
             if ( !success )
             {
-                node_logger->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
+                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
             }
         }
 
@@ -278,13 +259,14 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start( pubsubport, {}, lanip, {} );
+        auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
+        account_->InitMessenger( pubsub_, is_full_node );
         pubs.wait();
 
         if ( !is_full_node )
         {
-            pubsub_->GetHost()->getConnectionManagerConfig().high_water                   = 300;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water                    = 150;
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
         }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -303,12 +285,11 @@ namespace sgns
             throw std::runtime_error( error.message() );
         }
         tx_globaldb_ = std::move( global_db_ret.value() );
-        tx_globaldb_->SetFullNode(is_full_node);
+        tx_globaldb_->SetFullNode( is_full_node );
         tx_globaldb_->AddTopicName( processing_channel_topic_ );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
                                                                              1000000,
                                                                              1,
@@ -316,19 +297,8 @@ namespace sgns
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_, processing_channel_topic_ );
-        processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
-            pubsub_,                                                          //
-            MAX_NODES_COUNT,                                                  //
-            std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ), //
-            std::make_shared<processing::ProcessSubTaskStateStorage>(),       //
-            task_result_storage_,                                             //
-            processing_core_,                                                 //
-            [this]( const std::string &var, const SGProcessing::TaskResult &taskresult )
-            { ProcessingDone( var, taskresult ); }, //
-            [this]( const std::string &var ) { ProcessingError( var ); },
-            account_->GetAddress() );
-        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
+                                                                                       processing_channel_topic_ );
 
         auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
                                                              io_,              // ioContext
@@ -347,30 +317,109 @@ namespace sgns
                                       migrationResult.error().message() );
         }
 
-        transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
-                                                                     io_,
-                                                                     account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     is_full_node );
+        transaction_manager_ = TransactionManager::New( tx_globaldb_,
+                                                        io_,
+                                                        account_,
+                                                        std::make_shared<crypto::HasherImpl>(),
+                                                        is_full_node );
+    }
 
-        transaction_manager_->Start();
-        if ( isprocessor_ )
+    bool GeniusNode::InitLoggers( const std::string &base_path )
+    {
+        logging_system_ = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
+            // Original LibP2P logging config
+            std::make_shared<libp2p::log::Configurator>(),
+            // Additional logging config for application
+            GetLoggingSystem( base_path ) ) );
+        auto result     = logging_system_->configure();
+        if ( result.has_error )
         {
-            processing_service_->StartProcessing( processing_grid_chanel_topic_ );
+            return false;
         }
 
-        if ( autodht_ )
-        {
-            DHTInit();
-        }
-        RefreshUPNP( pubsubport );
+        libp2p::log::setLoggingSystem( logging_system_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
 
-        io_thread = std::thread( [this]() { io_->run(); } );
+        std::string logdir = "";
+#ifndef SGNS_DEBUGLOGS
+        logdir = base_path + "/sgnslog2.log";
+#endif
+        node_logger_                = base::createLogger( "SuperGeniusNode", logdir );
+        auto loggerGlobalDB         = base::createLogger( "GlobalDB", logdir );
+        auto loggerDAGSyncer        = base::createLogger( "GraphsyncDAGSyncer", logdir );
+        auto loggerGraphsync        = base::createLogger( "graphsync", logdir );
+        auto loggerBroadcaster      = base::createLogger( "PubSubBroadcasterExt", logdir );
+        auto loggerDataStore        = base::createLogger( "CrdtDatastore", logdir );
+        auto loggerCRDTHeads        = base::createLogger( "CrdtHeads", logdir );
+        auto loggerTransactions     = base::createLogger( "TransactionManager", logdir );
+        auto loggerMigration        = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep    = base::createLogger( "MigrationStep", logdir );
+        auto loggerQueue            = base::createLogger( "ProcessingTaskQueueImpl", logdir );
+        auto loggerRocksDB          = base::createLogger( "rocksdb", logdir );
+        auto logkad                 = base::createLogger( "Kademlia", logdir );
+        auto logNoise               = base::createLogger( "Noise", logdir );
+        auto logProcessingEngine    = base::createLogger( "ProcessingEngine", logdir );
+        auto loggerSubQueue         = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
+        auto loggerProcServ         = base::createLogger( "ProcessingService", logdir );
+        auto loggerProcqm           = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
+        auto loggerUPNP             = base::createLogger( "UPNP", logdir );
+        auto loggerProcessingNode   = base::createLogger( "ProcessingNode", logdir );
+        auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
+        auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
+        auto loggerGeniusAccount    = base::createLogger( "GeniusAccount", logdir );
+#ifdef SGNS_DEBUGLOGS
+        node_logger_->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::debug );
+        loggerCRDTHeads->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
+        loggerQueue->set_level( spdlog::level::err );
+        loggerRocksDB->set_level( spdlog::level::err );
+        logkad->set_level( spdlog::level::err );
+        logNoise->set_level( spdlog::level::err );
+        logProcessingEngine->set_level( spdlog::level::err );
+        loggerSubQueue->set_level( spdlog::level::err );
+        loggerProcServ->set_level( spdlog::level::err );
+        loggerProcqm->set_level( spdlog::level::err );
+        loggerUPNP->set_level( spdlog::level::err );
+        loggerProcessingNode->set_level( spdlog::level::err );
+        loggerGossipPubsub->set_level( spdlog::level::err );
+        loggerAccountMessenger->set_level( spdlog::level::debug );
+        loggerGeniusAccount->set_level( spdlog::level::debug );
+#else
+        node_logger_->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerCRDTHeads->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
+        loggerQueue->set_level( spdlog::level::err );
+        loggerRocksDB->set_level( spdlog::level::err );
+        logkad->set_level( spdlog::level::err );
+        logNoise->set_level( spdlog::level::err );
+        logProcessingEngine->set_level( spdlog::level::err );
+        loggerSubQueue->set_level( spdlog::level::err );
+        loggerProcServ->set_level( spdlog::level::err );
+        loggerProcqm->set_level( spdlog::level::err );
+        loggerUPNP->set_level( spdlog::level::err );
+        loggerProcessingNode->set_level( spdlog::level::err );
+        loggerGossipPubsub->set_level( spdlog::level::err );
+#endif
+        return true;
     }
 
     GeniusNode::~GeniusNode()
     {
-        node_logger->debug( "~GeniusNode CALLED" );
+        node_logger_->debug( "~GeniusNode CALLED" );
 
         if ( pubsub_ )
         {
@@ -390,9 +439,16 @@ namespace sgns
             upnp_thread.join();
         }
         processing_service_->StopProcessing();
+        if ( processing_callback_pool_ )
+        {
+            processing_callback_pool_->join();
+            processing_callback_pool_.reset();
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        node_logger_->debug( "~GeniusNode FINISHED" );
     }
 
-    void GeniusNode::RefreshUPNP( int pubsubport )
+    void GeniusNode::RefreshUPNP( uint16_t pubsubport )
     {
         if ( upnp_thread.joinable() )
         {
@@ -421,21 +477,21 @@ namespace sgns
                                 auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
                                 if ( !openedPort )
                                 {
-                                    node_logger->error( "Failed to open port" );
+                                    GeniusNodeLogger()->error( "Failed to open port" );
                                 }
                                 else
                                 {
-                                    node_logger->info( "Open Ports Success pubsub: {} ", pubsubport );
+                                    GeniusNodeLogger()->info( "Open Ports Success pubsub: {} ", pubsubport );
                                 }
                             }
                             else
                             {
-                                node_logger->info( "No IGD" );
+                                GeniusNodeLogger()->info( "No IGD" );
                             }
                         }
                         else
                         {
-                            node_logger->info( "UPNP weak_ptr expired" );
+                            GeniusNodeLogger()->info( "UPNP weak_ptr expired" );
                             stop_upnp = true; // Signal thread to stop gracefully
                         }
 
@@ -469,7 +525,7 @@ namespace sgns
         auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
-        node_logger->info( "CID Test:: {}", cidstring.value() );
+        node_logger_->info( "CID Test:: {}", cidstring.value() );
 
         // Also Find providers
         pubsub_->StartFindingPeers( key );
@@ -499,6 +555,10 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
 
         auto funds = GetProcessCost( jsondata );
@@ -655,11 +715,11 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
     {
-        node_logger->info( "Received JSON data: {}", json_data );
+        node_logger_->info( "Received JSON data: {}", json_data );
         rapidjson::Document document;
         if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
-            node_logger->error( "Invalid JSON data provided" );
+            node_logger_->error( "Invalid JSON data provided" );
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
@@ -670,7 +730,7 @@ namespace sgns
         }
         else
         {
-            node_logger->error( "This JSON lacks inputs" );
+            node_logger_->error( "This JSON lacks inputs" );
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
@@ -681,16 +741,16 @@ namespace sgns
             {
                 uint64_t block_len  = input["block_len"].GetUint64();
                 block_total_len    += block_len;
-                node_logger->info( "Block length (bytes): {}", block_len );
+                node_logger_->info( "Block length (bytes): {}", block_len );
             }
             else
             {
-                node_logger->error( "Missing or invalid block_len in input" );
+                node_logger_->error( "Missing or invalid block_len in input" );
                 return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
         }
 
-        node_logger->trace( "Total block length: {}", block_total_len );
+        node_logger_->trace( "Total block length: {}", block_total_len );
         return block_total_len;
     }
 
@@ -699,28 +759,28 @@ namespace sgns
         auto blockLen = ParseBlockSize( json_data );
         if ( !blockLen )
         {
-            node_logger->error( "ParseBlockSize failed" );
+            node_logger_->error( "ParseBlockSize failed" );
             return 0;
         }
-        node_logger->trace( "Parsed totalBytes: {}", blockLen.value() );
+        node_logger_->trace( "Parsed totalBytes: {}", blockLen.value() );
 
         auto maybeGnusPrice = GetGNUSPrice();
         if ( !maybeGnusPrice )
         {
-            node_logger->error( "GetGNUSPrice failed" );
+            node_logger_->error( "GetGNUSPrice failed" );
             return 0;
         }
         double gnusPrice = maybeGnusPrice.value();
-        node_logger->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
+        node_logger_->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
 
         auto rawMinionsRes = TokenAmount::CalculateCostMinions( blockLen.value(), gnusPrice );
         if ( !rawMinionsRes )
         {
-            node_logger->error( "TokenAmount::CalculateCostMinions failed" );
+            node_logger_->error( "TokenAmount::CalculateCostMinions failed" );
             return 0;
         }
         uint64_t rawMinions = rawMinionsRes.value();
-        node_logger->trace( "Raw cost in minions: {}", rawMinions );
+        node_logger_->trace( "Raw cost in minions: {}", rawMinions );
 
         return rawMinions;
     }
@@ -735,7 +795,7 @@ namespace sgns
         return price.value()["genius-ai"];
     }
 
-    std::string GetVersion( void )
+    std::string GeniusNode::GetVersion()
     {
         return sgns::version::SuperGeniusVersionFullString();
     }
@@ -746,22 +806,26 @@ namespace sgns
                                                                               TokenID            tokenid,
                                                                               std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto mint_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( mint_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "Mint transaction {} timed out after {} ms", tx_id, duration );
+            node_logger_->error( "Mint transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -770,22 +834,26 @@ namespace sgns
                                                                                  TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination, token_id ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto transfer_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( transfer_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -793,21 +861,25 @@ namespace sgns
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto paydev_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( paydev_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -817,23 +889,27 @@ namespace sgns
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
         std::chrono::milliseconds                timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id,
                      transaction_manager_->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
-        bool success = WaitForTransactionOutgoing( tx_id, timeout );
+        auto payescrow_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( payescrow_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "Pay escrow transaction {} timed out after {} ms", tx_id, duration );
+            node_logger_->error( "Pay escrow transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug( "Pay escrow transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "Pay escrow transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -849,42 +925,65 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        node_logger->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
-        do
-        {
-            if ( task_queue_->IsTaskCompleted( task_id ) )
+        boost::asio::post(
+            *processing_callback_pool_,
+            [weak_self( weak_from_this() ), task_id, taskresult]()
             {
-                node_logger->info( "Task Already completed!" );
-                break;
-            }
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}",
+                                                strong->account_->GetAddress(),
+                                                task_id );
+                    do
+                    {
+                        if ( strong->task_queue_->IsTaskCompleted( task_id ) )
+                        {
+                            strong->node_logger_->info( "Task Already completed!" );
+                            break;
+                        }
+                        if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
+                        {
+                            break;
+                        }
 
-            auto maybe_escrow_path = task_queue_->GetTaskEscrow( task_id );
-            if ( maybe_escrow_path.has_failure() )
-            {
-                node_logger->info( "No associated Escrow with the task id: {} ", task_id );
-                break;
-            }
-            auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
-            if ( complete_task_result.has_failure() )
-            {
-                node_logger->error( "Unable to complete task: {} ", task_id );
-                break;
-            }
-            auto pay_result = PayEscrow( maybe_escrow_path.value(),
-                                         taskresult,
-                                         std::move( complete_task_result.value() ) );
-            if ( pay_result.has_failure() )
-            {
-                node_logger->error( "Invalid results for task: {} ", task_id );
-                break;
-            }
+                        auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
+                        if ( maybe_escrow_path.has_failure() )
+                        {
+                            strong->node_logger_->info( "No associated Escrow with the task id: {} ", task_id );
+                            break;
+                        }
+                        auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
+                        if ( complete_task_result.has_failure() )
+                        {
+                            strong->node_logger_->error( "Unable to complete task: {} ", task_id );
+                            break;
+                        }
+                        auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
+                                                             taskresult,
+                                                             std::move( complete_task_result.value() ) );
+                        if ( pay_result.has_failure() )
+                        {
+                            strong->node_logger_->error( "Invalid results for task: {} ", task_id );
+                            break;
+                        }
 
-        } while ( 0 );
+                    } while ( 0 );
+                }
+            } );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        node_logger->error( "[ {} ] ERROR PROCESSING SUBTASK ", account_->GetAddress(), task_id );
+        boost::asio::post( *processing_callback_pool_,
+                           [weak_self( weak_from_this() ), task_id]()
+                           {
+                               if ( auto strong = weak_self.lock() )
+                               {
+                                   strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
+                                                                strong->account_->GetAddress(),
+                                                                task_id );
+                               }
+                           } );
     }
 
     void GeniusNode::PrintDataStore()
@@ -1008,25 +1107,39 @@ namespace sgns
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForTransactionOutgoing( const std::string        &txId,
+                                                                                  std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForTransactionOutgoing( txId, timeout );
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForTransactionIncoming( const std::string        &txId,
+                                                                                  std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
-    bool GeniusNode::WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                            std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
+    }
+
+    TransactionManager::State GeniusNode::GetTransactionManagerState() const
+    {
+        return transaction_manager_->GetState();
     }
 
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
+    }
+
+    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms )
+    {
+        transaction_manager_->SetTimeFrameToleranceMs( timeframe_limit_ms );
+        transaction_manager_->SetMutabilityWindowMs( mutability_window_ms );
     }
 
     void GeniusNode::rotateLogFiles( const std::string &base_path )
@@ -1076,5 +1189,15 @@ namespace sgns
             std::cerr << "Log rotation error: " << e.what() << std::endl;
             // Continue execution - don't let log rotation failure stop the application
         }
+    }
+
+    TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
+    {
+        auto retval = transaction_manager_->GetOutgoingStatusByTxId( txId );
+        if ( retval == TransactionManager::TransactionStatus::INVALID )
+        {
+            retval = transaction_manager_->GetIncomingStatusByTxId( txId );
+        }
+        return retval;
     }
 }

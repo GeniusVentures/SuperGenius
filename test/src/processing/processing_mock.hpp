@@ -2,6 +2,7 @@
 #ifndef PROCESSINGMOCK_HPP
 #define PROCESSINGMOCK_HPP
 
+#include "processing/processing_subtask_queue_channel.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_validation_core.hpp"
 #include "processing/processing_core.hpp"
