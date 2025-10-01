@@ -152,7 +152,13 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
         std::lock_guard lock( dagMutex_ );
-        return dagService_.addNode( std::move( node ) );
+        auto            cid = node->getCID();
+        auto            ret = dagService_.addNode( std::move( node ) );
+        if ( !ret.has_error() )
+        {
+            EraseRoute( cid );
+        }
+        return ret;
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
@@ -196,7 +202,7 @@ namespace sgns::crdt
         // Check if this peer recently failed to provide this specific CID
         if ( HasRecentCIDFailure( peerID, cid ) )
         {
-            logger_->debug( "Skipping request for CID {} from peer {} due to recent failure",
+            logger_->error( "Skipping request for CID {} from peer {} due to recent failure",
                             cid.toString().value(),
                             peerID.toBase58() );
             return outcome::failure( Error::CID_NOT_FOUND );
@@ -212,15 +218,15 @@ namespace sgns::crdt
         {
             if ( is_stopped_ )
             {
-                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.",
-                               cid.toString().value() );
+                logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
+                                cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
             }
             // Check request state
             auto state_result = graphsync_->getRequestState( cid );
             if ( !state_result )
             {
-                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check a GrabCIDBlock
+                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check cache or storage to see if we have the block
                 if ( auto result = GrabCIDBlock( cid ) )
                 {
                     logger_->debug( "Return node for CID {} instance={}",
@@ -228,7 +234,14 @@ namespace sgns::crdt
                                     reinterpret_cast<size_t>( this ) );
                     return result;
                 }
-                logger_->warn( "Request state not found for CID {}", cid.toString().value() );
+                if ( auto result = GetNodeWithoutRequest( cid ) )
+                {
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
+                    return result;
+                }
+                logger_->error( "Request state not found for CID {}", cid.toString().value() );
                 OUTCOME_TRY( BlackListPeer( peerID ) );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
@@ -247,7 +260,7 @@ namespace sgns::crdt
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
-                    logger_->warn( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:
@@ -488,32 +501,32 @@ namespace sgns::crdt
                 }
             }
         }
-        EraseRoute( cid );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(
         ipfs_lite::ipld::IPLDNode &node,
         std::string                link_name,
-        LinkInfoSet                visited,
-        bool                       skip_if_visited_root,
-        int                        max_depth ) const
+        LinkInfoSet                visited ) const
     {
         LinkInfoSet links_to_fetch;
 
         const CID &root_cid = node.getCID();
 
-        if ( skip_if_visited_root )
+        auto tree_resolved_res = isResolved( root_cid );
+        if ( tree_resolved_res.has_failure() )
         {
-            bool already_seen_root = std::any_of( visited.begin(),
-                                                  visited.end(),
-                                                  [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
+            logger_->error( "{}: isResolved failed: {}, cid: {}",
+                            __func__,
+                            tree_resolved_res.error().message().c_str(),
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
+        }
 
-            if ( already_seen_root )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already recorded)",
-                                root_cid.toString().value() );
-                return { std::move( links_to_fetch ), std::move( visited ) };
-            }
+        if ( tree_resolved_res.value() )
+        {
+            logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already resolved)",
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
         }
 
         logger_->info( "TraverseCIDsLinks: Checking links on {{ cid=\"{}\", name=\"{}\" }}",
@@ -555,19 +568,15 @@ namespace sgns::crdt
                 continue;
             }
 
-            if ( max_depth == 0 )
-            {
-                logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
-                                child.toString().value(),
-                                name );
-                continue;
-            }
+            //if ( max_depth == 0 )
+            //{
+            //    logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
+            //                    child.toString().value(),
+            //                    name );
+            //    continue;
+            //}
 
-            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(),
-                                                                   link_name,
-                                                                   visited,
-                                                                   skip_if_visited_root,
-                                                                   max_depth - 1 );
+            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(), link_name, visited );
 
             links_to_fetch.merge( child_links );
             visited.merge( child_visited );
@@ -576,6 +585,18 @@ namespace sgns::crdt
         }
 
         return { std::move( links_to_fetch ), std::move( visited ) };
+    }
+
+    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( dagMutex_ );
+        return dagService_.markResolved( cid );
+    }
+
+    outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( dagMutex_ );
+        return dagService_.isResolved( cid );
     }
 
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
@@ -999,13 +1020,4 @@ namespace sgns::crdt
         is_stopped_ = true;
     }
 
-    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
-    {
-        return outcome::success();
-    }
-
-    outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
-    {
-        return outcome::success();
-    }
 }

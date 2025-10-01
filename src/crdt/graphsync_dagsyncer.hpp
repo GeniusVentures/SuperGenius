@@ -107,10 +107,11 @@ namespace sgns::crdt
             const CID &cid ) const override;
 
         std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks( ipfs_lite::ipld::IPLDNode &node,
-                                                               std::string                link_name            = "",
-                                                               LinkInfoSet                visited              = {},
-                                                               bool                       skip_if_visited_root = false,
-                                                               int max_depth = 100 ) const override;
+                                                               std::string                link_name = "",
+                                                               LinkInfoSet                visited = {} ) const override;
+
+        outcome::result<void> markResolved( const CID &cid ) override;
+        outcome::result<bool> isResolved( const CID &cid ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
 
@@ -125,9 +126,6 @@ namespace sgns::crdt
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
 
         void Stop() override;
-
-        outcome::result<void> markResolved( const CID &cid ) override;
-        outcome::result<bool> isResolved( const CID &cid ) const override;
 
     private:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;
@@ -167,7 +165,7 @@ namespace sgns::crdt
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer );
 
-                /// CID-specific failure tracking methods
+        /// CID-specific failure tracking methods
         void RecordCIDFailure( const PeerId &peer, const CID &cid ) const;
         bool HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const;
         void ClearCIDFailure( const PeerId &peer, const CID &cid ) const;

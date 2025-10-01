@@ -259,7 +259,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start( pubsubport_, {}, lanip, addresses );
+        auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
         account_->InitMessenger( pubsub_, is_full_node );
         pubs.wait();
 
@@ -389,8 +389,8 @@ namespace sgns
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerAccountMessenger->set_level( spdlog::level::debug );
-        loggerGeniusAccount->set_level( spdlog::level::debug );
+        loggerAccountMessenger->set_level( spdlog::level::err );
+        loggerGeniusAccount->set_level( spdlog::level::err );
 #else
         node_logger_->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -808,6 +808,7 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
+            node_logger_->error( "{}: Transaction manager not ready",__func__);
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();

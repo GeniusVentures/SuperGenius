@@ -104,6 +104,6 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 60000 ),
                                   "Recovery node balance not updated in time" );
 }

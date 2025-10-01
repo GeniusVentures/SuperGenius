@@ -27,6 +27,8 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/wait_condition.hpp"
+
 
 class MultiAccountTest : public ::testing::Test
 {
@@ -203,6 +205,19 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateMint )
                                  true, // is full node
                                  true  // is processor
     );
+
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "node_full not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_same_addr_1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "node_same_addr_1 not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_same_addr_2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "node_same_addr_2 not synched" );
 
     // Verify nodes have the same address (they should since they use same self_address)
     ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )
