@@ -115,7 +115,11 @@ namespace sgns
         size_t BATCH_SIZE     = 50;
 
         boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+#ifdef DEV_NET
+        full_node_topic % TransactionManager::DEV_NET_ID;
+#else
         full_node_topic % TransactionManager::TEST_NET_ID;
+#endif
 
         for ( const auto &entry : entries )
         {
@@ -260,7 +264,11 @@ namespace sgns
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
                 boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+#ifdef DEV_NET
+                full_node_topic % TransactionManager::DEV_NET_ID;
+#else
                 full_node_topic % TransactionManager::TEST_NET_ID;
+#endif
                 topics_.emplace( full_node_topic.str() );
                 migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
@@ -281,7 +289,12 @@ namespace sgns
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
         boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+
+#ifdef DEV_NET
+        full_node_topic % TransactionManager::DEV_NET_ID;
+#else
         full_node_topic % TransactionManager::TEST_NET_ID;
+#endif
 
         topics_.emplace( full_node_topic.str() );
 
