@@ -48,8 +48,10 @@ namespace sgns
         static constexpr std::uint16_t DEV_NET_ID  = 144;
 #ifdef DEV_NET
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu.dev";
+        static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu.dev";
 #else
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu";
+        static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu";
 #endif
         using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
         using TransactionBatch = std::vector<TransactionPair>;

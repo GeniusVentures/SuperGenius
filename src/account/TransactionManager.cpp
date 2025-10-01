@@ -124,14 +124,19 @@ namespace sgns
                         full_node_m );
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
+        boost::format add_topic_aff{ std::string( GNUS_ADDRESS_TOPIC_AFF ) };
 #ifdef DEV_NET
         full_node_topic % DEV_NET_ID;
+        add_topic_aff % DEV_NET_ID;
 #else
         full_node_topic % TEST_NET_ID;
+        add_topic_aff % TEST_NET_ID;
 #endif
         full_node_topic_m = full_node_topic.str();
 
-        globaldb_m->AddListenTopic( account_m->GetAddress() );
+
+        auto my_address_topic = account_m->GetAddress() + add_topic_aff.str();
+        globaldb_m->AddListenTopic( my_address_topic );
         m_logger->info( "[{} - full: {}] Adding broadcast to full node on {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -145,7 +150,7 @@ namespace sgns
             globaldb_m->AddListenTopic( full_node_topic_m );
             globaldb_m->AddTopicName( full_node_topic_m );
         }
-        globaldb_m->AddTopicName( account_m->GetAddress() );
+        globaldb_m->AddTopicName( my_address_topic );
     }
 
     TransactionManager::~TransactionManager()
