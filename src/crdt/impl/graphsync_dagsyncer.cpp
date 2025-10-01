@@ -259,8 +259,15 @@ namespace sgns::crdt
                                         reinterpret_cast<size_t>( this ) );
                         return result;
                     }
+                    if ( auto result = GetNodeWithoutRequest( cid ) )
+                    {
+                        logger_->debug( "Return node for CID {} instance={}",
+                                        cid.toString().value(),
+                                        reinterpret_cast<size_t>( this ) );
+                        return result;
+                    }
                     // If still not found, this is strange but we'll fail
-                    logger_->error( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}", cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:
