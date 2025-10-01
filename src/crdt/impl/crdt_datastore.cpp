@@ -412,10 +412,7 @@ namespace sgns::crdt
         }
         for ( const auto &bCastHeadCID : heads_to_process_cids )
         {
-            for ( const auto &bCastHeadCID : heads_to_process_cids )
-            {
-                EnqueueRootCID( bCastHeadCID );
-            }
+            EnqueueRootCID( bCastHeadCID );
             dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
             //auto handleBlockResult = HandleRootCIDBlock( bCastHeadCID );
             //if ( handleBlockResult.has_failure() )
@@ -474,13 +471,13 @@ namespace sgns::crdt
             logger_->debug( "{}: Checking links for CID {}", __func__, node_to_process->getCID().toString().value() );
             for ( auto &topic : topics_to_update_cid )
             {
-                logger_->debug( "{}: Verifying topic {}", __func__, topic );
+                logger_->trace( "{}: Verifying topic {}", __func__, topic );
 
                 auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( *node_to_process, topic, {} );
 
                 for ( const auto &[cid, _dontcare] : known_cids )
                 {
-                    logger_->debug( "{}: known cid: {}, {}", __func__, cid.toString().value(), _dontcare );
+                    logger_->trace( "{}: known cid: {}, {}", __func__, cid.toString().value(), _dontcare );
                     if ( heads_->IsHead( cid, _dontcare ) )
                     {
                         logger_->debug( "{}: Recording replacement of {} with {} on topic {} ({}) ",
