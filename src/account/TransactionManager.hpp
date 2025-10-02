@@ -47,10 +47,10 @@ namespace sgns
         static constexpr std::uint16_t TEST_NET_ID = 963;
         static constexpr std::uint16_t DEV_NET_ID  = 144;
 #ifdef DEV_NET
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu.dev";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC  = "SuperGNUSNode.TestNet.FullNode.%hu.dev";
         static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu.dev";
 #else
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC  = "SuperGNUSNode.TestNet.FullNode.%hu";
         static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu";
 #endif
         using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
@@ -152,6 +152,17 @@ namespace sgns
 
         // Stop the periodic Update() loop and prevent re-posting.
         void Stop();
+
+        static std::uint16_t GetNetworkID()
+        {
+#if defined(MAIN_NET)
+            return MAIN_NET_ID;
+#elif defined(DEV_NET) 
+            return DEV_NET_ID;
+#else
+            return TEST_NET_ID;
+#endif      
+        }
 
     protected:
         friend class GeniusNode;

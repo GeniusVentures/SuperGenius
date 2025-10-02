@@ -361,14 +361,6 @@ namespace sgns::crdt
                        std::shared_ptr<Broadcaster> aBroadcaster,
                        std::shared_ptr<CrdtOptions> aOptions );
 
-        static constexpr std::uint16_t MAIN_NET_ID = 369;
-        static constexpr std::uint16_t TEST_NET_ID = 963;
-        static constexpr std::uint16_t DEV_NET_ID  = 144;
-#ifdef DEV_NET
-        static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu.dev";
-#else
-        static constexpr std::string_view GNUS_ADDRESS_TOPIC_AFF = ".%hu";
-#endif
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
 

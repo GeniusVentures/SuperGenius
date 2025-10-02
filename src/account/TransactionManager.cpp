@@ -125,15 +125,11 @@ namespace sgns
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
         boost::format add_topic_aff{ std::string( GNUS_ADDRESS_TOPIC_AFF ) };
-#ifdef DEV_NET
-        full_node_topic % DEV_NET_ID;
-        add_topic_aff % DEV_NET_ID;
-#else
-        full_node_topic % TEST_NET_ID;
-        add_topic_aff % TEST_NET_ID;
-#endif
-        full_node_topic_m = full_node_topic.str();
 
+        full_node_topic % GetNetworkID();
+        add_topic_aff % GetNetworkID();
+
+        full_node_topic_m = full_node_topic.str();
 
         auto my_address_topic = account_m->GetAddress() + add_topic_aff.str();
         globaldb_m->AddListenTopic( my_address_topic );
@@ -812,11 +808,9 @@ namespace sgns
     std::string TransactionManager::GetBlockChainBase()
     {
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-#ifdef DEV_NET
-        tx_key % DEV_NET_ID;
-#else
-        tx_key % TEST_NET_ID;
-#endif
+
+        tx_key % GetNetworkID();
+
         return tx_key.str();
     }
 

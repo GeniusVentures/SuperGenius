@@ -728,23 +728,16 @@ namespace sgns::crdt
         }
         auto [head_map, maxHeight] = getListResult.value();
 
-        boost::format add_topic_aff{ std::string( GNUS_ADDRESS_TOPIC_AFF ) };
-#ifdef DEV_NET
-        add_topic_aff % DEV_NET_ID;
-#else
-        add_topic_aff % TEST_NET_ID;
-#endif
         for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            auto topic_affixed   = topic_name + add_topic_aff.str();
-            auto broadcastResult = Broadcast( cid_set, topic_affixed );
+            auto broadcastResult = Broadcast( cid_set, topic_name );
             if ( broadcastResult.has_failure() )
             {
                 logger_->error( "RebroadcastHeads: Broadcast failed" );
             }
             else
             {
-                logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_affixed );
+                logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
                     logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
