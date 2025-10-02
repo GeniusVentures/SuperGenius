@@ -220,19 +220,19 @@ namespace sgns
             }
             if ( migrate_tx )
             {
-                topics_.emplace( tx->GetSrcAddress() );
+                topics_.emplace( TransactionManager::GetNodeTopic(tx->GetSrcAddress()) );
                 if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
                 {
                     for ( const auto &dest_info : transfer_tx->GetDstInfos() )
                     {
-                        topics_.emplace( dest_info.dest_address );
+                        topics_.emplace( TransactionManager::GetNodeTopic(dest_info.dest_address) );
                     }
                 }
                 if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
                 {
                     if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
                     {
-                        topics_.emplace( escrow_tx->GetSrcAddress() );
+                        topics_.emplace( TransactionManager::GetNodeTopic(escrow_tx->GetSrcAddress()) );
                     }
                 }
 

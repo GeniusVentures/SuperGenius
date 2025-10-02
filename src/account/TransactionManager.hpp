@@ -155,14 +155,17 @@ namespace sgns
 
         static std::uint16_t GetNetworkID()
         {
-#if defined(MAIN_NET)
+#if defined( MAIN_NET )
             return MAIN_NET_ID;
-#elif defined(DEV_NET) 
+#elif defined( DEV_NET )
             return DEV_NET_ID;
 #else
             return TEST_NET_ID;
-#endif      
+#endif
         }
+
+        static std::string GetNodeTopic( std::string node_address );
+        std::string        GetOwnTopic() const;
 
     protected:
         friend class GeniusNode;

@@ -124,15 +124,12 @@ namespace sgns
                         full_node_m );
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
-        boost::format add_topic_aff{ std::string( GNUS_ADDRESS_TOPIC_AFF ) };
 
         full_node_topic % GetNetworkID();
-        add_topic_aff % GetNetworkID();
 
         full_node_topic_m = full_node_topic.str();
 
-        auto my_address_topic = account_m->GetAddress() + add_topic_aff.str();
-        globaldb_m->AddListenTopic( my_address_topic );
+        globaldb_m->AddListenTopic( GetOwnTopic() );
         m_logger->info( "[{} - full: {}] Adding broadcast to full node on {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -146,7 +143,7 @@ namespace sgns
             globaldb_m->AddListenTopic( full_node_topic_m );
             globaldb_m->AddTopicName( full_node_topic_m );
         }
-        globaldb_m->AddTopicName( my_address_topic );
+        globaldb_m->AddTopicName( GetOwnTopic() );
     }
 
     TransactionManager::~TransactionManager()
@@ -1154,7 +1151,7 @@ namespace sgns
         auto dest_infos          = transfer_tx->GetDstInfos();
         bool notify_destinations = false;
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
         if ( ( transfer_tx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
         {
             notify_destinations = true;
@@ -1174,14 +1171,14 @@ namespace sgns
                              full_node_m,
                              dest_infos[i].dest_address,
                              dest_infos[i].encrypted_amount );
-            topics.emplace( dest_infos[i].dest_address );
+            topics.emplace( GetNodeTopic( dest_infos[i].dest_address ) );
         }
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          transfer_tx->GetSrcAddress() );
-        topics.emplace( transfer_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( transfer_tx->GetSrcAddress() ) );
 
         for ( auto &input : transfer_tx->GetInputInfos() )
         {
@@ -1204,7 +1201,7 @@ namespace sgns
     {
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
 
         if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1221,7 +1218,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          mint_tx->GetSrcAddress() );
-        topics.emplace( mint_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( mint_tx->GetSrcAddress() ) );
 
         return topics;
     }
@@ -1231,7 +1228,7 @@ namespace sgns
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1260,7 +1257,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrow_tx->GetSrcAddress() );
-        topics.emplace( escrow_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( escrow_tx->GetSrcAddress() ) );
 
         return topics;
     }
@@ -1270,7 +1267,7 @@ namespace sgns
     {
         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
         if ( !escrowReleaseTx )
         {
             m_logger->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
@@ -1283,13 +1280,13 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrowReleaseTx->GetEscrowSource() );
-        topics.emplace( escrowReleaseTx->GetEscrowSource() );
+        topics.emplace( GetNodeTopic( escrowReleaseTx->GetEscrowSource() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrowReleaseTx->GetSrcAddress() );
-        topics.emplace( escrowReleaseTx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( escrowReleaseTx->GetSrcAddress() ) );
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
@@ -1307,7 +1304,7 @@ namespace sgns
         auto dest_infos          = transfer_tx->GetDstInfos();
         bool notify_destinations = false;
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
 
         for ( const auto &dest_info : dest_infos )
         {
@@ -1322,14 +1319,14 @@ namespace sgns
                              full_node_m,
                              dest_info.dest_address,
                              dest_info.encrypted_amount );
-            topics.emplace( dest_info.dest_address );
+            topics.emplace( GetNodeTopic( dest_info.dest_address ) );
         }
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          transfer_tx->GetSrcAddress() );
-        topics.emplace( transfer_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( transfer_tx->GetSrcAddress() ) );
 
         m_logger->debug( "[{} - full: {}] Re-parsing inputs to be added as UTXOs",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1361,7 +1358,7 @@ namespace sgns
     {
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
 
         if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1379,7 +1376,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          mint_tx->GetSrcAddress() );
-        topics.emplace( mint_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( mint_tx->GetSrcAddress() ) );
 
         return topics;
     }
@@ -1389,7 +1386,7 @@ namespace sgns
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1426,7 +1423,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrow_tx->GetSrcAddress() );
-        topics.emplace( escrow_tx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( escrow_tx->GetSrcAddress() ) );
 
         return topics;
     }
@@ -1436,7 +1433,7 @@ namespace sgns
     {
         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
 
-        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        std::set<std::string> topics{ full_node_topic_m, GetOwnTopic() };
         if ( !escrowReleaseTx )
         {
             m_logger->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
@@ -1449,13 +1446,13 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrowReleaseTx->GetEscrowSource() );
-        topics.emplace( escrowReleaseTx->GetEscrowSource() );
+        topics.emplace( GetNodeTopic( escrowReleaseTx->GetEscrowSource() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrowReleaseTx->GetSrcAddress() );
-        topics.emplace( escrowReleaseTx->GetSrcAddress() );
+        topics.emplace( GetNodeTopic( escrowReleaseTx->GetSrcAddress() ) );
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
@@ -2491,4 +2488,17 @@ namespace sgns
         // Notify the condition variable to wake up the main loop
         cv_.notify_one();
     }
+
+    std::string TransactionManager::GetOwnTopic() const
+    {
+        return GetNodeTopic( account_m->GetAddress() );
+    }
+
+    std::string TransactionManager::GetNodeTopic( std::string node_address )
+    {
+        boost::format add_topic_aff{ std::string( GNUS_ADDRESS_TOPIC_AFF ) };
+        add_topic_aff % GetNetworkID();
+        return node_address + add_topic_aff.str();
+    }
+
 }
