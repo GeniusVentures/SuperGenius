@@ -1,4 +1,5 @@
 #include "pubsub_broadcaster_ext.hpp"
+#include "base/sgns_version.hpp"
 #include "crdt/globaldb/proto/broadcast.pb.h"
 #include "crdt/crdt_datastore.hpp"
 #include <ipfs_lite/ipld/ipld_node.hpp>
@@ -234,7 +235,8 @@ namespace sgns::crdt
         }
         if ( !topic.empty() )
         {
-            broadcastTopicsCopy.emplace( topic );
+            auto full_topic = topic + version::GetNetAndVersionAppendix();
+            broadcastTopicsCopy.emplace( full_topic );
         }
 
         if ( broadcastTopicsCopy.empty() )
@@ -317,16 +319,17 @@ namespace sgns::crdt
 
     outcome::result<void> PubSubBroadcasterExt::AddBroadcastTopic( const std::string &topicName )
     {
+        auto full_topic = topicName + version::GetNetAndVersionAppendix();
         {
             std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
 
-            if ( topicsToBroadcast_.find( topicName ) != topicsToBroadcast_.end() )
+            if ( topicsToBroadcast_.find( full_topic ) != topicsToBroadcast_.end() )
             {
-                m_logger->trace( "Topic '{}' already exists. Skipping.", topicName );
+                m_logger->trace( "Topic '{}' already exists. Skipping.", full_topic );
                 return outcome::success();
             }
 
-            topicsToBroadcast_.insert( topicName );
+            topicsToBroadcast_.insert( full_topic );
         }
 
         return outcome::success();
@@ -340,25 +343,26 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::AddListenTopic( const std::string &topic )
     {
+        auto full_topic = topic + version::GetNetAndVersionAppendix();
         std::lock_guard lock( listenTopicsMutex_ );
-        if ( topicsToListen_.find( topic ) != topicsToListen_.end() )
+        if ( topicsToListen_.find( full_topic ) != topicsToListen_.end() )
         {
-            this->m_logger->debug( "Already listening to topic {}", topic );
+            this->m_logger->debug( "Already listening to topic {}", full_topic );
             return;
         }
 
-        topicsToListen_.insert( topic );
-        m_logger->debug( "Listen request on topic: '{}'", topic );
+        topicsToListen_.insert( full_topic );
+        m_logger->debug( "Listen request on topic: '{}'", full_topic );
         if ( started_ )
         {
             std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> future = std::move( pubSub_->Subscribe(
-                topic,
-                [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
+                full_topic,
+                [weakptr = weak_from_this(), full_topic]( boost::optional<const GossipPubSub::Message &> message )
                 {
                     if ( auto self = weakptr.lock() )
                     {
-                        self->m_logger->debug( "Message received from topic: " + topic );
-                        self->OnMessage( message, topic );
+                        self->m_logger->debug( "Message received from topic: " + full_topic );
+                        self->OnMessage( message, full_topic );
                     }
                 } ) );
 
