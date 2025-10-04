@@ -35,13 +35,14 @@ namespace sgns::processing
         if ( ( m_maximalProcessingSubTaskCount > 0 ) && ( m_processingSubTaskCount > m_maximalProcessingSubTaskCount ) )
         {
             // Reset the counter to allow processing restart
-            m_processingSubTaskCount = 0;
+            --m_processingSubTaskCount;
             return outcome::failure( Error::MAX_NUMBER_SUBTASKS );
         }
 
         auto queryTasks = m_db->Get( "tasks/TASK_" + subTask.ipfsblock() );
         if ( !queryTasks.has_value() )
         {
+            --m_processingSubTaskCount;
             return outcome::failure( Error::GLOBALDB_READ_ERROR );
             //task.ParseFromArray(element, element.second.size());
         }
