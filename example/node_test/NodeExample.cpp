@@ -407,7 +407,7 @@ int main( int argc, char *argv[] )
 
     std::thread input_thread( keyboard_input_thread );
 
-    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), false, last_param );
+    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, last_param, 40101, start_processing );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
