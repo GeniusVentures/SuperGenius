@@ -102,6 +102,10 @@ namespace sgns::processing
         boost::optional<SGProcessing::Task> m_pendingTask;
         std::mutex                          m_mutexPendingCreation;
 
+        // Blacklist for failed tasks/channels to prevent repeated processing attempts
+        std::set<std::string>               m_blacklistedChannels;
+        std::mutex                          m_mutexBlacklist;
+
         base::Logger m_logger = base::createLogger( "ProcessingService" );
     };
 }

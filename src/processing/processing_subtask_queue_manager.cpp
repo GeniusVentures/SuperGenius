@@ -175,7 +175,7 @@ namespace sgns::processing
 
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
 
-        m_logger->trace("QUEUE_PROCESS_PENDING: for node {} at {}ms.", m_localNodeId, m_queue_timestamp_);
+        m_logger->trace("QUEUE_PROCESS_PENDING: for node {} at {}ms. is callback empty? {} current {} versus max {}", m_localNodeId, m_queue_timestamp_, m_onSubTaskGrabbedCallbacks.empty(), m_processedSubtasksInCurrentOwnership, m_maxSubtasksPerOwnership );
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
@@ -198,7 +198,7 @@ namespace sgns::processing
                 guard.lock();
                 lockReleased = false;
             }
-
+            m_logger->debug("QUEUE PROCESS CHECK");
             size_t itemIdx = 0;
             if ( m_processingQueue.GrabItem( itemIdx, m_queue_timestamp_ ) )
             {
@@ -740,7 +740,7 @@ namespace sgns::processing
             now - m_lastActiveCountCheck
         ).count());
         auto activeNodeCount = m_queueChannel->GetActiveNodesCount();
-
+        m_logger->info( "Active count is {} Duration is {}", activeNodeCount, duration );
         if (activeNodeCount > 1 ||
             (m_queue->processing_queue().ownership_requests_size() > 0))
         {
@@ -752,7 +752,7 @@ namespace sgns::processing
         else
         {
             // Check if enough time has passed to reset
-            if (duration > m_waitTimeBeforeReset)
+            if (duration >= m_waitTimeBeforeReset)
             {
                 // Reset processed subtasks and prepare for more processing
                 m_processedSubtasksInCurrentOwnership = 0;

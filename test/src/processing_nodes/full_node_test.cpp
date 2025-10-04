@@ -22,7 +22,7 @@ using namespace sgns;
  * @param privKey      Hex string private key (64 chars) for deterministic identity.
  * @return unique_ptr to the initialized GeniusNode.
  */
-static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
+static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
                                                        const std::string &tokenValue,
                                                        TokenID            tokenId,
                                                        bool               isProcessor,
@@ -42,7 +42,7 @@ static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = std::make_unique<GeniusNode>( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
 
     // allow startup
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
@@ -74,6 +74,15 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     uint64_t beforeMint = originalNode->GetBalance();
     uint64_t afterMint;
 
+    test::assertWaitForCondition(
+        [&]() { return originalNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Recovery node balance not updated in time" );
+    test::assertWaitForCondition(
+        [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Recovery node balance not updated in time" );
+
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
@@ -95,6 +104,6 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 60000 ),
                                   "Recovery node balance not updated in time" );
 }

@@ -19,11 +19,12 @@ namespace sgns::processing
     m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
     }
 
-    outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>>
+    outcome::result<std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>>
     ProcessingSubTaskQueueChannelPubSub::Listen(std::chrono::milliseconds msSubscriptionWaitingDuration)
     {
         // Subscribe to the processing queue channel
-        auto& subscription_future = m_processingQueueChannel->Subscribe(
+        // Changed: Use 'auto' (not 'auto&') to allow moving/copying the shared_future
+        auto subscription_future = m_processingQueueChannel->Subscribe(
             [weakSelf = weak_from_this()](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message)
             {
                 if (auto self = weakSelf.lock())
@@ -48,16 +49,18 @@ namespace sgns::processing
 
             if (success) {
                 m_logger->debug("Subscription established after {} ms", resultTime.count());
-                return std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>(resultTime);
+                // Fixed: Use consistent type (GossipPubSubTopic::Subscription)
+                return std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(resultTime);
             } else {
                 m_logger->error("Subscription not established within the specified time ({} ms)",
-                             msSubscriptionWaitingDuration.count());
+                            msSubscriptionWaitingDuration.count());
                 return outcome::failure(boost::system::errc::timed_out);
             }
         }
 
         // If no waiting requested, return the future
-        return std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>(std::move(subscription_future));
+        // Fixed: Use std::move for efficiency (though not strictly required for shared_future)
+        return std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(std::move(subscription_future));
     }
 
     void ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership( const std::string &nodeId )

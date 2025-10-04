@@ -23,17 +23,9 @@ namespace sgns::processing
         /** Create a task queue
         * @param db - CRDT globaldb to use
         */
-        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
-            m_db( std::move( db ) ),
-            m_processingTimeout( std::chrono::seconds( 10 ) ),
-            m_processing_topic( std::move( processing_topic ) )
-        {
-        }
+        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic );
 
-        ~ProcessingTaskQueueImpl()
-        {
-            m_logger->debug( "~ProcessingTaskQueueImpl CALLED" );
-        }
+        ~ProcessingTaskQueueImpl();
 
         /** Enqueue a task and subtasks
         * @param task - Task to add
@@ -100,12 +92,15 @@ namespace sgns::processing
         outcome::result<void> SendEscrow( std::string path, sgns::base::Buffer value );
         void                  ResetAtomicTransaction();
 
+        void MarkTaskBad( const std::string& taskKey ) override;
+
     private:
         std::shared_ptr<sgns::crdt::GlobalDB>          m_db;
         std::chrono::system_clock::duration            m_processingTimeout;
         sgns::base::Logger                             m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
         std::shared_ptr<sgns::crdt::AtomicTransaction> job_crdt_transaction_;
         std::string                                    m_processing_topic;
+        std::set<std::string>                          m_badjobs;
 
         static constexpr std::string_view TASK_LIST_KEY    = "/tasks";
         static constexpr std::string_view SUBTASK_LIST_KEY = "/subtasks";

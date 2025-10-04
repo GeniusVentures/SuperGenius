@@ -117,46 +117,47 @@ void keyboard_input_thread()
     disable_raw_mode();
 }
 
-void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+void PrintAccountInfo( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() != 1 )
     {
         std::cerr << "Invalid info command format.\n";
         return;
     }
-    std::cout << "Balance: " << genius_node.GetBalance() << std::endl;
+    std::cout << "Balance: " << genius_node->GetBalance() << std::endl;
 }
 
-void PrintDataStore( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+void PrintDataStore( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() != 1 )
     {
         std::cerr << "Invalid info command format.\n";
         return;
     }
-    genius_node.PrintDataStore();
+    genius_node->PrintDataStore();
 }
 
-void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+void MintTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() != 2 )
     {
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node.MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    genius_node->MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
 }
-void TransferTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+
+void TransferTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() != 3 )
     {
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node.TransferFunds( std::stoull( args[1] ), args[2], sgns::TokenID::FromBytes( { 0x00 } ) );
+    genius_node->TransferFunds( std::stoull( args[1] ), args[2], sgns::TokenID::FromBytes( { 0x00 } ) );
 }
 
-void GetCoinPrice( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+void GetCoinPrice( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() < 2 ) // Check if there's at least one token ID (args[0] is "price")
     {
@@ -168,7 +169,7 @@ void GetCoinPrice( const std::vector<std::string> &args, sgns::GeniusNode &geniu
     std::vector<std::string> tokenIds( args.begin() + 1, args.end() );
 
     // Call the GetCoinprice function with the token IDs
-    auto prices = genius_node.GetCoinprice( tokenIds );
+    auto prices = genius_node->GetCoinprice( tokenIds );
 
     // Display the results
     for ( const auto &[token, price] : prices.value() )
@@ -177,7 +178,7 @@ void GetCoinPrice( const std::vector<std::string> &args, sgns::GeniusNode &geniu
     }
 }
 
-void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+void CreateProcessingTransaction( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node)
 {
     std::string json_data = R"(
 {
@@ -312,7 +313,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
   ]
 }
        )";
-    auto        jobpost   = genius_node.ProcessImage( json_data /*args[1]*/
+    auto        jobpost   = genius_node->ProcessImage( json_data /*args[1]*/
     );
     if ( !jobpost )
     {
@@ -328,7 +329,7 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events( sgns::GeniusNode &genius_node )
+void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
     {
@@ -375,7 +376,7 @@ void process_events( sgns::GeniusNode &genius_node )
             {
                 if ( arguments.size() > 1 )
                 {
-                    genius_node.AddPeer( arguments[1] );
+                    genius_node->AddPeer( arguments[1] );
                 }
                 else
                 {
@@ -384,7 +385,7 @@ void process_events( sgns::GeniusNode &genius_node )
             }
             else if ( arguments[0] == "stopprocessing" )
             {
-                genius_node.StopProcessing();
+                genius_node->StopProcessing();
                 std::cout << "Stopping processing" << std::endl;
             }
             else if ( arguments[0] == "quit" )
@@ -401,7 +402,7 @@ void process_events( sgns::GeniusNode &genius_node )
     }
 }
 
-void periodic_processing( sgns::GeniusNode &genius_node )
+void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
     {
@@ -451,7 +452,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
                 ]
                 }
                )";
-        auto        jobpost   = genius_node.ProcessImage( json_data /*args[1]*/
+        auto        jobpost   = genius_node->ProcessImage( json_data /*args[1]*/
         );
         if ( !jobpost )
         {
@@ -499,7 +500,7 @@ int main( int argc, char *argv[] )
 
     std::thread input_thread( keyboard_input_thread );
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, eth_private_key.c_str(), false, last_param, 400101, true );
+    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, last_param, 40101, start_processing );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();

@@ -66,6 +66,7 @@ target_link_libraries(processing_service
     AsyncIOManager
     rapidjson
     sha
+    outcome
 )
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})

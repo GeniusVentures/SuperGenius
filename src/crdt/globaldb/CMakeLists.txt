@@ -11,6 +11,7 @@ set_target_properties(crdt_globaldb PROPERTIES UNITY_BUILD ON)
 
 target_link_libraries(crdt_globaldb
     PUBLIC
+    sgns_version
     Boost::headers
     ipfs-pubsub
     crdt_datastore

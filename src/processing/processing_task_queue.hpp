@@ -55,6 +55,12 @@ public:
      * @return      A @ref false 
      */
     virtual bool IsTaskCompleted( const std::string &taskId ) = 0;
+
+     /**
+     * @brief Mark a task key as bad to be skipped.    
+     * @param[in]   taskKey 
+     */
+    virtual void MarkTaskBad( const std::string &taskKey ) = 0;
 };
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP

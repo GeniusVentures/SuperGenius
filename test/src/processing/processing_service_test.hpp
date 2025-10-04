@@ -9,6 +9,7 @@
 #include "processing/processing_subtask_queue_accessor_impl.hpp"
 #include "processing/processing_subtask_queue_channel_pubsub.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
+#include "processing/processing_service.hpp"
 
 class ProcessingServiceTest : public ::testing::Test
 {
@@ -34,6 +35,9 @@ public:
     std::vector<std::shared_ptr<SubTaskQueueAccessorImpl>> m_processing_queues_accessors;
 
     std::vector<std::unique_ptr<std::atomic<bool>>> m_IsTaskFinalized;
+
+    // Track ProcessingServiceImpl instances to properly stop them in TearDown
+    std::vector<std::shared_ptr<ProcessingServiceImpl>> m_processing_services;
 
     std::shared_ptr<soralog::Logger> m_Logger;
 

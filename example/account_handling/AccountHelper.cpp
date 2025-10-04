@@ -34,7 +34,7 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
+        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -65,6 +65,8 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
+
+        account_->InitMessenger( pubsub_, false );
 
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
@@ -111,7 +113,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_ );
+        transaction_manager_ = TransactionManager::New( globaldb_, io_, account_, hasher_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

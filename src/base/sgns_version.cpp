@@ -7,6 +7,7 @@
  *
  */
 #include <string>
+#include <boost/format.hpp>
 #include "base/sgnsv.h"
 #include "sgns_version.hpp"
 
@@ -43,4 +44,23 @@ std::string sgns::version::SuperGeniusVersionFullString()
 std::string sgns::version::SuperGeniusVersionText()
 {
     return SUPERGENIUS_VERSION_TEXT;
+}
+
+uint16_t sgns::version::GetNetworkID()
+{
+#if defined( MAIN_NET )
+    return sgns::version::MAIN_NET_ID;
+#elif defined( DEV_NET )
+    return sgns::version::DEV_NET_ID;
+#else
+    return sgns::version::TEST_NET_ID;
+#endif
+}
+
+std::string sgns::version::GetNetAndVersionAppendix()
+{
+    return ( boost::format( std::string( sgns::version::SGNS_VERSION_APPENDIX ) ) % sgns::version::SuperGeniusVersionMajor() %
+             sgns::version::SuperGeniusVersionMinor() )
+               .str() +
+           ( boost::format( std::string( sgns::version::NET_ID_APPENDIX ) ) % sgns::version::GetNetworkID() ).str();
 }

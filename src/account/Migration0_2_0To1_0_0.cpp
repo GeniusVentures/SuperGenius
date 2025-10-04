@@ -72,11 +72,8 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-#ifdef DEV_NET
-        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%.dev";
-#else
         static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
-#endif
+
         const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
@@ -117,8 +114,6 @@ namespace sgns
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
 
-        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
 
         for ( const auto &entry : entries )
         {
@@ -139,7 +134,7 @@ namespace sgns
             auto tx = maybe_transaction.value();
             m_logger->trace( "Fetched transaction {}", transaction_key );
 
-            if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+            if ( !tx->CheckDAGSignatureLegacy() )
             {
                 m_logger->error( "Could not validate signature of transaction {}", transaction_key );
                 continue;
@@ -262,9 +257,8 @@ namespace sgns
                 OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
-                boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-                full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
-                topics_.emplace( full_node_topic.str() );
+
+                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
                 migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
             }
@@ -283,10 +277,9 @@ namespace sgns
 
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
-        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
 
-        topics_.emplace( full_node_topic.str() );
+
+        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ));
 
         m_logger->debug( "Migrating output DB into new DB" );
         OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
@@ -300,7 +293,7 @@ namespace sgns
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = newDb_->BeginTransaction();
             topics_.clear();
-            topics_.emplace( full_node_topic.str() );
+            topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
             m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
         }
 

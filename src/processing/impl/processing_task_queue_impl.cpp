@@ -4,6 +4,19 @@
 
 namespace sgns::processing
 {
+    ProcessingTaskQueueImpl::ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
+        m_db( std::move( db ) ),
+        m_processingTimeout( std::chrono::seconds( 10 ) ),
+        m_processing_topic( std::move( processing_topic ) ),
+        m_badjobs()
+    {
+        m_logger->info( "ProcessingTaskQueueImpl CREATED - instance at {}", static_cast<void*>(this) );
+    }
+
+    ProcessingTaskQueueImpl::~ProcessingTaskQueueImpl()
+    {
+        m_logger->info( "ProcessingTaskQueueImpl DESTROYED - instance at {}", static_cast<void*>(this) );
+    }
     outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
                                                                 const std::list<SGProcessing::SubTask> &subTasks )
     {
@@ -89,7 +102,7 @@ namespace sgns::processing
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
-        //m_logger->info( "GRAB_TASK" );
+        m_logger->info( "GRAB_TASK called - blacklist has {} items", m_badjobs.size() );
         OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
 
         //m_logger->info( "Task list grabbed from CRDT datastore" );
@@ -97,7 +110,7 @@ namespace sgns::processing
         bool                  task_grabbed = false;
         std::set<std::string> lockedTasks;
         SGProcessing::Task    task;
-        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( auto element : queryTasks )
         {
             auto taskKey = m_db->KeyToString( element.first );
@@ -106,12 +119,6 @@ namespace sgns::processing
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
-            {
-                m_logger->debug( "Couldn't parse the task from Protobuf" );
-                //TODO - Decide what to do with an invalid task - Maybe error?
-                continue;
-            }
 
             if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
             {
@@ -119,57 +126,22 @@ namespace sgns::processing
                 //TODO - Decide what to do with an invalid task - Maybe error?
                 continue;
             }
-          
-            if ( IsTaskCompleted( task.ipfs_block_id() ) )
-            {
-                m_logger->debug( "Task already processed" );
-                continue;
-            }
 
-            if ( !IsTaskValid( task.json_data() ) )
-            {
-                m_logger->debug( "Task does not meet schema requirements" );
-                continue;
-            }
-            auto key           = ( boost::format( "subtasks/TASK_%s" ) % task.ipfs_block_id() ).str();
-            auto querySubTasks = m_db->QueryKeyValues( key );
-            if ( querySubTasks.has_failure() )
-            {
-                m_logger->info( "Unable list subtasks from CRDT datastore" );
-                continue;
-            }
-            bool isSubtaskValid = true;
+            m_logger->info( "Checking task: ipfs_block_id='{}', taskKey='{}'", task.ipfs_block_id(), taskKey.value() );
 
-            if ( querySubTasks.has_value() )
+            if ( m_badjobs.find( task.ipfs_block_id() ) != m_badjobs.end() )
             {
-                m_logger->debug( "SUBTASKS_FOUND {}", querySubTasks.value().size() );
-
-                for ( auto element : querySubTasks.value() )
-                {
-                    SGProcessing::SubTask subTask;
-                    if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
-                    {
-                        if ( !IsSubTaskValid( subTask.json_data() ) )
-                        {
-                            m_logger->debug( "A subtask is not valid, skipping task." );
-                            isSubtaskValid = false;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        m_logger->debug( "Unable to parse a subtask" );
-                        isSubtaskValid = false;
-                    }
-                }
+                m_logger->debug( "Skip bad job: {} (found in blacklist of {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                continue;
             }
             else
             {
-                m_logger->debug( "Task has no subtasks" );
-                continue;
+                m_logger->debug( "Task {} not in blacklist (blacklist has {} items)", task.ipfs_block_id(), m_badjobs.size() );
             }
-            if ( !isSubtaskValid )
+
+            if ( IsTaskCompleted( task.ipfs_block_id() ) )
             {
+                m_logger->debug( "Task already processed" );
                 continue;
             }
 
@@ -200,12 +172,14 @@ namespace sgns::processing
                 break;
             }
         }
-
+        m_logger->info( "Checked task Queue: {} tasks processed, {} bad tasks in blacklist", queryTasks.size(), m_badjobs.size() );
         if ( task_grabbed )
         {
+            m_logger->info( "GRAB_TASK_SUCCESS: returning task_id={}", task.ipfs_block_id() );
             return std::make_pair( task.ipfs_block_id(), task );
         }
 
+        m_logger->info( "GRAB_TASK_FAILED: no tasks available" );
         return outcome::failure( boost::system::error_code{} );
     }
 
@@ -339,6 +313,17 @@ namespace sgns::processing
                     {
                         if ( task.ParseFromArray( taskData.value().data(), taskData.value().size() ) )
                         {
+                            // Check if this task is blacklisted before allowing it to be processed again
+                            if ( m_badjobs.find( task.ipfs_block_id() ) != m_badjobs.end() )
+                            {
+                                m_logger->debug( "Skip expired bad job: {} (found in blacklist of {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                                return false;
+                            }
+                            else
+                            {
+                                m_logger->debug( "Expired task {} not in blacklist (blacklist has {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                            }
+
                             if ( LockTask( taskKey ) )
                             {
                                 m_logger->debug( "TASK_LOCK_MOVED {}", taskKey );
@@ -377,5 +362,24 @@ namespace sgns::processing
     void ProcessingTaskQueueImpl::ResetAtomicTransaction()
     {
         job_crdt_transaction_.reset();
+    }
+
+    void ProcessingTaskQueueImpl::MarkTaskBad( const std::string &taskKey )
+    {
+        m_logger->info( "MARKING_TASK_BAD: {} (total bad jobs: {}) - instance at {}", taskKey, m_badjobs.size(), static_cast<void*>(this) );
+        m_badjobs.insert( taskKey );
+        m_logger->info( "MARKED_TASK_BAD: {} (total bad jobs now: {}) - instance at {}", taskKey, m_badjobs.size(), static_cast<void*>(this) );
+        
+        // Dump current blacklist for debugging
+        if ( m_badjobs.size() <= 10 ) // Only dump if list is small
+        {
+            std::string blacklist;
+            for ( const auto& bad_task : m_badjobs )
+            {
+                if ( !blacklist.empty() ) blacklist += ", ";
+                blacklist += bad_task;
+            }
+            m_logger->info( "Current blacklist: [{}]", blacklist );
+        }
     }
 }

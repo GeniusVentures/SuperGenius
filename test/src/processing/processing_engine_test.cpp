@@ -50,9 +50,12 @@ namespace
         {
             if (!m_subTasks.empty())
             {
-                m_context.post([this, onSubTaskGrabbedCallback]() {
-                    onSubTaskGrabbedCallback(m_subTasks.front());
-                    m_subTasks.pop_front();
+                // Make a copy of the subtask to avoid dangling references
+                SGProcessing::SubTask subTaskCopy = m_subTasks.front();
+                m_subTasks.pop_front();
+                
+                m_context.post([subTaskCopy, onSubTaskGrabbedCallback]() {
+                    onSubTaskGrabbedCallback(subTaskCopy);
                 });
             }
         }
@@ -236,6 +239,7 @@ TEST_F(ProcessingEngineTest, SubTaskProcessing)
     context.stop();
     contextThread.join();
 
+    engine->StopQueueProcessing();
 
     ASSERT_EQ(2, processingCore->m_processedSubTasks.size());
     EXPECT_EQ("SUBTASK_ID1", processingCore->m_processedSubTasks[0].subtaskid());
@@ -287,7 +291,8 @@ TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
 
     context.stop();
     contextThread.join();
-
+    engine1->StopQueueProcessing();
+    engine2->StopQueueProcessing();
     ASSERT_EQ(2, processingCore->m_initialHashes.size());
     EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId1)), processingCore->m_initialHashes[0]);
     EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId2)), processingCore->m_initialHashes[1]);
