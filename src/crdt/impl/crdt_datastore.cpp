@@ -415,11 +415,7 @@ namespace sgns::crdt
         {
             EnqueueRootCID( bCastHeadCID );
             dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
-            //auto handleBlockResult = HandleRootCIDBlock( bCastHeadCID );
-            //if ( handleBlockResult.has_failure() )
-            //{
-            //    logger_->error( "Broadcaster: Unable to handle block (error {})", handleBlockResult.error().message() );
-            //}
+
         }
     }
 
