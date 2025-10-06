@@ -1166,6 +1166,11 @@ namespace sgns::crdt
         }
         for ( const auto &[cid, topic] : it->second )
         {
+            std::string topic_to_record = topic;
+            if ( topic_to_record == "SuperGNUSNode.TestNet.FullNode.963" )
+            {
+                topic_to_record = "SuperGNUSNode.TestNet.FullNode";
+            }
             if ( cid == rootCID )
             {
                 auto resolve_result = dagSyncer_->markResolved( cid );
@@ -1173,7 +1178,7 @@ namespace sgns::crdt
                 {
                     logger_->error( "{}: error marking Root CID {} as resolved", __func__, cid.toString().value() );
                 }
-                auto add_result = heads_->Add( rootCID, rootPriority, topic );
+                auto add_result = heads_->Add( rootCID, rootPriority, topic_to_record );
                 if ( add_result.has_failure() )
                 {
                     logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
@@ -1207,7 +1212,7 @@ namespace sgns::crdt
                 {
                     logger_->error( "{}: error marking new Head CID {} as resolved", __func__, cid.toString().value() );
                 }
-                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
+                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic_to_record );
                 if ( replace_result.has_failure() )
                 {
                     logger_->error( "{}: error replacing head {} with {}",

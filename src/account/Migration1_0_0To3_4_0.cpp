@@ -38,18 +38,18 @@ namespace sgns
             return true;
         }
 
-        auto        version_buffer = version_ret.value();
-        std::string version_str( reinterpret_cast<const char *>( version_buffer.data() ), version_buffer.size() );
+        auto version_buffer = version_ret.value();
 
-        if ( version_str == ToVersion() )
+        if ( !IsVersionLessThan( std::string(version_buffer.toString()), ToVersion() ) )
+
         {
             logger_->info( "GlobalDB already at target version {}, skipping migration", ToVersion() );
             return false; // Already at target version
         }
-        else if ( version_str != FromVersion() )
+        else if ( version_buffer.toString() != FromVersion() )
         {
             logger_->warn( "GlobalDB at unexpected version {}, expected {}, migration may not be applicable",
-                           version_str,
+                           version_buffer.toString(),
                            FromVersion() );
             return false; // Unexpected version, skip migration
         }
@@ -89,6 +89,12 @@ namespace sgns
                 }
             }
         }
+        sgns::crdt::GlobalDB::Buffer version_buffer;
+        sgns::crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
+        version_buffer.put( ToVersion() );
+
+        OUTCOME_TRY( db_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

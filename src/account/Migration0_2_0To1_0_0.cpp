@@ -62,10 +62,14 @@ namespace sgns
         }
         auto version = version_ret.value();
 
-        if ( version.toString() == ToVersion() )
+        if ( !IsVersionLessThan( std::string( version.toString() ), ToVersion() ) )
         {
             m_logger->debug( "newDb is already migrated; skipping Migration0_2_0To1_0_0" );
             return false;
+        }
+        else
+        {
+            m_logger->debug( "Not migrated: {}", version.toString() );
         }
         return true;
     }
@@ -113,7 +117,6 @@ namespace sgns
         m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
-
 
         for ( const auto &entry : entries )
         {
@@ -258,7 +261,7 @@ namespace sgns
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
 
-                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
                 migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
             }
@@ -278,8 +281,7 @@ namespace sgns
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
 
-
-        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ));
+        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
         OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
@@ -293,7 +295,7 @@ namespace sgns
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = newDb_->BeginTransaction();
             topics_.clear();
-            topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+            topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
             m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
         }
 
