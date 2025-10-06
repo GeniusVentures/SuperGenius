@@ -8,6 +8,7 @@
 
 #include "account/MigrationManager.hpp"
 #include "account/Migration0_2_0To1_0_0.hpp"
+#include "account/Migration1_0_0To3_4_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
@@ -27,7 +28,7 @@ namespace sgns
         std::string                                                     base58key )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
-        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( std::move( newDb ),
+        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( newDb,
                                                                          std::move( ioContext ),
                                                                          std::move( pubSub ),
                                                                          std::move( graphsync ),
@@ -35,6 +36,7 @@ namespace sgns
                                                                          std::move( generator ),
                                                                          std::move( writeBasePath ),
                                                                          std::move( base58key ) ) );
+        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( newDb ) );
         return instance;
     }
 
