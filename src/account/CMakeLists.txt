@@ -20,6 +20,7 @@ add_library(sgns_account
     TokenAmount.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
+    Migration1_0_0To3_4_0.cpp
     AccountMessenger.cpp
 )
 

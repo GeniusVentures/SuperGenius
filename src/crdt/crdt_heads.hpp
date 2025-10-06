@@ -87,6 +87,8 @@ namespace sgns::crdt
         */
         outcome::result<void> Add( const CID &aCid, uint64_t aHeight, const std::string &topic );
 
+        outcome::result<void> Remove( const CID &aCid, const std::string &topic );
+
         /** Replace a head with a new cid.
         * @param aCidHead Content identifier of head to replace
         * @param aNewHeadCid Content identifier of new head

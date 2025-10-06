@@ -1230,4 +1230,24 @@ namespace sgns::crdt
         std::unique_lock lk( dagWorkerMutex_ );
         pendingRootQueue_.push( cid );
     }
+
+    outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
+    {
+        return heads_->GetList();
+    }
+
+    outcome::result<void> CrdtDatastore::RemoveHead( const CID &aCid, const std::string &topic )
+    {
+        return heads_->Remove( aCid, topic );
+    }
+
+    outcome::result<uint64_t> CrdtDatastore::GetHeadHeight( const CID &aCid, const std::string &topic )
+    {
+        return heads_->GetHeadHeight( aCid, topic );
+    }
+
+    outcome::result<void> CrdtDatastore::AddHead( const CID &aCid, const std::string &topic, uint64_t priority )
+    {
+        return heads_->Add( aCid, priority, topic );
+    }
 }

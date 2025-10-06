@@ -352,4 +352,23 @@ namespace sgns::crdt
         return m_datastore;
     }
 
+    outcome::result<GlobalDB::CRDTHeadListResult> GlobalDB::GetCRDTHeadList()
+    {
+        return m_crdtDatastore->GetHeadList();
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->GetHeadHeight( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadRemove( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->RemoveHead( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority )
+    {
+        return m_crdtDatastore->AddHead( aCid, topic, priority );
+    }
 }

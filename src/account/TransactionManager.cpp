@@ -138,6 +138,7 @@ namespace sgns
                              full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
             globaldb_m->AddTopicName( full_node_topic_m );
+            globaldb_m->AddTopicName( std::string(GNUS_FULL_NODES_TOPIC_LEGACY) );
         }
         globaldb_m->AddTopicName( account_m->GetAddress() );
     }

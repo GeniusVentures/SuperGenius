@@ -43,7 +43,8 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode.";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
 
         using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
         using TransactionBatch = std::vector<TransactionPair>;

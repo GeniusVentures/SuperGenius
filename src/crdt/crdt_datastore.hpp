@@ -213,6 +213,11 @@ namespace sgns::crdt
             isFullNode = std::move( full_node );
         }
 
+        outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
+        outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
+        outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
+        outcome::result<void> AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+
     protected:
         struct RootCIDJob
         {

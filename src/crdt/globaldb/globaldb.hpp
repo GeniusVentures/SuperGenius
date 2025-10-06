@@ -21,9 +21,10 @@ namespace sgns::crdt
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
     {
     public:
-        using Buffer      = base::Buffer;
-        using QueryResult = CrdtDatastore::QueryResult;
-        using RocksDB     = storage::rocksdb;
+        using Buffer             = base::Buffer;
+        using QueryResult        = CrdtDatastore::QueryResult;
+        using RocksDB            = storage::rocksdb;
+        using CRDTHeadListResult = CrdtHeads::CRDTListResult;
 
         /**
          * @brief       Factory method to create a GlobalDB instance
@@ -143,6 +144,12 @@ namespace sgns::crdt
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
 
         void Start();
+
+        outcome::result<CRDTHeadListResult> GetCRDTHeadList();
+
+        outcome::result<uint64_t> GetCRDTHeadHeight( const CID &aCid, const std::string &topic );
+        outcome::result<void>     CRDTHeadRemove( const CID &aCid, const std::string &topic );
+        outcome::result<void>     CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority );
 
     private:
         /**
