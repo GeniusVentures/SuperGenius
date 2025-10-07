@@ -261,7 +261,7 @@ namespace sgns
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
 
-                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
+                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
                 migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
             }
@@ -281,7 +281,7 @@ namespace sgns
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
 
-        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
+        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
         OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
@@ -295,7 +295,7 @@ namespace sgns
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = newDb_->BeginTransaction();
             topics_.clear();
-            topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY ) );
+            topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
             m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
         }
 
