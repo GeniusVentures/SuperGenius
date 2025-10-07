@@ -86,11 +86,8 @@ namespace sgns
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         InterfaceMethods                           methods ) :
         address_( std::move( address ) ),
-        account_comm_topic_(
-            address_ +
-            ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ) ),
-        requests_topic_(
-            ( boost::format( std::string( REQUESTS_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
+        account_comm_topic_( address_ + std::string( ACCOUNT_COMM ) + sgns::version::GetNetAndVersionAppendix() ),
+        requests_topic_( std::string( REQUESTS_COMM ) + sgns::version::GetNetAndVersionAppendix() ),
         pubsub_( std::move( pubsub ) ),
         methods_( std::move( methods ) )
     {
@@ -365,9 +362,8 @@ namespace sgns
 
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
-        auto account_topic =
-            ( req.requester_address() +
-              ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ) );
+        auto account_topic            = req.requester_address() + std::string( ACCOUNT_COMM ) +
+                             sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
 

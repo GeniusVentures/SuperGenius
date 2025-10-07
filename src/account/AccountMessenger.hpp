@@ -78,9 +78,9 @@ namespace sgns
 
     private:
         /// Basis of the account receiving topic
-        static constexpr std::string_view ACCOUNT_COMM = ".comm.%02d";
+        static constexpr std::string_view ACCOUNT_COMM = ".comm";
         /// Basis of the global requests topic
-        static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm.%02d";
+        static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm";
 
         const std::string                          address_;            ///< Own address
         const std::string                          account_comm_topic_; ///< Account receiving topic
