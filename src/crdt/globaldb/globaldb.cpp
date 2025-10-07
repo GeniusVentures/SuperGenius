@@ -65,7 +65,6 @@ namespace sgns::crdt
     using IpfsRocksDb        = ipfs_lite::rocksdb;
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
-    using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
     outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
         std::shared_ptr<boost::asio::io_context>                              context,

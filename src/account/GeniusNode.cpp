@@ -154,11 +154,8 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config ),
-        processing_channel_topic_(
-            ( boost::format( std::string( PROCESSING_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
-        processing_grid_chanel_topic_(
-            ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
-                .str() ),
+        processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
+        processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
 
@@ -251,9 +248,7 @@ namespace sgns
         }
         std::string base58key = maybe_base58.value();
 
-        gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                    version::SuperGeniusVersionMajor() % base58key )
-                                      .str();
+        gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key;
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
@@ -511,7 +506,7 @@ namespace sgns
     void GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes
-        std::string                temp = processing_grid_chanel_topic_;
+        std::string                temp = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
         std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
 
         // Compute the SHA-256 hash of the input bytes
@@ -808,7 +803,7 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            node_logger_->error( "{}: Transaction manager not ready",__func__);
+            node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();

@@ -271,9 +271,9 @@ namespace sgns
         static constexpr std::uint16_t    TEST_NET        = 963;
         static constexpr std::size_t      MAX_NODES_COUNT = 1;
 
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
-        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.Channel";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.Processing.Channel";
+        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.Node";
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {

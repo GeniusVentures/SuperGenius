@@ -1,7 +1,8 @@
-#include <fmt/std.h>
 #include "processing_subtask_queue_accessor_impl.hpp"
+#include <fmt/std.h>
 #include <thread>
 #include <utility>
+#include "base/sgns_version.hpp"
 
 namespace sgns::processing
 {
@@ -40,18 +41,18 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
     {
-        bool ret = false;
+        bool ret           = false;
+        auto results_topic = "RESULT_CHANNEL_ID_" + task_id + sgns::version::GetNetAndVersionAppendix();
         if ( !m_resultChannel )
         {
-            m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub,
-                                                                                "RESULT_CHANNEL_ID_" + task_id );
-            m_logger->debug( "Results channel created with \"RESULT_CHANNEL_ID_{}\"", task_id );
+            m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, results_topic );
+            m_logger->debug( "Results channel created with {}", results_topic );
             ret = true;
         }
         else
         {
-            m_logger->error( "Tried creating channel with \"RESULT_CHANNEL_ID_{}\" but channel already created",
-                             task_id );
+            m_logger->error( "Tried creating channel with {} but channel already created",
+                             results_topic );
         }
         StartPeriodicStateBroadcast();
         return ret;
@@ -234,7 +235,9 @@ namespace sgns::processing
         if ( auto validation_res = m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult );
              validation_res.has_error() )
         {
-            m_logger->error( "Rejecting invalid external result for subtask {}: {}", subTaskResult.subtaskid(), validation_res.error().message() );
+            m_logger->error( "Rejecting invalid external result for subtask {}: {}",
+                             subTaskResult.subtaskid(),
+                             validation_res.error().message() );
             m_processingErrorSink( "Invalid external result for subtask: " + subTaskResult.subtaskid() );
             return false;
         }

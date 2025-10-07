@@ -1,5 +1,5 @@
 #include "processing_service.hpp"
-
+#include "base/sgns_version.hpp"
 #include <utility>
 #include <thread>
 
@@ -121,7 +121,8 @@ namespace sgns::processing
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
-        m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processingGridChannelId );
+        auto processing_topic = processingGridChannelId + sgns::version::GetNetAndVersionAppendix();
+        m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processing_topic );
         m_gridChannel->Subscribe(
             [weakSelf = weak_from_this()]( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
             {
