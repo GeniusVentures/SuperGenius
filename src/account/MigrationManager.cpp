@@ -29,14 +29,21 @@ namespace sgns
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
         instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( newDb,
-                                                                         std::move( ioContext ),
-                                                                         std::move( pubSub ),
-                                                                         std::move( graphsync ),
-                                                                         std::move( scheduler ),
-                                                                         std::move( generator ),
-                                                                         std::move( writeBasePath ),
-                                                                         std::move( base58key ) ) );
-        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( newDb ) );
+                                                                         ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key ) );
+        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( newDb,
+                                                                         ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key ) );
         return instance;
     }
 

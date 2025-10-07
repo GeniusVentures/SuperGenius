@@ -9,7 +9,35 @@
 namespace sgns
 {
 
-    Migration1_0_0To3_4_0::Migration1_0_0To3_4_0( std::shared_ptr<crdt::GlobalDB> db ) : db_( std::move( db ) ) {}
+    Migration1_0_0To3_4_0::Migration1_0_0To3_4_0(
+        std::shared_ptr<crdt::GlobalDB>                                 db,
+        std::shared_ptr<boost::asio::io_context>                        ioContext,
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
+        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        std::string                                                     writeBasePath,
+        std::string                                                     base58key ) :
+        db_( std::move( db ) )
+    {
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.01.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key ).str();
+        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath % legacyNetworkFullPath ).str();
+
+        logger_->debug( "Initializing legacy DB at path {}", fullPath );
+
+        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext,
+                                                   fullPath,
+                                                   pubSub,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync,
+                                                   scheduler,
+                                                   generator );
+
+        db_1_0_0_ = std::move( maybe_db_1_0_0.value() );
+        logger_->debug( "Started legacy DB at path {}", fullPath );
+    }
 
     Migration1_0_0To3_4_0::~Migration1_0_0To3_4_0() {}
 
@@ -40,55 +68,116 @@ namespace sgns
 
         auto version_buffer = version_ret.value();
 
-        if ( !IsVersionLessThan( std::string(version_buffer.toString()), ToVersion() ) )
+        if ( !IsVersionLessThan( std::string( version_buffer.toString() ), ToVersion() ) )
 
         {
             logger_->info( "GlobalDB already at target version {}, skipping migration", ToVersion() );
             return false; // Already at target version
         }
-        else if ( version_buffer.toString() != FromVersion() )
-        {
-            logger_->warn( "GlobalDB at unexpected version {}, expected {}, migration may not be applicable",
-                           version_buffer.toString(),
-                           FromVersion() );
-            return false; // Unexpected version, skip migration
-        }
+        version_buffer.clear();
+        version_buffer.put( ToVersion() );
 
-        logger_->info( "GlobalDB at version {}, migration to {} is required", FromVersion(), ToVersion() );
-        return true; // Migration is required
+        OUTCOME_TRY( db_->GetDataStore()->put( version_key, version_buffer ) );
+
+        logger_->info( "GlobalDB at version {}, but updated already no migration to {} is required",
+                       FromVersion(),
+                       ToVersion() );
+        return false; // Migration is not required, 1_0_0 is already fixed
     }
 
     outcome::result<void> Migration1_0_0To3_4_0::Apply()
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
+        auto                  crdt_transaction_ = db_->BeginTransaction();
+        std::set<std::string> topics_;
 
-        // In version 3.4.0, the full node topic format changed to include the network ID.
-        // We need to update any existing topics in the GlobalDB to the new format.
+        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
-        const std::string old_full_node_topic_prefix = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC_LEGACY );
-        const std::string new_full_node_topic_prefix = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
-
-        // Query all keys with the old full node topic prefix
-        OUTCOME_TRY( auto head_list, db_->GetCRDTHeadList() );
-
-        auto [head_map, maxHeight] = head_list;
-
-        for ( const auto &[topic, cid_set] : head_map )
+        const std::string BASE = "/bc-963/";
+        OUTCOME_TRY( auto &&entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
+        logger_->debug( "Found {} transaction keys to migrate", entries.size() );
+        size_t migrated_count = 0;
+        size_t BATCH_SIZE     = 50;
+        for ( const auto &entry : entries )
         {
-            if ( topic == old_full_node_topic_prefix )
+            auto keyOpt = db_1_0_0_->KeyToString( entry.first );
+            if ( !keyOpt.has_value() )
             {
-                logger_->info( "{}: Found old full node topic, replacing it: {}", __func__, topic );
-                for ( const auto &cid : cid_set )
+                logger_->error( "Failed to convert key buffer to string" );
+                continue;
+            }
+            std::string transaction_key   = keyOpt.value();
+            auto        maybe_transaction = TransactionManager::FetchTransaction( db_1_0_0_, transaction_key );
+            if ( !maybe_transaction.has_value() )
+            {
+                logger_->error( "Can't fetch transaction for key {}", transaction_key );
+                continue;
+            }
+            auto tx = maybe_transaction.value();
+            logger_->trace( "Fetched transaction {}", transaction_key );
+
+            if ( !tx->CheckSignature() )
+            {
+                if ( !tx->CheckDAGSignatureLegacy() )
                 {
-                    logger_->info( "{}: Migrating head CID {} from old topic to new topic",
-                                   __func__,
-                                   cid.toString().value() );
-                    OUTCOME_TRY( auto &&head_height, db_->GetCRDTHeadHeight( cid, old_full_node_topic_prefix ) );
-                    OUTCOME_TRY( db_->CRDTHeadRemove( cid, old_full_node_topic_prefix ) );
-                    OUTCOME_TRY( db_->CRDTHeadAdd( cid, new_full_node_topic_prefix, head_height ) );
+                    logger_->error( "Could not validate signature of transaction {}", transaction_key );
+                    continue;
                 }
             }
+            auto maybe_proof = db_1_0_0_->Get( { TransactionManager::GetTransactionProofPath( *tx ) } );
+
+            if ( !maybe_proof.has_value() )
+            {
+                logger_->error( "Can't find the proof data for {}", transaction_key );
+                continue;
+            }
+
+            topics_.emplace( tx->GetSrcAddress() );
+            if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+            {
+                for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                {
+                    topics_.emplace( dest_info.dest_address );
+                }
+            }
+            if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
+            {
+                if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
+                {
+                    topics_.emplace( escrow_tx->GetSrcAddress() );
+                }
+            }
+
+            sgns::crdt::GlobalDB::Buffer data_transaction;
+            data_transaction.put( tx->SerializeByteVector() );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
+
+            sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+            sgns::crdt::GlobalDB::Buffer proof_transaction;
+            proof_transaction.put( maybe_proof.value() );
+            BOOST_OUTCOME_TRYV2(
+                auto &&,
+                crdt_transaction_->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+            logger_->trace( "Proof recorded for transaction {}", transaction_key );
+
+            ++migrated_count;
+            if ( migrated_count >= BATCH_SIZE )
+            {
+                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                crdt_transaction_ = db_->BeginTransaction(); // start fresh
+                topics_.clear();
+
+                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+                migrated_count = 0;
+                logger_->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+            }
         }
+        if ( migrated_count )
+        {
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            logger_->debug( "Committed remaining {}  transactions", migrated_count );
+        }
+
         sgns::crdt::GlobalDB::Buffer version_buffer;
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
