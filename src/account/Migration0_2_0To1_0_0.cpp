@@ -21,7 +21,6 @@ namespace sgns
 {
 
     Migration0_2_0To1_0_0::Migration0_2_0To1_0_0(
-        std::shared_ptr<crdt::GlobalDB>                                 newDb,
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
@@ -29,7 +28,6 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
-        newDb_( std::move( newDb ) ),
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -38,6 +36,30 @@ namespace sgns
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) )
     {
+        static constexpr auto DATABASE_1_0_0_PREFIX = "/SuperGNUSNode.TestNet.2a.01.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( DATABASE_1_0_0_PREFIX ) % base58key_ ).str();
+        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
+
+        m_logger->debug( "Initializing 1.0.0 DB at path {}", fullPath );
+
+        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext_,
+                                                   fullPath,
+                                                   pubSub_,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync_,
+                                                   scheduler_,
+                                                   generator_ );
+
+        if ( !maybe_db_1_0_0.has_value() )
+        {
+            m_logger->error( "1.0.0 database not created on {}", fullPath );
+        }
+        else
+        {
+            newDb_ = std::move( maybe_db_1_0_0.value() );
+            m_logger->debug( "Started DB at path {}", fullPath );
+        }
     }
 
     std::string Migration0_2_0To1_0_0::FromVersion() const
@@ -91,7 +113,6 @@ namespace sgns
                                           graphsync_,
                                           scheduler_,
                                           generator_ ) );
-        db->Start();
         m_logger->debug( "Started legacy DB at path {}", fullPath );
 
         return db;

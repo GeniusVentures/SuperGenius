@@ -28,8 +28,7 @@ namespace sgns
         std::string                                                     base58key )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
-        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( newDb,
-                                                                         ioContext,
+        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,
                                                                          scheduler,

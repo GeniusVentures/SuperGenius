@@ -46,8 +46,7 @@ namespace sgns
          * @param   writeBasePath Base path for writing legacy DB files.
          * @param   base58key     Base58-encoded peer key to form legacy paths.
          */
-        Migration0_2_0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                 newDb,
-                               std::shared_ptr<boost::asio::io_context>                        ioContext,
+        Migration0_2_0To1_0_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
