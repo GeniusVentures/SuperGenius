@@ -197,7 +197,7 @@ namespace sgns
                 continue;
             }
 
-            auto                        transaction_path = TransactionManager::GetTransactionPath( *tx );
+            auto                        transaction_path = BASE + tx->GetTransactionFullPath();
             sgns::crdt::HierarchicalKey tx_key( transaction_path );
 
             auto has_tx     = crdt_transaction_->HasKey( tx_key );
@@ -223,8 +223,7 @@ namespace sgns
 
                             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
-                            sgns::crdt::HierarchicalKey replicated_proof_key(
-                                TransactionManager::GetTransactionProofPath( *tx ) );
+                            sgns::crdt::HierarchicalKey replicated_proof_key( BASE + tx->GetProofFullPath() );
 
                             m_logger->debug( "Need to remove previous proof as well {}",
                                              replicated_proof_key.GetKey() );
@@ -243,8 +242,7 @@ namespace sgns
 
                         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
-                        sgns::crdt::HierarchicalKey replicated_proof_key(
-                            TransactionManager::GetTransactionProofPath( *tx ) );
+                        sgns::crdt::HierarchicalKey replicated_proof_key( BASE + tx->GetProofFullPath() );
 
                         m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
                         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
@@ -263,10 +261,8 @@ namespace sgns
                 }
                 if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
                 {
-                    if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
-                    {
-                        topics_.emplace( escrow_tx->GetSrcAddress() );
-                    }
+                    topics_.emplace( escrow_tx->GetSrcAddress() );
+                    topics_.emplace( escrow_tx->GetEscrowSource() );
                 }
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
@@ -274,7 +270,7 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
-                sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+                sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
                 sgns::crdt::GlobalDB::Buffer proof_transaction;
                 proof_transaction.put( maybe_proof_data.value() );
                 BOOST_OUTCOME_TRYV2(

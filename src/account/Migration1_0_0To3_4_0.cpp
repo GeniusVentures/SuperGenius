@@ -139,17 +139,15 @@ namespace sgns
             }
             if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
             {
-                if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                }
+                topics_.emplace( escrow_tx->GetSrcAddress() );
+                topics_.emplace( escrow_tx->GetEscrowSource() );
             }
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
             proof_transaction.put( maybe_proof.value() );
             BOOST_OUTCOME_TRYV2(
