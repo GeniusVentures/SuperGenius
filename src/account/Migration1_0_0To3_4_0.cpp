@@ -18,25 +18,15 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
-        db_( std::move( db ) )
+        db_( std::move( db ) ),
+        ioContext_( std::move( ioContext ) ),
+        pubSub_( std::move( pubSub ) ),
+        graphsync_( std::move( graphsync ) ),
+        scheduler_( std::move( scheduler ) ),
+        generator_( std::move( generator ) ),
+        writeBasePath_( std::move( writeBasePath ) ),
+        base58key_( std::move( base58key ) )
     {
-        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.01.%1%";
-
-        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key ).str();
-        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath % legacyNetworkFullPath ).str();
-
-        logger_->debug( "Initializing legacy DB at path {}", fullPath );
-
-        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext,
-                                                   fullPath,
-                                                   pubSub,
-                                                   crdt::CrdtOptions::DefaultOptions(),
-                                                   graphsync,
-                                                   scheduler,
-                                                   generator );
-
-        db_1_0_0_ = std::move( maybe_db_1_0_0.value() );
-        logger_->debug( "Started legacy DB at path {}", fullPath );
     }
 
     Migration1_0_0To3_4_0::~Migration1_0_0To3_4_0() {}
@@ -85,6 +75,13 @@ namespace sgns
         return false; // Migration is not required, 1_0_0 is already fixed
     }
 
+    outcome::result<void> Migration1_0_0To3_4_0::Init()
+    {
+        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        db_1_0_0_ = std::move( legacy_db );
+        return outcome::success();
+    }
+
     outcome::result<void> Migration1_0_0To3_4_0::Apply()
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
@@ -124,7 +121,7 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_1_0_0_->Get( { TransactionManager::GetTransactionProofPath( *tx ) } );
+            auto maybe_proof = db_1_0_0_->Get( { BASE + tx->GetProofFullPath() } );
 
             if ( !maybe_proof.has_value() )
             {
@@ -186,6 +183,39 @@ namespace sgns
         OUTCOME_TRY( db_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
+        return outcome::success();
+    }
+
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration1_0_0To3_4_0::InitLegacyDb()
+    {
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.01.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
+        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
+
+        logger_->debug( "Initializing legacy DB at path {}", fullPath );
+
+        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext_,
+                                                   fullPath,
+                                                   pubSub_,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync_,
+                                                   scheduler_,
+                                                   generator_ );
+
+        if ( !maybe_db_1_0_0.has_value() )
+        {
+            logger_->error( "Legacy DB error at path {}", fullPath );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        logger_->debug( "Started legacy DB at path {}", fullPath );
+        return std::move( maybe_db_1_0_0.value() );
+    }
+
+    outcome::result<void> Migration1_0_0To3_4_0::ShutDown()
+    {
+        db_1_0_0_.reset();
         return outcome::success();
     }
 }

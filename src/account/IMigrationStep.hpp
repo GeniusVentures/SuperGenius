@@ -36,10 +36,21 @@ namespace sgns
         virtual std::string ToVersion() const = 0;
 
         /**
+         * @brief       Initializes internal variables after constructor
+         * @return      Outcome of the operation
+         */
+        virtual outcome::result<void> Init() = 0;
+        /**
          * @brief Execute the migration logic.
          * @return Outcome of the operation.
          */
         virtual outcome::result<void> Apply() = 0;
+
+        /**
+         * @brief       Shuts down internal variables
+         * @return      Outcome of the operation
+         */
+        virtual outcome::result<void> ShutDown() = 0;
 
         /**
          * @brief   Check if migration is required.

@@ -62,8 +62,10 @@ namespace sgns
         {
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
+            OUTCOME_TRY( step->Init() );
+            
             OUTCOME_TRY( bool is_req, step->IsRequired() );
-
+            
             if ( is_req )
             {
                 OUTCOME_TRY( step->Apply() );
@@ -73,6 +75,8 @@ namespace sgns
             {
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
+            OUTCOME_TRY( step->ShutDown() );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 
         const auto currentVersion = ( boost::format( "%d.%d.%d" ) % version::SuperGeniusVersionMajor() %

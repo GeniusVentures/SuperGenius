@@ -136,7 +136,7 @@ namespace sgns::crdt
                 if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
                      dataStoreResult.has_value() )
                 {
-                    dataStore = dataStoreResult.value();
+                    dataStore = std::move(dataStoreResult.value());
                 }
                 else
                 {

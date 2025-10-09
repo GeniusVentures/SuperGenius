@@ -36,30 +36,6 @@ namespace sgns
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) )
     {
-        static constexpr auto DATABASE_1_0_0_PREFIX = "/SuperGNUSNode.TestNet.2a.01.%1%";
-
-        const auto legacyNetworkFullPath = ( boost::format( DATABASE_1_0_0_PREFIX ) % base58key_ ).str();
-        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
-
-        m_logger->debug( "Initializing 1.0.0 DB at path {}", fullPath );
-
-        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext_,
-                                                   fullPath,
-                                                   pubSub_,
-                                                   crdt::CrdtOptions::DefaultOptions(),
-                                                   graphsync_,
-                                                   scheduler_,
-                                                   generator_ );
-
-        if ( !maybe_db_1_0_0.has_value() )
-        {
-            m_logger->error( "1.0.0 database not created on {}", fullPath );
-        }
-        else
-        {
-            newDb_ = std::move( maybe_db_1_0_0.value() );
-            m_logger->debug( "Started DB at path {}", fullPath );
-        }
     }
 
     std::string Migration0_2_0To1_0_0::FromVersion() const
@@ -70,6 +46,13 @@ namespace sgns
     std::string Migration0_2_0To1_0_0::ToVersion() const
     {
         return "1.0.0";
+    }
+
+    outcome::result<void> Migration0_2_0To1_0_0::Init()
+    {
+        OUTCOME_TRY( auto &&target_db, InitTargetDb() );
+        newDb_ = std::move( target_db );
+        return outcome::success();
     }
 
     outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
@@ -94,6 +77,34 @@ namespace sgns
             m_logger->debug( "Not migrated: {}", version.toString() );
         }
         return true;
+    }
+
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitTargetDb()
+    {
+        static constexpr auto DATABASE_1_0_0_PREFIX = "/SuperGNUSNode.TestNet.2a.01.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( DATABASE_1_0_0_PREFIX ) % base58key_ ).str();
+        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
+
+        m_logger->debug( "Initializing 1.0.0 DB at path {}", fullPath );
+
+        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext_,
+                                                   fullPath,
+                                                   pubSub_,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync_,
+                                                   scheduler_,
+                                                   generator_ );
+
+        if ( !maybe_db_1_0_0.has_value() )
+        {
+            m_logger->error( "1.0.0 database not created on {}", fullPath );
+        }
+        else
+        {
+            m_logger->debug( "Started DB at path {}", fullPath );
+        }
+        return std::move( maybe_db_1_0_0.value() );
     }
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
@@ -339,6 +350,15 @@ namespace sgns
         OUTCOME_TRY( newDb_->GetDataStore()->put( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
+
+        return outcome::success();
+    }
+
+    outcome::result<void> Migration0_2_0To1_0_0::ShutDown()
+    {
+        m_logger->debug( "Deleting 1.0.0 DB with previous count {}", newDb_.use_count() );
+        crdt_transaction_.reset();
+        newDb_.reset();
         return outcome::success();
     }
 

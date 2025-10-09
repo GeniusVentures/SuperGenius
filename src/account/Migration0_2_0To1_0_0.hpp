@@ -66,6 +66,8 @@ namespace sgns
          */
         std::string ToVersion() const override;
 
+        outcome::result<void> Init() override;
+
         /**
          * @brief   Check if this migration should run.
          * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
@@ -78,11 +80,19 @@ namespace sgns
          */
         outcome::result<void> Apply() override;
 
+        outcome::result<void> ShutDown() override;
+
     private:
+        /**
+         * @brief       Opens the target database to migrate into
+         * @return      The pointer to the database of Error
+         */
+        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitTargetDb();
+
         /**
          * @brief   Open a legacy GlobalDB given a suffix ("out" or "in").
          * @param   suffix  Suffix string for legacy path.
-         * @return  outcome::result<std::shared_ptr<crdt::GlobalDB>>  opened DB or error.
+         * @return  opened DB or error.
          */
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb( const std::string &suffix );
 

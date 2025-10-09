@@ -45,6 +45,8 @@ namespace sgns
          */
         std::string ToVersion() const override;
 
+        outcome::result<void> Init() override;
+
         /**
          * @brief   Check if this migration should run.
          * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
@@ -57,7 +59,21 @@ namespace sgns
          */
         outcome::result<void> Apply() override;
 
+        outcome::result<void> ShutDown() override;
+
     private:
+        /**
+         * @brief   Open a legacy GlobalDB from 1.0.0
+         * @return  opened DB or error.
+         */
+        outcome::result<std::shared_ptr<crdt::GlobalDB>>                InitLegacyDb();
+        std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
+        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< Request ID generator.
+        std::string                     writeBasePath_;                             ///< Base path for writing DB files.
+        std::string                     base58key_;                                 ///< Key to build legacy paths.
         base::Logger                    logger_ = base::createLogger( "MigrationStep" ); ///< Logger for this step.
         std::shared_ptr<crdt::GlobalDB> db_;                                             ///< Target GlobalDB.
         std::shared_ptr<crdt::GlobalDB> db_1_0_0_;
