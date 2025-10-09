@@ -35,7 +35,7 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
-        logger_->debug( "GraphSyncer created{} ", reinterpret_cast<size_t>( this ) );
+        logger_->debug( "GraphSyncer created {} ", reinterpret_cast<size_t>( this ) );
     }
 
     GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId             &peer,
@@ -1025,6 +1025,7 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
+        graphsync_->stop();
     }
 
 }

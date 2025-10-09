@@ -71,9 +71,6 @@ namespace sgns::crdt
         ~GraphsyncDAGSyncer() override
         {
             logger_->debug( "~GraphsyncDAGSyncer CALLED" );
-            is_stopped_ = true;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            graphsync_->stop();
         }
 
         outcome::result<void> Listen( const Multiaddress &listen_to );
