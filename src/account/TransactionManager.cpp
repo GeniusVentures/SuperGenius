@@ -53,49 +53,54 @@ namespace sgns
                                                                                      std::move( timestamp_tolerance ),
                                                                                      std::move( mutability_window ) ) );
 
-        bool crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
-            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                if ( auto strong = weak_ptr.lock() )
+        auto monitored_networks = GetMonitoredNetworkIDs();
+        for ( auto network_id : monitored_networks )
+        {
+            std::string blockchain_base            = GetBlockChainBase( network_id );
+            bool        crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+                "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
                 {
-                    return strong->FilterTransaction( element );
-                }
-                return std::nullopt;
-            } );
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        return strong->FilterTransaction( element );
+                    }
+                    return std::nullopt;
+                } );
 
-        bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
-            "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                if ( auto strong = weak_ptr.lock() )
+            bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+                "^/?" + blockchain_base + "[^/]*/proof/[^/]*/[0-9]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
                 {
-                    return strong->FilterProof( element );
-                }
-                return std::nullopt;
-            } );
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        return strong->FilterProof( element );
+                    }
+                    return std::nullopt;
+                } );
 
-        (void)instance->globaldb_m->RegisterNewElementCallback(
-            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                crdt::CRDTCallbackManager::NewDataPair new_data )
-            {
-                if ( auto strong = weak_ptr.lock() )
+            (void)instance->globaldb_m->RegisterNewElementCallback(
+                "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                    crdt::CRDTCallbackManager::NewDataPair new_data )
                 {
-                    strong->NewElementCallback( std::move( new_data ) );
-                }
-            } );
-        (void)instance->globaldb_m->RegisterDeletedElementCallback(
-            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string deleted_key )
-            {
-                if ( auto strong = weak_ptr.lock() )
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->NewElementCallback( std::move( new_data ) );
+                    }
+                } );
+            (void)instance->globaldb_m->RegisterDeletedElementCallback(
+                "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string deleted_key )
                 {
-                    strong->DeleteElementCallback( std::move( deleted_key ) );
-                }
-            } );
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->DeleteElementCallback( std::move( deleted_key ) );
+                    }
+                } );
+        }
         instance->globaldb_m->Start();
 
         return instance;
@@ -138,7 +143,7 @@ namespace sgns
                              full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
             globaldb_m->AddTopicName( full_node_topic_m );
-            globaldb_m->AddTopicName( std::string(GNUS_FULL_NODES_TOPIC_LEGACY) );
+            globaldb_m->AddTopicName( std::string( GNUS_FULL_NODES_TOPIC_LEGACY ) );
         }
         globaldb_m->AddTopicName( account_m->GetAddress() );
     }
@@ -799,13 +804,29 @@ namespace sgns
         return tx_base_path;
     }
 
-    std::string TransactionManager::GetBlockChainBase()
+    std::vector<uint16_t> TransactionManager::GetMonitoredNetworkIDs()
+    {
+        std::vector<uint16_t> monitored_networks{ version::GetNetworkID() };
+        if ( version::GetNetworkID() == version::DEV_NET_ID ) // DEV network
+        {
+            monitored_networks.push_back( version::TEST_NET_ID );
+            monitored_networks.push_back( version::MAIN_NET_ID );
+        }
+        return monitored_networks;
+    }
+
+    std::string TransactionManager::GetBlockChainBase( uint16_t network_id )
     {
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
-        tx_key % version::GetNetworkID();
+        tx_key % network_id;
 
         return tx_key.str();
+    }
+
+    std::string TransactionManager::GetBlockChainBase()
+    {
+        return GetBlockChainBase( version::GetNetworkID() );
     }
 
     outcome::result<std::string> TransactionManager::GetExpectedProofKey(
@@ -981,87 +1002,94 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        m_logger->trace( "[{} - full: {}] Probing incoming transactions on {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         GetBlockChainBase() + "!" + account_m->GetAddress() + "/tx" );
-        OUTCOME_TRY( ( auto &&, transaction_list ),
-                     globaldb_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
+        auto monitored_networks = GetMonitoredNetworkIDs();
 
-        m_logger->trace( "[{} - full: {}] Incoming transaction list grabbed from CRDT with Size {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         transaction_list.size() );
-
-        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
-        for ( const auto &element : transaction_list )
+        for ( auto network_id : monitored_networks )
         {
-            auto transaction_key = globaldb_m->KeyToString( element.first );
-            if ( !transaction_key.has_value() )
+            std::string blockchain_base = GetBlockChainBase( network_id );
+            std::string query_path      = blockchain_base + "!" + account_m->GetAddress() + "/tx";
+            m_logger->trace( "[{} - full: {}] Probing incoming transactions on {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             query_path );
+            OUTCOME_TRY( ( auto &&, transaction_list ),
+                         globaldb_m->QueryKeyValues( blockchain_base, "!" + account_m->GetAddress(), "/tx" ) );
+
+            m_logger->trace( "[{} - full: {}] Incoming transaction list grabbed from CRDT with Size {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             transaction_list.size() );
+
+            //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+            for ( const auto &element : transaction_list )
             {
-                m_logger->debug( "[{} - full: {}] Unable to convert a key to string",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                continue;
-            }
-            if ( incoming_tx_processed_m.find( transaction_key.value() ) != incoming_tx_processed_m.end() )
-            {
-                m_logger->trace( "[{} - full: {}] Transaction already processed: {}",
+                auto transaction_key = globaldb_m->KeyToString( element.first );
+                if ( !transaction_key.has_value() )
+                {
+                    m_logger->debug( "[{} - full: {}] Unable to convert a key to string",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                    continue;
+                }
+                if ( incoming_tx_processed_m.find( transaction_key.value() ) != incoming_tx_processed_m.end() )
+                {
+                    m_logger->trace( "[{} - full: {}] Transaction already processed: {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    continue;
+                }
+
+                m_logger->debug( "[{} - full: {}] Finding incoming transaction: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  transaction_key.value() );
-                continue;
-            }
+                auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
+                if ( !maybe_transaction.has_value() )
+                {
+                    m_logger->debug( "[{} - full: {}] Can't fetch transaction {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    continue;
+                }
 
-            m_logger->debug( "[{} - full: {}] Finding incoming transaction: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             transaction_key.value() );
-            auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
-            if ( !maybe_transaction.has_value() )
-            {
-                m_logger->debug( "[{} - full: {}] Can't fetch transaction {}",
+                m_logger->debug( "[{} - full: {}] Transaction fetched successfully: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  transaction_key.value() );
-                continue;
-            }
 
-            m_logger->debug( "[{} - full: {}] Transaction fetched successfully: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             transaction_key.value() );
-
-            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-            if ( maybe_parsed.has_error() )
-            {
-                m_logger->debug( "[{} - full: {}] Can't parse the transaction {}",
+                auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+                if ( maybe_parsed.has_error() )
+                {
+                    m_logger->debug( "[{} - full: {}] Can't parse the transaction {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    continue;
+                }
+                m_logger->debug( "[{} - full: {}] Transaction parsed successfully: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  transaction_key.value() );
-                continue;
-            }
-            m_logger->debug( "[{} - full: {}] Transaction parsed successfully: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             transaction_key.value() );
 
-            account_m->SetPeerConfirmedNonce( maybe_transaction.value()->dag_st.nonce(),
-                                              maybe_transaction.value()->dag_st.source_addr() );
-            m_logger->debug( "[{} - full: {}] Updated peer nonce for {} to {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             maybe_transaction.value()->dag_st.source_addr().substr( 0, 8 ),
-                             maybe_transaction.value()->dag_st.nonce() );
-
-            {
-                m_logger->trace( "[{} - full: {}] Inserting into incoming {}",
+                account_m->SetPeerConfirmedNonce( maybe_transaction.value()->dag_st.nonce(),
+                                                  maybe_transaction.value()->dag_st.source_addr() );
+                m_logger->debug( "[{} - full: {}] Updated peer nonce for {} to {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 transaction_key.value() );
-                std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
-                incoming_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
-                                                                              TransactionStatus::CONFIRMED };
+                                 maybe_transaction.value()->dag_st.source_addr().substr( 0, 8 ),
+                                 maybe_transaction.value()->dag_st.nonce() );
+
+                {
+                    m_logger->trace( "[{} - full: {}] Inserting into incoming {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
+                    incoming_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
+                                                                                  TransactionStatus::CONFIRMED };
+                }
             }
         }
         return outcome::success();
@@ -1069,73 +1097,80 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckOutgoing()
     {
-        m_logger->trace( "[{} - full: {}] Probing outgoing transactions on {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         GetBlockChainBase() );
-        OUTCOME_TRY( ( auto &&, transaction_list ),
-                     globaldb_m->QueryKeyValues( GetBlockChainBase(), account_m->GetAddress(), "/tx" ) );
+        auto monitored_networks = GetMonitoredNetworkIDs();
 
-        m_logger->trace( "[{} - full: {}] Transaction list grabbed from CRDT",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m );
-
-        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
-        for ( const auto &element : transaction_list )
+        for ( auto network_id : monitored_networks )
         {
-            auto transaction_key = globaldb_m->KeyToString( element.first );
-            if ( !transaction_key.has_value() )
+            std::string blockchain_base = GetBlockChainBase( network_id );
+
+            m_logger->trace( "[{} - full: {}] Probing outgoing transactions on {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             blockchain_base );
+            OUTCOME_TRY( ( auto &&, transaction_list ),
+                         globaldb_m->QueryKeyValues( blockchain_base, account_m->GetAddress(), "/tx" ) );
+
+            m_logger->trace( "[{} - full: {}] Transaction list grabbed from CRDT",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+
+            //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+            for ( const auto &element : transaction_list )
             {
-                m_logger->debug( "[{} - full: {}] Unable to convert a key to string",
+                auto transaction_key = globaldb_m->KeyToString( element.first );
+                if ( !transaction_key.has_value() )
+                {
+                    m_logger->debug( "[{} - full: {}] Unable to convert a key to string",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                    continue;
+                }
+                if ( outgoing_tx_processed_m.find( transaction_key.value() ) != outgoing_tx_processed_m.end() )
+                {
+                    m_logger->trace( "[{} - full: {}] Transaction already processed: {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    continue;
+                }
+
+                auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
+                if ( !maybe_transaction.has_value() )
+                {
+                    m_logger->debug( "[{} - full: {}] Can't fetch transaction",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                    continue;
+                }
+                m_logger->debug( "[{} - full: {}] Transaction {} fetched on {}",
                                  account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                continue;
-            }
-            if ( outgoing_tx_processed_m.find( transaction_key.value() ) != outgoing_tx_processed_m.end() )
-            {
-                m_logger->trace( "[{} - full: {}] Transaction already processed: {}",
+                                 full_node_m,
+                                 maybe_transaction.value()->dag_st.data_hash(),
+                                 transaction_key.value() );
+                auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+                if ( maybe_parsed.has_error() )
+                {
+                    m_logger->debug( "[{} - full: {}] Can't parse the transaction",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                    continue;
+                }
+                m_logger->debug( "[{} - full: {}] Transaction parsed {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  transaction_key.value() );
-                continue;
-            }
 
-            auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
-            if ( !maybe_transaction.has_value() )
-            {
-                m_logger->debug( "[{} - full: {}] Can't fetch transaction",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                continue;
-            }
-            m_logger->debug( "[{} - full: {}] Transaction {} fetched on {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             maybe_transaction.value()->dag_st.data_hash(),
-                             transaction_key.value() );
-            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-            if ( maybe_parsed.has_error() )
-            {
-                m_logger->debug( "[{} - full: {}] Can't parse the transaction",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                continue;
-            }
-            m_logger->debug( "[{} - full: {}] Transaction parsed {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             transaction_key.value() );
+                account_m->SetLocalConfirmedNonce( maybe_transaction.value()->dag_st.nonce() );
 
-            account_m->SetLocalConfirmedNonce( maybe_transaction.value()->dag_st.nonce() );
-
-            {
-                m_logger->trace( "[{} - full: {}] Inserting into outgoing {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 transaction_key.value() );
-                std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                outgoing_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
-                                                                              TransactionStatus::CONFIRMED };
+                {
+                    m_logger->trace( "[{} - full: {}] Inserting into outgoing {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     transaction_key.value() );
+                    std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                    outgoing_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
+                                                                                  TransactionStatus::CONFIRMED };
+                }
             }
         }
         return outcome::success();

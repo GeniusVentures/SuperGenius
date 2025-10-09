@@ -174,8 +174,10 @@ namespace sgns
         outcome::result<bool>    SendTransaction();
         outcome::result<void>    ConfirmTransactions();
 
-        static std::string GetTransactionBasePath( const std::string &address );
-        static std::string GetBlockChainBase();
+        static std::string           GetTransactionBasePath( const std::string &address );
+        static std::vector<uint16_t> GetMonitoredNetworkIDs();
+        static std::string           GetBlockChainBase( uint16_t network_id );
+        static std::string           GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
