@@ -919,6 +919,16 @@ namespace sgns
         return account_->GetBalance( token_id );
     }
 
+    uint64_t GeniusNode::GetBalance( const std::string &address )
+    {
+        return account_->GetBalance( address );
+    }
+
+    uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
+    {
+        return account_->GetBalance( token_id, address );
+    }
+
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         boost::asio::post(

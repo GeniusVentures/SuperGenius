@@ -129,7 +129,7 @@ namespace sgns
                 sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
-            TransferProof prover( static_cast<uint64_t>( account->GetBalance<uint64_t>() ),
+            TransferProof prover( static_cast<uint64_t>( account->GetBalance() ),
                                   static_cast<uint64_t>( amount ) );
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
 

@@ -108,6 +108,8 @@ namespace sgns
         void     RefreshUPNP( uint16_t pubsubport );
         uint64_t GetBalance();
         uint64_t GetBalance( const TokenID token_id );
+        uint64_t GetBalance( const std::string &address );
+        uint64_t GetBalance( const TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {

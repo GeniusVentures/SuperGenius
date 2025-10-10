@@ -319,7 +319,7 @@ namespace sgns
     void TransactionManager::PrintAccountInfo()
     {
         std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
-        std::cout << "Balance: " << account_m->GetBalance<std::string>() << std::endl;
+        std::cout << "Balance: " << std::to_string( account_m->GetBalance() ) << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
     }
@@ -349,7 +349,7 @@ namespace sgns
         transfer_transaction->MakeSignature( *account_m );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
@@ -424,7 +424,7 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
@@ -547,7 +547,7 @@ namespace sgns
 
     uint64_t TransactionManager::GetBalance()
     {
-        return account_m->GetBalance<uint64_t>();
+        return account_m->GetBalance();
     }
 
     void TransactionManager::Update()
@@ -1238,7 +1238,7 @@ namespace sgns
         m_logger->info( "[{} - full: {}] Created tokens, balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
-                        account_m->GetBalance<std::string>() );
+                        std::to_string(account_m->GetBalance()) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1387,7 +1387,7 @@ namespace sgns
                         full_node_m,
                         mint_tx->GetAmount(),
                         mint_tx->dag_st.data_hash(),
-                        account_m->GetBalance<std::string>() );
+                        std::to_string( account_m->GetBalance() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),

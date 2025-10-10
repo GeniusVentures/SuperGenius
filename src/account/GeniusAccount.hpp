@@ -72,11 +72,9 @@ namespace sgns
          * @brief       Get the account's balance
          * @return      The total balance of the account
          */
-        template <typename T>
-        [[nodiscard]] T GetBalance() const;
+        [[nodiscard]] uint64_t GetBalance() const;
 
-        template <typename T>
-        [[nodiscard]] T GetBalance( const std::string &address ) const;
+        [[nodiscard]] uint64_t GetBalance( const std::string &address ) const;
 
         /**
          * @brief       Get the accounts balance for a specific token

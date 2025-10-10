@@ -36,7 +36,7 @@ TEST( GeniusAccount, TotalBalance )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
-    EXPECT_EQ( account->GetBalance<uint64_t>(), 140ull );
+    EXPECT_EQ( account->GetBalance(), 140ull );
 }
 
 TEST( GeniusAccount, BalanceByToken )
@@ -69,8 +69,8 @@ TEST( GeniusAccount, StringTemplateBalance )
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    std::string s = account->GetBalance<std::string>();
-    EXPECT_EQ( s, std::to_string( account->GetBalance<uint64_t>() ) );
+    std::string s = std::to_string(account->GetBalance());
+    EXPECT_EQ( s, std::to_string( account->GetBalance() ) );
 }
 
 TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
@@ -115,7 +115,7 @@ TEST( GeniusAccount, RefreshAllUTXOsRemovesAll )
     }
     account->ConsumeUTXOs( infos );
     EXPECT_TRUE( account->GetUTXOs().empty() );
-    EXPECT_EQ( account->GetBalance<uint64_t>(), 0ull );
+    EXPECT_EQ( account->GetBalance(), 0ull );
 }
 
 TEST( GeniusUTXO, PropertyAccessors )

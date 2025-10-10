@@ -121,7 +121,6 @@ namespace sgns
         return eth_keypair->GetEntirePubValue();
     }
 
-    template <>
     uint64_t GeniusAccount::GetBalance( const std::string &address ) const
     {
         uint64_t retval         = 0;
@@ -149,27 +148,15 @@ namespace sgns
         return retval;
     }
 
-    template <>
-    std::string GeniusAccount::GetBalance( const std::string &address ) const
-    {
-        return std::to_string( GetBalance<uint64_t>( address ) );
-    }
 
     TokenID GeniusAccount::GetToken() const
     {
         return token;
     }
 
-    template <>
     uint64_t GeniusAccount::GetBalance() const
     {
-        return GetBalance<uint64_t>( GetAddress() );
-    }
-
-    template <>
-    std::string GeniusAccount::GetBalance() const
-    {
-        return std::to_string( GetBalance<uint64_t>() );
+        return GetBalance( GetAddress() );
     }
 
     uint64_t GeniusAccount::GetBalance( const TokenID token_id ) const
