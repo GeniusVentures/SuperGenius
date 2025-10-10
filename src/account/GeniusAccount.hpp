@@ -47,14 +47,15 @@ namespace sgns
          */
         static std::shared_ptr<GeniusAccount> New( TokenID          token_id,
                                                    std::string_view base_path,
-                                                   const char      *eth_private_key );
+                                                   const char      *eth_private_key,
+                                                   bool             full_node = false);
         /**
          * @brief       Initialize the messenger for the account
          * @param[in]   pubsub pubsub instance
          * @param[in]   full_node parameter to indicate if the account is a full node
          * @return      true if succeeds, false otherwise
          */
-        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, bool full_node );
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -74,12 +75,17 @@ namespace sgns
         template <typename T>
         [[nodiscard]] T GetBalance() const;
 
+        template <typename T>
+        [[nodiscard]] T GetBalance( const std::string &address ) const;
+
         /**
          * @brief       Get the accounts balance for a specific token
          * @param[in]   token_id Token ID to get the balance
          * @return      The balance of the account for the specific token
          */
         uint64_t GetBalance( const TokenID token_id ) const;
+
+        uint64_t GetBalance( const TokenID token_id, const std::string &address ) const;
 
         /**
          * @brief       Get the account's token
@@ -101,13 +107,23 @@ namespace sgns
          * @param[in]   new_utxo The new UTXO to be added
          * @return      true if the UTXO was added, false otherwise
          */
-        bool PutUTXO( const GeniusUTXO &new_utxo );
+        bool PutUTXO( const GeniusUTXO &new_utxo, const std::string &address );
+
+        bool PutUTXO( const GeniusUTXO &new_utxo )
+        {
+            return PutUTXO( new_utxo, GetAddress() );
+        }
 
         /**
          * @brief       Delete a UTXO from the account
          * @param[in]   utxo_id The ID of the UTXO to be deleted
          */
-        void DeleteUTXO( const base::Hash256 &utxo_id );
+        void DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address );
+
+        void DeleteUTXO( const base::Hash256 &utxo_id )
+        {
+            DeleteUTXO( utxo_id, GetAddress() );
+        }
 
         /**
          * @brief       Consume UTXOs from the account
@@ -115,6 +131,30 @@ namespace sgns
          * @return      true if all UTXOs were consumed, false otherwise
          */
         bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
+
+        /**
+         * @brief       Get UTXOs for a specific address
+         * @param[in]   address The address to get UTXOs for (defaults to current account address)
+         * @return      Vector of UTXOs for the address
+         */
+        std::vector<GeniusUTXO> GetUTXOs( const std::string &address ) const;
+
+        std::vector<GeniusUTXO> GetUTXOs() const
+        {
+            return GetUTXOs( GetAddress() );
+        }
+
+        /**
+         * @brief       Set UTXOs for a specific address (replaces existing UTXOs)
+         * @param[in]   utxos Vector of UTXOs to set for the address
+         * @param[in]   address The address to set UTXOs for
+         */
+        void SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
+
+        void SetUTXOs( const std::vector<GeniusUTXO> &utxos )
+        {
+            SetUTXOs( utxos, GetAddress() );
+        }
 
         /**
          * @brief       Verify a signature using the Genius account's public key
@@ -183,11 +223,14 @@ namespace sgns
          */
         void IncProposedNonce();
 
-        TokenID                 token; ///< Token ID of the account
-        std::vector<GeniusUTXO> utxos; ///< Vector of UTXOs of the account
-
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+
+        TokenID token;         ///< Token ID of the account
+        bool    is_full_node_; ///< Whether this account is a full node
+
+        std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address
+        mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
@@ -202,7 +245,7 @@ namespace sgns
          * @brief       Private constructor a new Genius Account object
          * @param[in]   token_id
          */
-        GeniusAccount( TokenID token_id );
+        GeniusAccount( TokenID token_id, bool full_node );
 
         /**
          * @brief       Derives a Genius address from a given Ethereum private key

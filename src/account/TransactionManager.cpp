@@ -339,7 +339,7 @@ namespace sgns
         }
         OUTCOME_TRY(
             auto &&params,
-            UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination, token_id ) );
+            UTXOTxParameters::create( account_m->GetUTXOs(), account_m->GetAddress(), amount, destination, token_id ) );
 
         params.SignParameters( account_m );
 
@@ -355,7 +355,7 @@ namespace sgns
         maybe_proof = std::move( proof_result );
 #endif
 
-        account_m->utxos = UTXOTxParameters::ReserveUTXOs( account_m->utxos, params );
+        account_m->SetUTXOs( UTXOTxParameters::ReserveUTXOs( account_m->GetUTXOs(), params ) );
 
         EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
@@ -405,7 +405,7 @@ namespace sgns
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
         OUTCOME_TRY( ( auto &&, params ),
-                     UTXOTxParameters::create( account_m->utxos,
+                     UTXOTxParameters::create( account_m->GetUTXOs(),
                                                account_m->GetAddress(),
                                                amount,
                                                "0x" + hash_data.toReadableString(),
@@ -413,7 +413,7 @@ namespace sgns
 
         params.SignParameters( account_m );
 
-        account_m->utxos        = UTXOTxParameters::ReserveUTXOs( account_m->utxos, params );
+        account_m->SetUTXOs( UTXOTxParameters::ReserveUTXOs( account_m->GetUTXOs(), params ) );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
@@ -1191,12 +1191,9 @@ namespace sgns
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
-            if ( dest_infos[i].dest_address == account_m->GetAddress() )
-            {
-                auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
-                GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-                account_m->PutUTXO( new_utxo );
-            }
+            auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
+            GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
+            account_m->PutUTXO( new_utxo, dest_infos[i].dest_address );
 
             m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1235,16 +1232,13 @@ namespace sgns
 
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
 
-        if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
-        {
-            auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
-            GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
-            account_m->PutUTXO( new_utxo );
-            m_logger->info( "[{} - full: {}] Created tokens, balance {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            account_m->GetBalance<std::string>() );
-        }
+        auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
+        GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
+        account_m->PutUTXO( new_utxo, mint_tx->GetSrcAddress() );
+        m_logger->info( "[{} - full: {}] Created tokens, balance {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        account_m->GetBalance<std::string>() );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1272,14 +1266,11 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
                 if ( dest_infos.outputs_.size() > 1 )
                 {
-                    if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress() )
-                    {
-                        GeniusUTXO new_utxo( hash,
-                                             1,
-                                             dest_infos.outputs_[1].encrypted_amount,
-                                             dest_infos.outputs_[1].token_id );
-                        account_m->PutUTXO( new_utxo );
-                    }
+                    GeniusUTXO new_utxo( hash,
+                                         1,
+                                         dest_infos.outputs_[1].encrypted_amount,
+                                         dest_infos.outputs_[1].token_id );
+                    account_m->PutUTXO( new_utxo, dest_infos.outputs_[1].dest_address );
                 }
                 account_m->ConsumeUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
@@ -1340,11 +1331,8 @@ namespace sgns
 
         for ( const auto &dest_info : dest_infos )
         {
-            if ( dest_info.dest_address == account_m->GetAddress() )
-            {
-                auto hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
-                account_m->DeleteUTXO( hash );
-            }
+            auto hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
+            account_m->DeleteUTXO( hash, dest_info.dest_address );
 
             m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1380,7 +1368,7 @@ namespace sgns
             }
         }
         UTXOTxParameters params( transfer_tx->GetInputInfos(), transfer_tx->GetDstInfos() );
-        account_m->utxos = UTXOTxParameters::RollbackUTXOs( account_m->utxos, params );
+        account_m->SetUTXOs( UTXOTxParameters::RollbackUTXOs( account_m->GetUTXOs(), params ) );
 
         return topics;
     }
@@ -1392,17 +1380,14 @@ namespace sgns
 
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
 
-        if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
-        {
-            auto hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
-            account_m->DeleteUTXO( hash );
-            m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            mint_tx->GetAmount(),
-                            mint_tx->dag_st.data_hash(),
-                            account_m->GetBalance<std::string>() );
-        }
+        auto hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
+        account_m->DeleteUTXO( hash, mint_tx->GetSrcAddress() );
+        m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        mint_tx->GetAmount(),
+                        mint_tx->dag_st.data_hash(),
+                        account_m->GetBalance<std::string>() );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1430,10 +1415,7 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
                 if ( dest_infos.outputs_.size() > 1 )
                 {
-                    if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress() )
-                    {
-                        account_m->DeleteUTXO( hash );
-                    }
+                    account_m->DeleteUTXO( hash, dest_infos.outputs_[1].dest_address );
                 }
                 for ( auto &input : escrow_tx->GetUTXOParameters().inputs_ )
                 {
@@ -1447,7 +1429,7 @@ namespace sgns
                         OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
-                account_m->utxos = UTXOTxParameters::RollbackUTXOs( account_m->utxos, dest_infos );
+                account_m->SetUTXOs( UTXOTxParameters::RollbackUTXOs( account_m->GetUTXOs(), dest_infos ) );
             }
         }
 

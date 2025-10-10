@@ -148,7 +148,7 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
+        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -255,7 +255,7 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
-        account_->InitMessenger( pubsub_, is_full_node );
+        account_->InitMessenger( pubsub_ );
         pubs.wait();
 
         if ( !is_full_node )

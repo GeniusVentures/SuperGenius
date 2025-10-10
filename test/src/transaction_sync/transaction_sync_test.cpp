@@ -106,7 +106,7 @@ namespace sgns
             const std::string                   &destination )
         {
             OUTCOME_TRY( auto &&params,
-                         sgns::UTXOTxParameters::create( account->utxos,
+                         sgns::UTXOTxParameters::create( account->GetUTXOs(),
                                                          account->GetAddress(),
                                                          amount,
                                                          destination,
@@ -135,7 +135,7 @@ namespace sgns
 
             maybe_proof = std::move( proof_result );
 
-            account->utxos = sgns::UTXOTxParameters::ReserveUTXOs( account->utxos, params );
+            account->SetUTXOs( sgns::UTXOTxParameters::ReserveUTXOs( account->GetUTXOs(), params ) );
             return std::make_pair( transfer_transaction, maybe_proof );
         }
 
