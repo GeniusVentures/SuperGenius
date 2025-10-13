@@ -129,7 +129,7 @@ namespace sgns
         instance->transaction_manager_->Start();
         if ( instance->isprocessor_ )
         {
-            instance->processing_service_->StartProcessing( instance->processing_grid_chanel_topic_ );
+            instance->StartProcessing();
         }
 
         if ( instance->autodht_ )

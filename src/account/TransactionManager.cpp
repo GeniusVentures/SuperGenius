@@ -168,12 +168,12 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        if ( state_m != State::CREATING || stopped_.load() )
+        if ( GetState() != State::CREATING || stopped_.load() )
         {
             return;
         }
 
-        state_m = State::INITIALIZING;
+        ChangeState( State::INITIALIZING );
 
         if ( !stopped_.load() )
         {
@@ -241,11 +241,11 @@ namespace sgns
                          full_node_m,
                          time_since_last_loop );
 
-        switch ( state_m )
+        switch ( GetState() )
         {
             case State::INITIALIZING:
                 this->InitNonce( 5000 );
-                if ( state_m == State::READY )
+                if ( GetState() == State::READY )
                 {
                     m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
                                      account_m->GetAddress().substr( 0, 8 ),
@@ -333,7 +333,7 @@ namespace sgns
                                                                     const std::string &destination,
                                                                     TokenID            token_id )
     {
-        if ( state_m != State::READY )
+        if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -349,8 +349,7 @@ namespace sgns
         transfer_transaction->MakeSignature( *account_m );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ),
-                              static_cast<uint64_t>( amount ) );
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ), static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -367,7 +366,7 @@ namespace sgns
                                                                 std::string chainid,
                                                                 TokenID     tokenid )
     {
-        if ( state_m != State::READY )
+        if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -398,7 +397,7 @@ namespace sgns
                                                                                             uint64_t peers_cut,
                                                                                             const std::string &job_id )
     {
-        if ( state_m != State::READY )
+        if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -424,8 +423,7 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ),
-                              static_cast<uint64_t>( amount ) );
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance() ), static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -676,7 +674,7 @@ namespace sgns
                                  full_node_m,
                                  expected_next_nonce,
                                  transaction->dag_st.nonce() );
-                state_m          = State::SYNCHING;
+                ChangeState( State::SYNCHING );
                 auto local_nonce = transaction->dag_st.nonce();
                 while ( --local_nonce > confirmed_nonce )
                 {
@@ -706,7 +704,7 @@ namespace sgns
                                  full_node_m,
                                  expected_next_nonce,
                                  transaction->dag_st.nonce() );
-                state_m = State::SYNCHING;
+                ChangeState( State::SYNCHING );
 
                 {
                     std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
@@ -1238,7 +1236,7 @@ namespace sgns
         m_logger->info( "[{} - full: {}] Created tokens, balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
-                        std::to_string(account_m->GetBalance()) );
+                        std::to_string( account_m->GetBalance() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1668,7 +1666,7 @@ namespace sgns
                                  local_nonce_result.value() );
                 if ( local_nonce_result.value() >= network_confirmed_nonce )
                 {
-                    state_m = State::READY;
+                    ChangeState( State::READY );
                 }
             }
             else
@@ -1683,8 +1681,7 @@ namespace sgns
             m_logger->debug( "[{} - full: {}] No node from the network, assume we are updated",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
-
-            state_m = State::READY;
+            ChangeState( State::READY );
         }
     }
 
@@ -1723,7 +1720,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              expected_next_nonce );
-            state_m = State::READY;
+            ChangeState( State::READY );
         }
         else if ( proposed_nonce > expected_next_nonce )
         {
@@ -2501,6 +2498,39 @@ namespace sgns
 
         // Notify the condition variable to wake up the main loop
         cv_.notify_one();
+    }
+
+    void TransactionManager::RegisterStateChangeCallback( StateChangeCallback callback )
+    {
+        std::lock_guard lock( state_change_callback_mutex_ );
+        state_change_callback_ = callback;
+    }
+
+    void TransactionManager::UnregisterStateChangeCallback()
+    {
+        std::lock_guard lock( state_change_callback_mutex_ );
+        state_change_callback_ = nullptr;
+    }
+
+    void TransactionManager::ChangeState( State new_state )
+    {
+        {
+            std::lock_guard lock( state_change_callback_mutex_ );
+            if ( state_m != new_state )
+            {
+                m_logger->info( "[{} - full: {}] State changed from {} to {}",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                static_cast<int>( state_m ),
+                                static_cast<int>( new_state ) );
+                auto old_state = state_m;
+                state_m        = new_state;
+                if ( state_change_callback_ )
+                {
+                    state_change_callback_( old_state, new_state );
+                }
+            }
+        }
     }
 
 }

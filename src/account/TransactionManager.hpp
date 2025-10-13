@@ -46,10 +46,6 @@ namespace sgns
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
 
-        using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
-        using TransactionBatch = std::vector<TransactionPair>;
-        using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
-
         /**
          * @brief       State of the Transaction Manager
          */
@@ -60,6 +56,11 @@ namespace sgns
             SYNCHING,     ///< Synching the transactions
             READY,        ///< Ready to process transactions
         };
+
+        using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
+        using TransactionBatch = std::vector<TransactionPair>;
+        using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
+        using StateChangeCallback = std::function<void( const State &previous, const State &current )>;
 
         /**
          * @brief       Status of a transaction
@@ -143,8 +144,13 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
-        // Stop the periodic Update() loop and prevent re-posting.
+        /**
+         * @brief      Stops the TransactionManager processing
+         */
         void Stop();
+
+        void RegisterStateChangeCallback( StateChangeCallback callback );
+        void UnregisterStateChangeCallback();
 
     protected:
         friend class GeniusNode;
@@ -212,6 +218,8 @@ namespace sgns
         std::string                              full_node_topic_m; ///< formatted full-node topic
         void                                     TickOnce();
         State                                    state_m;
+        std::mutex                               state_change_callback_mutex_;
+        StateChangeCallback                      state_change_callback_;
 
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
@@ -293,6 +301,8 @@ namespace sgns
 
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
         void DeleteElementCallback( std::string deleted_key );
+
+        void ChangeState( State new_state );
     };
 }
 
