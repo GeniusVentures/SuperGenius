@@ -152,6 +152,23 @@ namespace sgns
         void RegisterStateChangeCallback( StateChangeCallback callback );
         void UnregisterStateChangeCallback();
 
+        static std::string StateToString( State state )
+        {
+            switch ( state )
+            {
+                case State::CREATING:
+                    return "CREATING";
+                case State::INITIALIZING:
+                    return "INITIALIZING";
+                case State::SYNCHING:
+                    return "SYNCHING";
+                case State::READY:
+                    return "READY";
+                default:
+                    return "UNKNOWN";
+            }
+        }
+
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );

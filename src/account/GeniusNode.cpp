@@ -126,11 +126,16 @@ namespace sgns
             instance->account_->GetAddress() );
         instance->processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
+        instance->transaction_manager_->RegisterStateChangeCallback(
+            [wptr( std::weak_ptr<GeniusNode>( instance ) )]( TransactionManager::State old_state,
+                                                             TransactionManager::State new_state )
+            {
+                if ( auto strong = wptr.lock() )
+                {
+                    strong->TransactionStateChanged( old_state, new_state );
+                }
+            } );
         instance->transaction_manager_->Start();
-        if ( instance->isprocessor_ )
-        {
-            instance->StartProcessing();
-        }
 
         if ( instance->autodht_ )
         {
@@ -1205,5 +1210,32 @@ namespace sgns
             retval = transaction_manager_->GetIncomingStatusByTxId( txId );
         }
         return retval;
+    }
+
+    void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
+    {
+        node_logger_->info( "Transaction Manager State changed from {} to {}",
+                            TransactionManager::StateToString( old_state ),
+                            TransactionManager::StateToString( new_state ) );
+
+        switch ( new_state )
+        {
+            case TransactionManager::State::READY:
+                if ( isprocessor_ )
+                {
+                    StartProcessing();
+                }
+                break;
+            case TransactionManager::State::INITIALIZING:
+            case TransactionManager::State::SYNCHING:
+                if ( isprocessor_ )
+                {
+                    StopProcessing();
+                }
+                break;
+            case TransactionManager::State::CREATING:
+            default:
+                break;
+        }
     }
 }

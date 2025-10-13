@@ -268,6 +268,9 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
+        void TransactionStateChanged( TransactionManager::State old_state,
+                                      TransactionManager::State new_state );
+
         static constexpr std::string_view db_path_        = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
         static constexpr std::uint16_t    TEST_NET        = 963;
