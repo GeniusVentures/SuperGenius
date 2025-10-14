@@ -7,5 +7,16 @@ target_link_libraries(json_secure_storage
     PRIVATE
     rapidjson
 )
-
 supergenius_install(json_secure_storage)
+
+add_library(drive_secure_storage
+    impl/drive/DriveSecureStorage.cpp
+)
+target_link_libraries(drive_secure_storage
+    PUBLIC
+    outcome
+    OpenSSL::SSL
+    PRIVATE
+    rapidjson
+)
+supergenius_install(drive_secure_storage)
