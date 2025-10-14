@@ -2154,6 +2154,13 @@ namespace sgns
                                                        const IGeniusTransactions &new_tx ) const
     {
         // First check if the existing transaction is immutable
+        if ( existing_tx.dag_st.data_hash() ==  new_tx.dag_st.data_hash()  )
+        {
+            m_logger->info( "[{} - full: {}] Already have the same transaction, rejecting replacement attempt",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            return false;
+        }
         if ( IsTransactionImmutable( existing_tx ) )
         {
             m_logger->info( "[{} - full: {}] Existing transaction is immutable, rejecting replacement attempt",
