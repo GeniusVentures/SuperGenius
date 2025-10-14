@@ -162,6 +162,7 @@ namespace sgns::crdt
                                 }
 
                                 (void)self->dagSyncer_->DeleteCIDBlock( job_to_process.root_node_->getCID() );
+                                (void)self->dagSyncer_->DeleteCIDBlock( job_to_process.node_->getCID() );
                                 {
                                     std::lock_guard<std::mutex> g( self->pendingHeadsMutex_ );
                                     self->pendingHeadsByRootCID_.erase( job_to_process.root_node_->getCID() );
@@ -415,7 +416,6 @@ namespace sgns::crdt
         {
             EnqueueRootCID( bCastHeadCID );
             dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
-
         }
     }
 
