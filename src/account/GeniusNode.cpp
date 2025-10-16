@@ -187,7 +187,6 @@ namespace sgns
         {
             throw std::runtime_error( "GlobalDB initialization error" );
         }
-        tx_globaldb_->SetFullNode( is_full_node );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
         if ( !InitProcessingModules() )

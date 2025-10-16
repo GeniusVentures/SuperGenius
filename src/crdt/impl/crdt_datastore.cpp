@@ -1251,10 +1251,4 @@ namespace sgns::crdt
     {
         topicNames_.emplace( topic );
     }
-
-    void CrdtDatastore::SetFullNode( bool full_node )
-    {
-        isFullNode = std::move( full_node );
-    }
-
 }

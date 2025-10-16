@@ -205,8 +205,6 @@ namespace sgns::crdt
          */
         void AddTopicName( const std::string &topic );
 
-        void SetFullNode( bool full_node );
-
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );

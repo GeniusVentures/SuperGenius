@@ -300,11 +300,6 @@ namespace sgns::crdt
         m_crdtDatastore->PrintDataStore();
     }
 
-    void GlobalDB::SetFullNode( bool full_node )
-    {
-        m_crdtDatastore->SetFullNode( std::move( full_node ) );
-    }
-
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );

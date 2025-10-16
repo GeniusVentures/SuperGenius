@@ -134,7 +134,6 @@ namespace sgns::crdt
         void AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
-        void SetFullNode( bool full_node );
 
         std::shared_ptr<RocksDB> GetDataStore();
 
