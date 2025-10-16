@@ -142,10 +142,7 @@ namespace sgns
                              full_node_m,
                              full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
-            globaldb_m->AddTopicName( full_node_topic_m );
-            globaldb_m->AddTopicName( std::string( GNUS_FULL_NODES_TOPIC_LEGACY ) );
         }
-        globaldb_m->AddTopicName( account_m->GetAddress() );
     }
 
     TransactionManager::~TransactionManager()
@@ -2154,7 +2151,7 @@ namespace sgns
                                                        const IGeniusTransactions &new_tx ) const
     {
         // First check if the existing transaction is immutable
-        if ( existing_tx.dag_st.data_hash() ==  new_tx.dag_st.data_hash()  )
+        if ( existing_tx.dag_st.data_hash() == new_tx.dag_st.data_hash() )
         {
             m_logger->info( "[{} - full: {}] Already have the same transaction, rejecting replacement attempt",
                             account_m->GetAddress().substr( 0, 8 ),

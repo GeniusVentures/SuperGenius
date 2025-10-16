@@ -136,7 +136,7 @@ namespace sgns::crdt
                 if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
                      dataStoreResult.has_value() )
                 {
-                    dataStore = std::move(dataStoreResult.value());
+                    dataStore = std::move( dataStoreResult.value() );
                 }
                 else
                 {
@@ -300,11 +300,6 @@ namespace sgns::crdt
         m_crdtDatastore->PrintDataStore();
     }
 
-    void GlobalDB::AddTopicName( std::string topicName )
-    {
-        m_crdtDatastore->AddTopicName( topicName );
-    }
-
     void GlobalDB::SetFullNode( bool full_node )
     {
         m_crdtDatastore->SetFullNode( std::move( full_node ) );
@@ -323,6 +318,7 @@ namespace sgns::crdt
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
         m_broadcaster->AddListenTopic( topicName );
+        m_crdtDatastore->AddTopicName( topicName );
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
