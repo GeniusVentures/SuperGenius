@@ -1207,7 +1207,7 @@ namespace sgns::crdt
                 {
                     logger_->error( "{}: error marking new Head CID {} as resolved", __func__, cid.toString().value() );
                 }
-                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic_to_record );
+                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
                 if ( replace_result.has_failure() )
                 {
                     logger_->error( "{}: error replacing head {} with {}",
@@ -1246,4 +1246,15 @@ namespace sgns::crdt
     {
         return heads_->Add( aCid, priority, topic );
     }
+
+    void CrdtDatastore::AddTopicName( const std::string &topic )
+    {
+        topicNames_.emplace( topic );
+    }
+
+    void CrdtDatastore::SetFullNode( bool full_node )
+    {
+        isFullNode = std::move( full_node );
+    }
+
 }
