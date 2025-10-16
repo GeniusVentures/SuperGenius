@@ -230,9 +230,15 @@ namespace sgns
                     bool                isprocessor,
                     uint16_t            base_port,
                     bool                is_full_node );
+        void                  InitOpenSSL();
         bool                  InitLoggers( const std::string &base_path );
+        bool                  InitNetwork( uint16_t base_port, bool is_full_node );
+        bool                  InitDatabase();
+        bool                  InitProcessingModules();
+        bool                  MigrateDatabase();
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
-        void                  DHTInit();
+
+        void DHTInit();
 
         struct PriceInfo
         {
@@ -245,9 +251,13 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
-        std::thread       io_thread;
-        std::thread       upnp_thread;
-        std::atomic<bool> stop_upnp{ false };
+        std::thread                                                     io_thread;
+        std::thread                                                     upnp_thread;
+        std::atomic<bool>                                               stop_upnp{ false };
+        std::string                                                     base58key_;
+        std::shared_ptr<libp2p::protocol::AsioScheduler>                scheduler_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_;
 
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
@@ -260,7 +270,7 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
-        void rotateLogFiles( const std::string &base_path );
+        void RotateLogFiles( const std::string &base_path );
         /**
          * @brief Parse and sum all "block_len" values from the JSON.
          * @param json_data JSON string containing an "input" array.
@@ -268,8 +278,7 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        void TransactionStateChanged( TransactionManager::State old_state,
-                                      TransactionManager::State new_state );
+        void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
 
         static constexpr std::string_view db_path_        = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
@@ -304,7 +313,6 @@ groups:
             return config;
         }
     };
-
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );

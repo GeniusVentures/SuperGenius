@@ -166,10 +166,8 @@ namespace sgns
 
     {
         // Rotate log files before initializing logging system
-        rotateLogFiles( write_base_path_ );
-        SSL_library_init();
-        SSL_load_error_strings();
-        OpenSSL_add_all_algorithms();
+        RotateLogFiles( write_base_path_ );
+        InitOpenSSL();
 
         if ( !InitLoggers( write_base_path_ ) )
         {
@@ -178,143 +176,28 @@ namespace sgns
 
         node_logger_->info( sgns::version::SuperGeniusVersionText() );
 
-        pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
-
-        std::vector<std::string> addresses;
-        // UPNP
-        auto        upnp = std::make_shared<upnp::UPNP>();
-        std::string lanip;
-
-        if ( upnp->GetIGD() )
+        if ( !InitNetwork( base_port, is_full_node ) )
         {
-            std::string wanip = upnp->GetWanIP();
-            lanip             = upnp->GetLocalIP();
-            node_logger_->info( "Wan IP: {}", wanip );
-            node_logger_->info( "Lan IP: {}", lanip );
-
-            bool        success = false;
-            std::string owner;
-
-            constexpr int max_attempts = 10;
-            for ( int i = 0; i < max_attempts; ++i )
-            {
-                int candidate_port = pubsubport_ + i;
-                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
-                {
-                    if ( owner == lanip )
-                    {
-                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                        {
-                            addresses.push_back( wanip );
-                            success     = true;
-                            pubsubport_ = candidate_port;
-                            break;
-                        }
-
-                        node_logger_->error(
-                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                            candidate_port );
-                        continue;
-                    }
-                    node_logger_->warn( "Port {} already in use by {}", candidate_port, owner );
-                    continue;
-                }
-
-                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                {
-                    node_logger_->info( "Successfully opened port {}", candidate_port );
-                    addresses.push_back( wanip );
-                    success     = true;
-                    pubsubport_ = candidate_port;
-                    break;
-                }
-                node_logger_->warn( "Failed to open port {}", candidate_port );
-            }
-
-            if ( !success )
-            {
-                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
-            }
+            throw std::runtime_error( "Network initialization error" );
         }
 
-        // Make a base58 out of our address
-        std::string                tempaddress = account_->GetAddress();
-        std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-
-        libp2p::protocol::kademlia::ContentId key( hash );
-        auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-        auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-        if ( !maybe_base58 )
-        {
-            throw std::runtime_error( "We couldn't convert the account to base58" );
-        }
-        std::string base58key = maybe_base58.value();
-
-        gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key;
-
-        auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
-
-        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
         account_->InitMessenger( pubsub_ );
-        pubs.wait();
 
-        if ( !is_full_node )
+        if ( !InitDatabase() )
         {
-            pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
+            throw std::runtime_error( "GlobalDB initialization error" );
         }
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
-        auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-        auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
-
-        auto global_db_ret = crdt::GlobalDB::New( io_,
-                                                  write_base_path_ + gnus_network_full_path_,
-                                                  pubsub_,
-                                                  crdt::CrdtOptions::DefaultOptions(),
-                                                  graphsyncnetwork,
-                                                  scheduler,
-                                                  generator );
-        if ( global_db_ret.has_error() )
-        {
-            auto error = global_db_ret.error();
-            throw std::runtime_error( error.message() );
-        }
-        tx_globaldb_ = std::move( global_db_ret.value() );
         tx_globaldb_->SetFullNode( is_full_node );
-        tx_globaldb_->AddTopicName( processing_channel_topic_ );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
-        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
-                                                                             1000000,
-                                                                             1,
-                                                                             dev_config.TokenID );
-        processing_core_->RegisterProcessorFactory( "mnnimage",
-                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
-
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
-                                                                                       processing_channel_topic_ );
-
-        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
-                                                             io_,              // ioContext
-                                                             pubsub_,          // pubSub
-                                                             graphsyncnetwork, // graphsync
-                                                             scheduler,        // scheduler
-                                                             generator,        // generator
-                                                             write_base_path_, // writeBasePath
-                                                             base58key         // base58key
-        );
-
-        auto migrationResult = migrationManager->Migrate();
-        if ( migrationResult.has_error() )
+        if ( !InitProcessingModules() )
         {
-            throw std::runtime_error( std::string( "Database migration failed: " ) +
-                                      migrationResult.error().message() );
+            throw std::runtime_error( "Processing modules initialization error" );
+        }
+
+        if ( !MigrateDatabase() )
+        {
+            throw std::runtime_error( "Database migration error" );
         }
 
         transaction_manager_ = TransactionManager::New( tx_globaldb_,
@@ -322,6 +205,13 @@ namespace sgns
                                                         account_,
                                                         std::make_shared<crypto::HasherImpl>(),
                                                         is_full_node );
+    }
+
+    void GeniusNode::InitOpenSSL()
+    {
+        SSL_library_init();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
     }
 
     bool GeniusNode::InitLoggers( const std::string &base_path )
@@ -415,6 +305,167 @@ namespace sgns
         loggerGossipPubsub->set_level( spdlog::level::err );
 #endif
         return true;
+    }
+
+    bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
+    {
+        bool ret    = false;
+        pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
+
+        auto        upnp = std::make_shared<upnp::UPNP>();
+        std::string lanip;
+        do
+        {
+            if ( !upnp->GetIGD() )
+            {
+                break;
+            }
+            std::string wanip = upnp->GetWanIP();
+            lanip             = upnp->GetLocalIP();
+            node_logger_->info( "Wan IP: {}", wanip );
+            node_logger_->info( "Lan IP: {}", lanip );
+
+            std::string owner;
+
+            constexpr uint16_t MAX_ATTEMPTS = 10;
+            for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            {
+                uint16_t candidate_port = pubsubport_ + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                {
+                    if ( owner == lanip )
+                    {
+                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                        {
+                            ret         = true;
+                            pubsubport_ = candidate_port;
+                            break;
+                        }
+
+                        node_logger_->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
+                        continue;
+                    }
+                    node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+                    continue;
+                }
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                {
+                    node_logger_->info( "Successfully opened port {}", candidate_port );
+                    ret         = true;
+                    pubsubport_ = candidate_port;
+                    break;
+                }
+                node_logger_->warn( "Failed to open port {}", candidate_port );
+            }
+            if ( !ret )
+            {
+                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                break;
+            }
+            // Make a base58 out of our address
+            std::string                tempaddress = account_->GetAddress();
+            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
+            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+
+            libp2p::protocol::kademlia::ContentId key( hash );
+            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+            if ( !maybe_base58 )
+            {
+                ret = false;
+                node_logger_->error( "We couldn't convert the account {} to base58", account_->GetAddress() );
+                break;
+            }
+            base58key_ = maybe_base58.value();
+
+            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
+                                      base58key_;
+
+            auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
+
+            pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
+                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
+            auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
+            pubs.wait();
+            if ( !is_full_node )
+            {
+                pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
+                pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
+            }
+        } while ( 0 );
+        return ret;
+    }
+
+    bool GeniusNode::InitDatabase()
+    {
+        bool ret = false;
+        do
+        {
+            scheduler_ = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+            generator_ = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
+
+            auto global_db_ret = crdt::GlobalDB::New( io_,
+                                                      write_base_path_ + gnus_network_full_path_,
+                                                      pubsub_,
+                                                      crdt::CrdtOptions::DefaultOptions(),
+                                                      graphsyncnetwork_,
+                                                      scheduler_,
+                                                      generator_ );
+            if ( global_db_ret.has_error() )
+            {
+                node_logger_->error( "Error creating GlobalDB: {}", global_db_ret.error().message() );
+                break;
+            }
+            tx_globaldb_ = std::move( global_db_ret.value() );
+
+            ret = true;
+        } while ( 0 );
+        return ret;
+    }
+
+    bool GeniusNode::InitProcessingModules()
+    {
+        bool ret = true;
+
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
+                                                                             1000000,
+                                                                             1,
+                                                                             dev_config_.TokenID );
+        processing_core_->RegisterProcessorFactory( "mnnimage",
+                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
+
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
+                                                                                       processing_channel_topic_ );
+
+        return ret;
+    }
+
+    bool GeniusNode::MigrateDatabase()
+    {
+        bool ret              = false;
+        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,      // newDb
+                                                             io_,               // ioContext
+                                                             pubsub_,           // pubSub
+                                                             graphsyncnetwork_, // graphsync
+                                                             scheduler_,        // scheduler
+                                                             generator_,        // generator
+                                                             write_base_path_,  // writeBasePath
+                                                             base58key_         // base58key
+        );
+
+        auto migrationResult = migrationManager->Migrate();
+        if ( !migrationResult.has_error() )
+        {
+            ret = true;
+        }
+        return ret;
     }
 
     GeniusNode::~GeniusNode()
@@ -1153,7 +1204,7 @@ namespace sgns
         transaction_manager_->SetMutabilityWindowMs( mutability_window_ms );
     }
 
-    void GeniusNode::rotateLogFiles( const std::string &base_path )
+    void GeniusNode::RotateLogFiles( const std::string &base_path )
     {
         std::filesystem::path basePath( base_path );
 
