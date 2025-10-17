@@ -267,7 +267,8 @@ namespace sgns::crdt
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
-                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}",
+                                    cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:

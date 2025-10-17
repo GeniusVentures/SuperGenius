@@ -244,7 +244,7 @@ namespace sgns
         switch ( GetState() )
         {
             case State::INITIALIZING:
-                this->InitNonce( 5000 );
+                InitNonce( 8000 );
                 if ( GetState() == State::READY )
                 {
                     m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
@@ -1657,27 +1657,28 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              network_confirmed_nonce );
-            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
-            if ( local_nonce_result.has_value() )
+            bool synched = true;
+            for ( uint64_t i = 0; i <= network_confirmed_nonce; ++i )
             {
-                m_logger->debug( "[{} - full: {}] Local nonce {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 local_nonce_result.value() );
-                if ( local_nonce_result.value() >= network_confirmed_nonce )
+                auto tx = GetOutTransaction( i );
+                if ( !tx )
                 {
-                    ChangeState( State::READY );
+                    synched = false;
+                    m_logger->debug( "[{} - full: {}] Missing transaction with nonce {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     i );
+                    break;
                 }
             }
-            else
+            if ( synched )
             {
-                m_logger->debug( "[{} - full: {}] Local nonce with no value",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
+                ChangeState( State::READY );
             }
         }
         else
         {
+            //TODO - Have the full node respond it doesn't have it to check for connectivity
             m_logger->debug( "[{} - full: {}] No node from the network, assume we are updated",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
@@ -2154,7 +2155,7 @@ namespace sgns
                                                        const IGeniusTransactions &new_tx ) const
     {
         // First check if the existing transaction is immutable
-        if ( existing_tx.dag_st.data_hash() ==  new_tx.dag_st.data_hash()  )
+        if ( existing_tx.dag_st.data_hash() == new_tx.dag_st.data_hash() )
         {
             m_logger->info( "[{} - full: {}] Already have the same transaction, rejecting replacement attempt",
                             account_m->GetAddress().substr( 0, 8 ),
