@@ -55,7 +55,18 @@ namespace sgns::base
     {
         static std::mutex           mutex;
         std::lock_guard<std::mutex> lock( mutex );
-        auto                        logger = spdlog::get( tag );
+        
+        // If basepath is provided, we want to create/recreate the logger for file output
+        if ( !basepath.empty() )
+        {
+            // Drop any existing logger with this name to force recreation with file sink
+            spdlog::drop( tag );
+            auto logger = ::createLogger( tag, false, basepath );
+            return logger;
+        }
+        
+        // For console loggers, use existing if available
+        auto logger = spdlog::get( tag );
         if ( logger == nullptr )
         {
             logger = ::createLogger( tag, false, basepath );
