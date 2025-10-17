@@ -236,8 +236,6 @@ namespace sgns
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
         std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
-        /// Logger instance
-        base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
 
         /**
          * @brief       Private constructor a new Genius Account object

@@ -231,6 +231,7 @@ namespace sgns
                     uint16_t            base_port,
                     bool                is_full_node );
         bool                  InitLoggers( const std::string &base_path );
+        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
         void                  DHTInit();
 

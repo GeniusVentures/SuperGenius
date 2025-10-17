@@ -28,8 +28,9 @@ namespace sgns
 
     base::Logger genius_account_logger()
     {
-        static base::Logger static_logger = base::createLogger( "GeniusAccount" );
-        return static_logger;
+        // Always call base::createLogger to get the current logger
+        // This will return existing logger or create new one as needed
+        return base::createLogger( "GeniusAccount" );
     }
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
@@ -101,7 +102,7 @@ namespace sgns
                                             std::move( methods ) );
         if ( messenger_ )
         {
-            logger_->debug( "Created AccountMessenger" );
+            genius_account_logger()->debug( "Created AccountMessenger" );
             ret = true;
         }
         return ret;
@@ -129,7 +130,7 @@ namespace sgns
         // If not a full node and trying to get balance for other addresses, return 0
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->error( "Non-full node cannot get balance for other addresses" );
+            genius_account_logger()->error( "Non-full node cannot get balance for other addresses" );
             return 0;
         }
 
@@ -171,7 +172,7 @@ namespace sgns
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->error( "Non-full node cannot store UTXOs for other addresses" );
+            genius_account_logger()->error( "Non-full node cannot store UTXOs for other addresses" );
             return false;
         }
 
@@ -207,7 +208,7 @@ namespace sgns
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->warn( "Non-full node cannot delete UTXOs for other addresses" );
+            genius_account_logger()->warn( "Non-full node cannot delete UTXOs for other addresses" );
             return;
         }
 
@@ -263,7 +264,7 @@ namespace sgns
         // If not a full node and trying to get UTXOs for other addresses, return empty
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->warn( "Non-full node cannot get UTXOs for other addresses" );
+            genius_account_logger()->warn( "Non-full node cannot get UTXOs for other addresses" );
             return {};
         }
 
@@ -282,14 +283,14 @@ namespace sgns
         // If not a full node and trying to set UTXOs for other addresses, reject
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->warn( "Non-full node cannot set UTXOs for other addresses" );
+            genius_account_logger()->warn( "Non-full node cannot set UTXOs for other addresses" );
             return;
         }
 
         std::unique_lock lock( utxos_mutex_ );
         utxos_[target_address] = utxos;
 
-        logger_->debug( "Set {} UTXOs for address {}", utxos.size(), target_address.substr( 0, 8 ) );
+        genius_account_logger()->debug( "Set {} UTXOs for address {}", utxos.size(), target_address.substr( 0, 8 ) );
     }
 
     bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
@@ -411,7 +412,7 @@ namespace sgns
         // If not a full node and trying to get balance for other addresses, return 0
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            logger_->warn( "Non-full node cannot get balance for other addresses" );
+            genius_account_logger()->warn( "Non-full node cannot get balance for other addresses" );
             return 0;
         }
 
@@ -431,11 +432,11 @@ namespace sgns
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
-        logger_->debug( "Setting local confirmed nonce to {} from {}", nonce, proposed_nonce_ );
+        genius_account_logger()->debug( "Setting local confirmed nonce to {} from {}", nonce, proposed_nonce_ );
         SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
         std::lock_guard lock( nonce_mutex_ );
         nonce++;
-        logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
+        genius_account_logger()->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
         proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
@@ -443,7 +444,7 @@ namespace sgns
     {
         std::lock_guard lock( nonce_mutex_ );
         auto            current_confirmed_nonce = confirmed_nonces_[address];
-        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
+        genius_account_logger()->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
                         current_confirmed_nonce,
                         nonce,
                         address.substr( 0, 8 ) );
@@ -454,7 +455,7 @@ namespace sgns
     {
         std::lock_guard lock( nonce_mutex_ );
         auto            current_confirmed_nonce = confirmed_nonces_[address];
-        logger_->debug( "Setting the min value between {} and {} as a confirmed nonce for address {}",
+        genius_account_logger()->debug( "Setting the min value between {} and {} as a confirmed nonce for address {}",
                         current_confirmed_nonce,
                         nonce,
                         address.substr( 0, 8 ) );
@@ -472,7 +473,7 @@ namespace sgns
             }
             if ( address == eth_keypair->GetEntirePubValue() )
             {
-                logger_->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
+                genius_account_logger()->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
                                 proposed_nonce_,
                                 current_confirmed_nonce );
                 proposed_nonce_ = current_confirmed_nonce;
@@ -515,17 +516,17 @@ namespace sgns
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
         uint64_t result = 0;
-        logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
+        genius_account_logger()->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
         if ( latest_nonce_result.has_value() )
         {
             result = latest_nonce_result.value();
-            logger_->debug( "Nonce replied with value {}", result );
+            genius_account_logger()->debug( "Nonce replied with value {}", result );
         }
         else
         {
-            logger_->debug( "Using local nonce {}", result );
+            genius_account_logger()->debug( "Using local nonce {}", result );
             return outcome::failure( std::errc::timed_out );
         }
         return result;
