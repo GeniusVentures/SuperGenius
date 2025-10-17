@@ -538,6 +538,7 @@ namespace sgns::crdt
                             cid.toString().value(),
                             aRootJob.root_node_->getCID().toString().value() );
 
+            dagSyncer_->InitCIDBlock( cid );
             OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
 
             RootCIDJob newRootJob;
