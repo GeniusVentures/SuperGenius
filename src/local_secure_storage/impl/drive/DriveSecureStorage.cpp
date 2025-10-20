@@ -122,7 +122,7 @@ namespace sgns
     outcome::result<void> DriveSecureStorage::Authenticate( std::string_view auth_code )
     {
         std::string body = fmt::format(
-            "code={}&client_id={}&client_secret={}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code",
+            "code={}&client_id={}&client_secret={}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code&scope=https://www.googleapis.com/auth/drive.file",
             auth_code,
             CLIENT_ID,
             client_secret );
