@@ -36,6 +36,7 @@ namespace sgns
             PROTO_SERIALIZATION,       ///< Error in protobuf data serialization
             NONCE_REQUEST_IN_PROGRESS, ///< Nonce request already in progress
             NONCE_GET_ERROR,           ///< Nonce couldn't be fetched
+            GENESIS_REQUEST_ERROR,     //sim/< Genesis request failed
         };
 
         /**
@@ -52,7 +53,13 @@ namespace sgns
 
             /// @brief Get local nonce method
             std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
+
+            /// @brief Get local genesis block method
+            std::function<outcome::result<std::string>()> get_local_genesis_;
         };
+
+        // Genesis callback type
+        using GenesisCallback = std::function<void(const std::string&)>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -76,6 +83,12 @@ namespace sgns
          */
         outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms = 150 );
 
+        /**
+         * @brief       Request genesis block from the network
+         * @param[in]   callback Callback to be called when genesis block is received
+         */
+        void RequestGenesis(GenesisCallback callback);
+
     private:
         /// Basis of the account receiving topic
         static constexpr std::string_view ACCOUNT_COMM = ".comm";
@@ -96,6 +109,10 @@ namespace sgns
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
                          first_response_time_;   ///< Timestamp of the first response
         std::mutex       nonce_responses_mutex_; ///< Mutex of the nonce_responses_
+        
+        std::unordered_map<uint64_t, GenesisCallback> genesis_callbacks_; ///< Genesis request callbacks
+        std::mutex                                    genesis_callbacks_mutex_; ///< Mutex for genesis callbacks
+        
         InterfaceMethods methods_;               ///< Interface methods
 
         std::random_device rd_; ///< Random device for request IDs
@@ -115,6 +132,14 @@ namespace sgns
          * @return      Success if requested, error otherwise
          */
         outcome::result<void> RequestNonce( uint64_t req_id );
+
+        /**
+         * @brief       Requests the genesis block to the network
+         * @param[in]   req_id The current request ID
+         * @return      Success if requested, error otherwise
+         */
+        outcome::result<void> RequestGenesisBlock( uint64_t req_id );
+
         /**
          * @brief       Callback of pubsub message when a response was received
          * @param[in]   message Pubsub messaged to be parsed to proto data type
@@ -144,6 +169,17 @@ namespace sgns
          * @param[in]   req The proto nonce response package
          */
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
+
+        /**
+         * @brief       Handles the Genesis request package
+         * @param[in]   req The proto genesis request package
+         */
+        void HandleGenesisRequest( const accountComm::SignedGenesisRequest &req );
+        /**
+         * @brief       Handles the Genesis response package
+         * @param[in]   resp The proto genesis response package
+         */
+        void HandleGenesisResponse( const accountComm::SignedGenesisResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

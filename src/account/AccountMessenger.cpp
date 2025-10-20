@@ -24,6 +24,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
             return "Nonce request already in progress";
         case AccountCommError::NONCE_GET_ERROR:
             return "Nonce couldn't be fetched";
+        case AccountCommError::GENESIS_REQUEST_ERROR:
+            return "Genesis request failed";
     }
     return "Unknown error";
 }
@@ -112,7 +114,11 @@ namespace sgns
                 case accountComm::AccountMessage::kNonceRequest:
                     HandleNonceRequest( acc_msg.nonce_request() );
                     break;
+                case accountComm::AccountMessage::kGenesisRequest:
+                    HandleGenesisRequest( acc_msg.genesis_request() );
+                    break;
                 case accountComm::AccountMessage::kNonceResponse:
+                case accountComm::AccountMessage::kGenesisResponse:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
@@ -141,6 +147,9 @@ namespace sgns
                     break;
                 case accountComm::AccountMessage::kNonceResponse:
                     HandleNonceResponse( acc_msg.nonce_response() );
+                    break;
+                case accountComm::AccountMessage::kGenesisResponse:
+                    HandleGenesisResponse( acc_msg.genesis_response() );
                     break;
                 default:
                     logger_->error( "{}: Unknown AccountMessage type received on {}", __func__ );
@@ -269,6 +278,192 @@ namespace sgns
                         req_id,
                         max_nonce );
         return max_nonce;
+    }
+
+    void AccountMessenger::RequestGenesis(GenesisCallback callback)
+    {
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
+        
+        std::string to_hash = address_ + std::to_string( random_value );
+        sgns::crypto::HasherImpl hasher;
+        auto hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+        
+        uint64_t req_id = 0;
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
+
+        logger_->debug( "[{}] Requesting genesis block with req_id {}", address_.substr( 0, 8 ), req_id );
+
+        {
+            std::lock_guard lock( genesis_callbacks_mutex_ );
+            genesis_callbacks_[req_id] = std::move(callback);
+        }
+
+        auto request_result = RequestGenesisBlock( req_id );
+        if ( request_result.has_error() )
+        {
+            std::lock_guard lock( genesis_callbacks_mutex_ );
+            genesis_callbacks_.erase( req_id );
+            logger_->error( "[{}] Failed to request genesis block", address_.substr( 0, 8 ) );
+        }
+    }
+
+    outcome::result<void> AccountMessenger::RequestGenesisBlock( uint64_t req_id )
+    {
+        accountComm::GenesisRequest req;
+        req.set_requester_address( address_ );
+        req.set_request_id( req_id );
+        req.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        std::string encoded;
+        if ( !req.SerializeToString( &encoded ) )
+        {
+            return outcome::failure( Error::PROTO_SERIALIZATION );
+        }
+
+        std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        
+        accountComm::SignedGenesisRequest signed_req;
+        *signed_req.mutable_data() = req;
+        signed_req.set_signature( signature.data(), signature.size() );
+
+        accountComm::AccountMessage envelope;
+        *envelope.mutable_genesis_request() = signed_req;
+
+        return SendAccountMessage( envelope, { requests_topic_ } );
+    }
+
+    void AccountMessenger::HandleGenesisRequest( const accountComm::SignedGenesisRequest &signed_req )
+    {
+        const auto &req = signed_req.data();
+
+        logger_->debug( "[{}] Received a Genesis request req_id {}", address_.substr( 0, 8 ), req.request_id() );
+
+        std::string serialized;
+        if ( !req.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize GenesisRequest for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
+
+        auto verify_signature_result = methods_.verify_signature_( req.requester_address(),
+                                                                   signed_req.signature(),
+                                                                   serialized_vec );
+        if ( verify_signature_result.has_error() )
+        {
+            logger_->error( "No verify method" );
+            return;
+        }
+        if ( !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on GenesisRequest from {}", req.requester_address() );
+            return;
+        }
+
+        auto local_genesis_result = methods_.get_local_genesis_();
+        if ( local_genesis_result.has_error() )
+        {
+            logger_->debug( "[{}] I don't have the genesis block", address_.substr( 0, 8 ) );
+            return;
+        }
+
+        std::string local_genesis = local_genesis_result.value();
+
+        accountComm::GenesisResponse resp;
+        resp.set_responder_address( address_ );
+        resp.set_requester_address( req.requester_address() );
+        resp.set_request_id( req.request_id() );
+        resp.set_genesis_block( local_genesis );
+        resp.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        std::string resp_serialized;
+        if ( !resp.SerializeToString( &resp_serialized ) )
+        {
+            logger_->error( "Failed to serialize GenesisResponse" );
+            return;
+        }
+
+        std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
+        auto                 signature_result = methods_.sign_( resp_bytes );
+        if ( signature_result.has_error() )
+        {
+            logger_->error( "Failed to sign GenesisResponse" );
+            return;
+        }
+        auto signature = signature_result.value();
+
+        accountComm::SignedGenesisResponse signed_resp;
+        *signed_resp.mutable_data() = resp;
+        signed_resp.set_signature( signature.data(), signature.size() );
+
+        accountComm::AccountMessage msg;
+        *msg.mutable_genesis_response() = signed_resp;
+        auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
+                             sgns::version::GetNetAndVersionAppendix();
+
+        auto send_ret = SendAccountMessage( msg, { account_topic } );
+        
+        logger_->debug( "[{}] Sending back genesis block to {} with req_id {}",
+                        address_.substr( 0, 8 ),
+                        req.requester_address().substr( 0, 8 ),
+                        resp.request_id() );
+
+        if ( send_ret.has_error() )
+        {
+            logger_->error( "Failed to send GenesisResponse" );
+        }
+    }
+
+    void AccountMessenger::HandleGenesisResponse( const accountComm::SignedGenesisResponse &signed_resp )
+    {
+        const auto &resp = signed_resp.data();
+
+        logger_->debug( "[{}] Received a Genesis response from {} with req_id {}",
+                        address_.substr( 0, 8 ),
+                        resp.responder_address().substr( 0, 8 ),
+                        resp.request_id() );
+
+        std::string serialized;
+        if ( !resp.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize GenesisResponse for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
+
+        auto verify_signature_result = methods_.verify_signature_( resp.responder_address(),
+                                                                   signed_resp.signature(),
+                                                                   data_vec );
+        if ( verify_signature_result.has_error() )
+        {
+            logger_->error( "No verify method for GenesisResponse" );
+            return;
+        }
+        if ( !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on GenesisResponse from {}", resp.responder_address() );
+            return;
+        }
+
+        {
+            std::lock_guard lock( genesis_callbacks_mutex_ );
+            auto it = genesis_callbacks_.find( resp.request_id() );
+            if ( it != genesis_callbacks_.end() )
+            {
+                auto callback = std::move( it->second );
+                genesis_callbacks_.erase( it );
+                callback( resp.genesis_block() );
+            }
+        }
     }
 
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,

@@ -6,6 +6,8 @@ message AccountMessage {
   oneof payload {
     SignedNonceRequest nonce_request = 1;
     SignedNonceResponse nonce_response = 2;
+    SignedGenesisRequest genesis_request = 3;
+    SignedGenesisResponse genesis_response = 4;
   }
 }
 
@@ -34,4 +36,28 @@ message NonceResponse {
   uint64 request_id = 3;
   uint64 known_nonce = 4;
   uint64 timestamp = 5;
+}
+
+message GenesisRequest {
+  string requester_address = 1;
+  uint64 request_id = 2;
+  uint64 timestamp = 3;
+}
+
+message SignedGenesisRequest {
+  GenesisRequest data = 1;
+  bytes signature = 2;
+}
+
+message GenesisResponse {
+  string responder_address = 1;
+  string requester_address = 2;
+  uint64 request_id = 3;
+  bytes genesis_block = 4;
+  uint64 timestamp = 5;
+}
+
+message SignedGenesisResponse {
+  GenesisResponse data = 1;
+  bytes signature = 2;
 }
