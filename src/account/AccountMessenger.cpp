@@ -280,16 +280,16 @@ namespace sgns
         return max_nonce;
     }
 
-    void AccountMessenger::RequestGenesis(GenesisCallback callback)
+    void AccountMessenger::RequestGenesis( GenesisCallback callback )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
-        
-        std::string to_hash = address_ + std::to_string( random_value );
+
+        std::string              to_hash = address_ + std::to_string( random_value );
         sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256(
+        auto                     hash = hasher.sha2_256(
             gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
-        
+
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
 
@@ -297,7 +297,7 @@ namespace sgns
 
         {
             std::lock_guard lock( genesis_callbacks_mutex_ );
-            genesis_callbacks_[req_id] = std::move(callback);
+            genesis_callbacks_[req_id] = std::move( callback );
         }
 
         auto request_result = RequestGenesisBlock( req_id );
@@ -326,7 +326,7 @@ namespace sgns
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
         OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
-        
+
         accountComm::SignedGenesisRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature.data(), signature.size() );
@@ -343,46 +343,64 @@ namespace sgns
 
         logger_->debug( "[{}] Received a Genesis request req_id {}", address_.substr( 0, 8 ), req.request_id() );
 
+        // verify genesis request signature (keep your existing checks)
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
             logger_->error( "Failed to serialize GenesisRequest for signature check" );
             return;
         }
-
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
-
-        auto verify_signature_result = methods_.verify_signature_( req.requester_address(),
+        auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
                                                                    signed_req.signature(),
                                                                    serialized_vec );
-        if ( verify_signature_result.has_error() )
-        {
-            logger_->error( "No verify method" );
-            return;
-        }
-        if ( !verify_signature_result.value() )
+        if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on GenesisRequest from {}", req.requester_address() );
             return;
         }
 
-        auto local_genesis_result = methods_.get_local_genesis_();
-        if ( local_genesis_result.has_error() )
+        // get blocks with routing info (CID, peerID, addresses)
+        auto genesis_cid_result = methods_.get_genesis_cid_();
+        if ( genesis_cid_result.has_error() )
         {
-            logger_->debug( "[{}] I don't have the genesis block", address_.substr( 0, 8 ) );
+            logger_->debug( "[{}] I don't have the genesis block share", address_.substr( 0, 8 ) );
             return;
         }
 
-        std::string local_genesis = local_genesis_result.value();
-
-        accountComm::GenesisResponse resp;
+        // build generic BlockResponse (contains repeated BlockInfo with CIDs)
+        accountComm::BlockResponse resp;
         resp.set_responder_address( address_ );
         resp.set_requester_address( req.requester_address() );
         resp.set_request_id( req.request_id() );
-        resp.set_genesis_block( local_genesis );
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+
+        for ( const auto &b : available_blocks )
+        {
+            auto *genesis_info = resp.add_blocks();
+            genesis_info->set_cid( genesis_cid_result.value() );
+            auto peer_info_result = pubsub_->GetHost()->getPeerInfo();
+            if ( peer_info_result.has_error() )
+            {
+                logger_->error( "Failed to get peer info for GenesisResponse" );
+                return;
+            }
+            auto peer_info = peer_info_res.value();
+            genesis_info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+            auto mas = peer_info.addresses;
+            for ( auto &address : mas )
+            {
+                genesis_info->add_addresses( address.getStringAddress() );
+                logger_->info( "Address Broadcast: {}", address.getStringAddress() );
+            }
+            if ( genesis_info->addresses_size() <= 0 )
+            {  
+                logger_->error( "No addresses found for GenesisResponse." );
+                return;
+            }
+        }
 
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
@@ -392,33 +410,30 @@ namespace sgns
         }
 
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-        auto                 signature_result = methods_.sign_( resp_bytes );
-        if ( signature_result.has_error() )
-        {
-            logger_->error( "Failed to sign GenesisResponse" );
-            return;
-        }
-        auto signature = signature_result.value();
+        OUTCOME_TRY( auto &&signature, methods_.sign_( resp_bytes ) );
 
-        accountComm::SignedGenesisResponse signed_resp;
+        accountComm::SignedBlockResponse signed_resp;
         *signed_resp.mutable_data() = resp;
         signed_resp.set_signature( signature.data(), signature.size() );
 
         accountComm::AccountMessage msg;
-        *msg.mutable_genesis_response() = signed_resp;
+        *msg.mutable_block_response() = signed_resp;
+
         auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
                              sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
-        
-        logger_->debug( "[{}] Sending back genesis block to {} with req_id {}",
-                        address_.substr( 0, 8 ),
-                        req.requester_address().substr( 0, 8 ),
-                        resp.request_id() );
-
         if ( send_ret.has_error() )
         {
-            logger_->error( "Failed to send GenesisResponse" );
+            logger_->error( "Failed to send BlockResponse" );
+        }
+        else
+        {
+            logger_->debug( "[{}] Sent {} Genesis BlockInfo entries to {} (req_id {})",
+                            address_.substr( 0, 8 ),
+                            resp.blocks_size(),
+                            req.requester_address().substr( 0, 8 ),
+                            resp.request_id() );
         }
     }
 
@@ -456,7 +471,7 @@ namespace sgns
 
         {
             std::lock_guard lock( genesis_callbacks_mutex_ );
-            auto it = genesis_callbacks_.find( resp.request_id() );
+            auto            it = genesis_callbacks_.find( resp.request_id() );
             if ( it != genesis_callbacks_.end() )
             {
                 auto callback = std::move( it->second );

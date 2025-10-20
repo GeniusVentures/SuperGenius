@@ -55,7 +55,7 @@ namespace sgns
             std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
 
             /// @brief Get local genesis block method
-            std::function<outcome::result<std::string>()> get_local_genesis_;
+            std::function<outcome::result<std::string>()> get_genesis_cid_;
         };
 
         // Genesis callback type

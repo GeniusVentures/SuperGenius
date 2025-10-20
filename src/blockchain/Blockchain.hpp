@@ -74,6 +74,7 @@ namespace sgns
 
         GenesisCallback                pending_genesis_callback_; ///< Callback waiting for genesis block
         sgns::blockchain::GenesisBlock genesis_block_;            ///< Cached genesis block for easy access
+        std::string                    genesis_cid_;
 
         std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g );
         bool                 VerifySignature( const sgns::blockchain::GenesisBlock &g );
