@@ -530,9 +530,9 @@ namespace sgns::crdt
         OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
 
         // trigger add hook
-        if ( this->putHookFunc_ != nullptr )
+        if ( putHookFunc_ != nullptr )
         {
-            putHookFunc_( aKey, aValue );
+            putHookFunc_( aKey, aValue, aID );
         }
 
         return outcome::success();
@@ -629,7 +629,7 @@ namespace sgns::crdt
         {
             for ( const auto &key : deletedKeys )
             {
-                deleteHookFunc_( key );
+                deleteHookFunc_( key, aID );
             }
         }
 
