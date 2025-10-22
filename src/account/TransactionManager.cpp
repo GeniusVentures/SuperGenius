@@ -2181,22 +2181,24 @@ namespace sgns
         {
             if ( timestamp_tolerance_m.count() == 0 )
             {
-                m_logger->debug( "[{} - full: {}] Timestamp tolerance disabled — new tx earlier (diff {} ms): allowing replacement",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 time_diff );
+                m_logger->debug(
+                    "[{} - full: {}] Timestamp tolerance disabled — new tx earlier (diff {} ms): allowing replacement",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    time_diff );
                 return true;
             }
 
             if ( time_diff < timestamp_tolerance_m.count() )
             {
-                m_logger->debug( "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 timestamp_tolerance_m.count(),
-                                 existing_timestamp,
-                                 new_timestamp,
-                                 time_diff );
+                m_logger->debug(
+                    "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    timestamp_tolerance_m.count(),
+                    existing_timestamp,
+                    new_timestamp,
+                    time_diff );
 
                 m_logger->info( "[{} - full: {}] New transaction is earlier (ts: {} vs {}), will replace existing",
                                 account_m->GetAddress().substr( 0, 8 ),
@@ -2425,12 +2427,17 @@ namespace sgns
                 outgoing_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED };
             }
         }
-
         else
         {
             std::unique_lock in_lock( incoming_tx_mutex_m );
             auto             it = incoming_tx_processed_m.find( key );
 
+            if ( ( it != incoming_tx_processed_m.end() ) &&
+                 ( it->second.tx->dag_st.data_hash() != new_tx->dag_st.data_hash() ) )
+            {
+                OUTCOME_TRY( auto &&topics, RevertTransaction( it->second.tx ) );
+                it = incoming_tx_processed_m.end();
+            }
             if ( it == incoming_tx_processed_m.end() )
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
