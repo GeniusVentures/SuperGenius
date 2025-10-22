@@ -56,7 +56,7 @@ namespace sgns
          * @brief Handle received genesis block from pubsub
          * @param serialized_genesis The received genesis block data
          */
-        void OnGenesisBlockReceived( const std::string &serialized_genesis );
+        outcome::result<void> OnGenesisBlockReceived( const base::Buffer &serialized_genesis );
 
     private:
         /// Make constructor private to force use of factory method
@@ -67,13 +67,14 @@ namespace sgns
         /// CID / hex of the Genesis block creator pub address (authorized)
         static constexpr std::string_view FULL_NODE_PUB_ADDRESS =
             "8a33bdf1445a68736429d1773be8682362753a0efc6fb9d8b3e8dffe3b74fc91e26b203fd521547a5219eddf1d3ac51fd17a7646c9bca5ef065da131add4e5a2";
-        static constexpr std::string_view GENESIS_KEY = "gnus-genesis-block";
+        static constexpr std::string_view GENESIS_KEY     = "gnus-genesis-block";
+        static constexpr std::string_view GENESIS_CID_KEY = "gnus-genesis-block-cid";
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
 
-        GenesisCallback                pending_genesis_callback_; ///< Callback waiting for genesis block
-        sgns::blockchain::GenesisBlock genesis_block_;            ///< Cached genesis block for easy access
+        GenesisCallback                genesis_processed_callback_; ///< Callback waiting for genesis block
+        sgns::blockchain::GenesisBlock genesis_block_;              ///< Cached genesis block for easy access
         std::string                    genesis_cid_;
 
         std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g );
@@ -83,6 +84,7 @@ namespace sgns
         outcome::result<void> CreateGenesisBlock();
         outcome::result<void> VerifyGenesisBlock( const std::string &serialized_genesis );
 
+        void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         void CompleteGenesisCheck( outcome::result<void> result );
     };
 
@@ -91,6 +93,17 @@ namespace sgns
                                                  std::shared_ptr<GeniusAccount>  account )
     {
         auto instance = std::shared_ptr<Blockchain>( new Blockchain( std::move( global_db ), std::move( account ) ) );
+
+        (void)instance->db_->RegisterNewElementCallback(
+            "gnus-genesis-block",
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
+                                                                 const std::string                     &cid )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->GenesisReceivedCallback( std::move( new_data ), cid );
+                }
+            } );
         return instance;
     }
 
@@ -108,7 +121,7 @@ namespace sgns
         auto full_blockchain_topic = std::string( BLOCKCHAIN_TOPIC ) + sgns::version::GetNetAndVersionAppendix();
         db_->AddListenTopic( full_blockchain_topic );
 
-        pending_genesis_callback_ = std::move( callback );
+        genesis_processed_callback_ = std::move( callback );
 
         // Try to get genesis block synchronously first
         auto get_genesis_result = db_->Get( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ) );
@@ -125,52 +138,69 @@ namespace sgns
             else
             {
                 // Regular node requests genesis block via pubsub
-                account_->RequestGenesis(
-                    [weak_self( weak_from_this() )]( const std::string &serialized_genesis )
-                    {
-                        if ( auto self = weak_self.lock() )
-                        {
-                            self->OnGenesisBlockReceived( serialized_genesis );
-                        }
-                    } );
+                account_->RequestGenesis();
             }
         }
         else
         {
             // Genesis block found, verify it immediately
-            auto verify_result = VerifyGenesisBlock( get_genesis_result.value() );
-            CompleteGenesisCheck( verify_result );
+            auto genesis_validation_result = OnGenesisBlockReceived( get_genesis_result.value() );
+            if ( !genesis_validation_result.has_error() )
+            {
+                sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
+                genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
+                auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
+                if ( genesis_cid.has_value() )
+                {
+                    genesis_cid_ = std::string( genesis_cid.value().toString() );
+                }
+            }
         }
     }
 
-    void Blockchain::OnGenesisBlockReceived( const std::string &serialized_genesis )
+    outcome::result<void> Blockchain::OnGenesisBlockReceived( const base::Buffer &serialized_genesis )
     {
-        if ( !pending_genesis_callback_ )
-        {
-            // No pending callback, ignore
-            return;
-        }
-
         // Store the received genesis block in member variable
         std::vector<uint8_t> data( serialized_genesis.begin(), serialized_genesis.end() );
         if ( !genesis_block_.ParseFromArray( data.data(), data.size() ) )
         {
-            CompleteGenesisCheck( outcome::failure( Error::GENESIS_BLOCK_SERIALIZATION_FAILED ) );
-            return;
+            return CompleteGenesisCheck( outcome::failure( Error::GENESIS_BLOCK_SERIALIZATION_FAILED ) );
         }
 
         // Verify the received genesis block
         auto verify_result = VerifyGenesisBlock( serialized_genesis );
-        CompleteGenesisCheck( verify_result );
+        return CompleteGenesisCheck( verify_result );
     }
 
-    void Blockchain::CompleteGenesisCheck( outcome::result<void> result )
+    outcome::result<void> Blockchain::CompleteGenesisCheck( outcome::result<void> result )
     {
-        if ( pending_genesis_callback_ )
+        if ( genesis_processed_callback_ )
         {
-            auto callback             = std::move( pending_genesis_callback_ );
-            pending_genesis_callback_ = nullptr;
-            callback( result );
+            genesis_processed_callback_( result );
+        }
+        return result;
+    }
+
+    void Blockchain::GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+    {
+        sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
+        genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
+        auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
+
+        if ( !genesis_cid.has_value() )
+        {
+            auto [genesis_key, serialized_genesis] = new_data;
+            // New genesis block CID, process it
+
+            auto genesis_validation_result = OnGenesisBlockReceived( serialized_genesis );
+            if ( !genesis_validation_result.has_error() )
+            {
+                sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_value;
+                genesis_cid_buffer_value.put( cid );
+
+                db_->GetDataStore()->put( genesis_cid_buffer_key, genesis_cid_buffer_value );
+                genesis_cid_ = cid;
+            }
         }
     }
 
@@ -205,9 +235,22 @@ namespace sgns
 
         // Convert to string for storage
         std::string serialized( serialized_proto.begin(), serialized_proto.end() );
-        auto        put_res = db_->Put( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ), serialized );
+        auto        put_res = db_->Put( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ),
+                                 serialized,
+                                        { BLOCKCHAIN_TOPIC } );
         if ( put_res.has_error() )
         {
+            return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
+        }
+        crdt::GlobalDB::Buffer genesis_buffer_cid_key;
+        genesis_buffer_cid_key.put( std::string( GENESIS_CID_KEY ) );
+        crdt::GlobalDB::Buffer genesis_buffer_cid_value;
+        genesis_buffer_cid_value.put( put_res.value().toString() );
+        auto store_cid_res = db_->GetDataStore()->put( genesis_buffer_cid_key, genesis_buffer_cid_value );
+        if ( store_cid_res.has_error() )
+        {
+            (void)db_->Remove( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ), { BLOCKCHAIN_TOPIC } );
+
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
