@@ -134,7 +134,7 @@ namespace sgns::crdt
          * @param aValue Value to be stored
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<void> PutKey( const HierarchicalKey       &aKey,
+        outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
                                       const Buffer                &aValue,
                                       const std::set<std::string> &topics );
 
@@ -148,7 +148,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to delete from set
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
+        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
 
         /**
          * @brief Publishes a Delta.

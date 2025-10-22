@@ -782,7 +782,7 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
+    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
                                                  const Buffer                &aValue,
                                                  const std::set<std::string> &topics )
     {
@@ -792,16 +792,10 @@ namespace sgns::crdt
             return outcome::failure( deltaResult.error() );
         }
 
-        auto publishResult = Publish( deltaResult.value(), topics );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( publishResult.error() );
-        }
-
-        return outcome::success();
+        return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -814,13 +808,8 @@ namespace sgns::crdt
             return outcome::success();
         }
 
-        auto publishResult = Publish( deltaResult.value(), topics );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( publishResult.error() );
-        }
+        return Publish( deltaResult.value(), topics );
 
-        return outcome::success();
     }
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,

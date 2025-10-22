@@ -215,7 +215,7 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -226,7 +226,7 @@ namespace sgns::crdt
         return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
     }
 
-    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -248,7 +248,7 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
+    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
     {
         if ( !started_ )
         {

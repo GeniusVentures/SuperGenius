@@ -81,14 +81,14 @@ namespace sgns::crdt
          * @param[in] value The value to store.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
-        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
+        outcome::result<CID> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
          * @return      outcome::failure on error or success otherwise
          */
-        outcome::result<void> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
+        outcome::result<CID> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
 
         /** Gets a value that corresponds to specified key.
         * @param key - value key
@@ -100,7 +100,7 @@ namespace sgns::crdt
         * @param key to remove from storage
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
+        outcome::result<CID> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
         * @param prefix - keys prefix to match. An empty prefix matches any key.
