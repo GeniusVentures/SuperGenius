@@ -2173,38 +2173,48 @@ namespace sgns
         // Get timestamps and elapsed times
         auto existing_timestamp = existing_tx.GetTimestamp();
         auto new_timestamp      = new_tx.GetTimestamp();
-        auto time_diff          = GetElapsedTime( new_timestamp, existing_timestamp );
+        auto time_diff          = GetElapsedTime( new_timestamp, existing_timestamp ); // preserve original semantics
 
-        // Check if both transactions are within the tolerance window
-        if ( ( time_diff > 0 ) && ( time_diff < timestamp_tolerance_m.count() ) )
+        // If new tx is earlier than existing (time_diff > 0) allow replacement.
+        // If timestamp_tolerance_m > 0 enforce the tolerance window; otherwise only the sign of time_diff is considered.
+        if ( time_diff > 0 )
         {
-            m_logger->debug( "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             timestamp_tolerance_m.count(),
-                             existing_timestamp,
-                             new_timestamp,
-                             time_diff );
+            if ( timestamp_tolerance_m.count() == 0 )
+            {
+                m_logger->debug( "[{} - full: {}] Timestamp tolerance disabled — new tx earlier (diff {} ms): allowing replacement",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 time_diff );
+                return true;
+            }
 
-            m_logger->info( "[{} - full: {}] New transaction is earlier (ts: {} vs {}), will replace existing",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            new_timestamp,
-                            existing_timestamp );
-            return true;
+            if ( time_diff < timestamp_tolerance_m.count() )
+            {
+                m_logger->debug( "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 timestamp_tolerance_m.count(),
+                                 existing_timestamp,
+                                 new_timestamp,
+                                 time_diff );
+
+                m_logger->info( "[{} - full: {}] New transaction is earlier (ts: {} vs {}), will replace existing",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                new_timestamp,
+                                existing_timestamp );
+                return true;
+            }
         }
 
-        // If outside tolerance, reject the new transaction
         m_logger->warn(
-            "[{} - full: {}] Timestamp difference ({} ms) exceeds tolerance ({} ms). Existing: {} , New: {} , Diff: {}. Rejecting new transaction.",
+            "[{} - full: {}] New transaction not eligible for replacement. Existing: {} , New: {} , Diff: {} ms, Tolerance: {} ms",
             account_m->GetAddress().substr( 0, 8 ),
             full_node_m,
-            time_diff,
-            timestamp_tolerance_m.count(),
             existing_timestamp,
             new_timestamp,
-            time_diff );
-
+            time_diff,
+            timestamp_tolerance_m.count() );
         return false;
     }
 
@@ -2249,6 +2259,12 @@ namespace sgns
 
     bool TransactionManager::IsTransactionImmutable( const IGeniusTransactions &tx ) const
     {
+        // mutability window of zero => always mutable
+        if ( mutability_window_m.count() == 0 )
+        {
+            return false;
+        }
+
         auto tx_timestamp = tx.GetTimestamp();
         auto elapsed      = GetElapsedTime( tx_timestamp );
 

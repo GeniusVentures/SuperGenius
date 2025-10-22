@@ -95,8 +95,8 @@ namespace sgns
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = TIMESTAMP_TOLERANCE,
-            std::chrono::milliseconds                mutability_window   = MUTABILITY_WINDOW );
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds(0),
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds(0) );
 
         ~TransactionManager();
 
