@@ -118,7 +118,7 @@ namespace sgns
                     HandleGenesisRequest( acc_msg.genesis_request() );
                     break;
                 case accountComm::AccountMessage::kNonceResponse:
-                case accountComm::AccountMessage::kGenesisResponse:
+                case accountComm::AccountMessage::kBlockResponse:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
@@ -148,8 +148,8 @@ namespace sgns
                 case accountComm::AccountMessage::kNonceResponse:
                     HandleNonceResponse( acc_msg.nonce_response() );
                     break;
-                case accountComm::AccountMessage::kGenesisResponse:
-                    HandleGenesisResponse( acc_msg.genesis_response() );
+                case accountComm::AccountMessage::kBlockResponse:
+                    HandleGenesisResponse( acc_msg.block_response() );
                     break;
                 default:
                     logger_->error( "{}: Unknown AccountMessage type received on {}", __func__ );
@@ -377,29 +377,21 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
 
-        for ( const auto &b : available_blocks )
+        auto *genesis_info = resp.add_blocks();
+        genesis_info->set_cid( genesis_cid_result.value() );
+        auto peer_info = pubsub_->GetHost()->getPeerInfo();
+
+        genesis_info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+        auto mas = peer_info.addresses;
+        for ( auto &address : mas )
         {
-            auto *genesis_info = resp.add_blocks();
-            genesis_info->set_cid( genesis_cid_result.value() );
-            auto peer_info_result = pubsub_->GetHost()->getPeerInfo();
-            if ( peer_info_result.has_error() )
-            {
-                logger_->error( "Failed to get peer info for GenesisResponse" );
-                return;
-            }
-            auto peer_info = peer_info_res.value();
-            genesis_info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
-            auto mas = peer_info.addresses;
-            for ( auto &address : mas )
-            {
-                genesis_info->add_addresses( address.getStringAddress() );
-                logger_->info( "Address Broadcast: {}", address.getStringAddress() );
-            }
-            if ( genesis_info->addresses_size() <= 0 )
-            {  
-                logger_->error( "No addresses found for GenesisResponse." );
-                return;
-            }
+            genesis_info->add_addresses( address.getStringAddress() );
+            logger_->info( "Address Broadcast: {}", address.getStringAddress() );
+        }
+        if ( genesis_info->addresses_size() <= 0 )
+        {
+            logger_->error( "No addresses found for GenesisResponse." );
+            return;
         }
 
         std::string resp_serialized;
@@ -408,9 +400,16 @@ namespace sgns
             logger_->error( "Failed to serialize GenesisResponse" );
             return;
         }
-
+        
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( resp_bytes ) );
+        
+        auto signature_res = methods_.sign_( resp_bytes );
+        if ( signature_res.has_error(  ) )
+        {
+            logger_->error( "Failed to sign" );
+            return;
+        }
+        auto signature = signature_res.value();
 
         accountComm::SignedBlockResponse signed_resp;
         *signed_resp.mutable_data() = resp;
@@ -437,7 +436,7 @@ namespace sgns
         }
     }
 
-    void AccountMessenger::HandleGenesisResponse( const accountComm::SignedGenesisResponse &signed_resp )
+    void AccountMessenger::HandleGenesisResponse( const accountComm::SignedBlockResponse &signed_resp )
     {
         const auto &resp = signed_resp.data();
 
@@ -476,7 +475,7 @@ namespace sgns
             {
                 auto callback = std::move( it->second );
                 genesis_callbacks_.erase( it );
-                callback( resp.genesis_block() );
+                //callback( resp.genesis_block() );
             }
         }
     }

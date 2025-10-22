@@ -179,7 +179,7 @@ namespace sgns
          * @brief       Handles the Genesis response package
          * @param[in]   resp The proto genesis response package
          */
-        void HandleGenesisResponse( const accountComm::SignedGenesisResponse &resp );
+        void HandleGenesisResponse( const accountComm::SignedBlockResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );
