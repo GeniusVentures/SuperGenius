@@ -51,7 +51,9 @@ namespace sgns::crdt
         deleted_data_callback_registry_.erase( pattern );
     }
 
-    void CRDTCallbackManager::PutDataCallback( const std::string &key, const base::Buffer &value )
+    void CRDTCallbackManager::PutDataCallback( const std::string  &key,
+                                               const base::Buffer &value,
+                                               const std::string  &cid )
     {
         NewDataCallbackRegistry registry_copy;
         {
@@ -62,12 +64,12 @@ namespace sgns::crdt
         {
             if ( std::regex regex( pattern ); std::regex_match( key, regex ) )
             {
-                callback( std::make_pair( key, value ) );
+                callback( std::make_pair( key, value ), cid );
             }
         }
     }
 
-    void CRDTCallbackManager::DeleteDataCallback( const std::string &deleted_key )
+    void CRDTCallbackManager::DeleteDataCallback( const std::string &deleted_key, const std::string &cid )
     {
         DeletedDataCallbackRegistry registry_copy;
         {
@@ -78,7 +80,7 @@ namespace sgns::crdt
         {
             if ( std::regex regex( pattern ); std::regex_match( deleted_key, regex ) )
             {
-                callback( deleted_key );
+                callback( deleted_key, cid );
             }
         }
     }

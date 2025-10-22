@@ -61,19 +61,19 @@ namespace sgns::crdt
         crdtInstance->set_ = std::make_shared<CrdtSet>(
             crdtInstance->dataStore_,
             aKey.ChildString( std::string( setsNamespace_ ) ),
-            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string  &key,
-                                                                       const base::Buffer &value )
+            [weakptr( std::weak_ptr<CrdtDatastore>(
+                crdtInstance ) )]( const std::string &key, const base::Buffer &value, const std::string &cid )
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->PutElementsCallback( key, value );
+                    strong->PutElementsCallback( key, value, cid );
                 }
             },
-            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key )
+            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key, const std::string &cid )
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->DeleteElementsCallback( key );
+                    strong->DeleteElementsCallback( key, cid );
                 }
             } );
         crdtInstance->dagWorkerJobListThreadRunning_ = true;
@@ -1145,14 +1145,14 @@ namespace sgns::crdt
         return crdt_cb_manager_.RegisterDeletedDataCallback( pattern, std::move( callback ) );
     }
 
-    void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value )
+    void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid )
     {
-        crdt_cb_manager_.PutDataCallback( key, value );
+        crdt_cb_manager_.PutDataCallback( key, value, cid );
     }
 
-    void CrdtDatastore::DeleteElementsCallback( const std::string &key )
+    void CrdtDatastore::DeleteElementsCallback( const std::string &key, const std::string &cid )
     {
-        crdt_cb_manager_.DeleteDataCallback( key );
+        crdt_cb_manager_.DeleteDataCallback( key, cid );
     }
 
     void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority )

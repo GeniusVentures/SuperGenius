@@ -20,10 +20,10 @@ namespace sgns::crdt
     {
     public:
         using NewDataPair             = std::pair<std::string, base::Buffer>;
-        using NewDataCallback         = std::function<void( NewDataPair new_data )>;
+        using NewDataCallback         = std::function<void( NewDataPair new_data, std::string cid )>;
         using NewDataCallbackRegistry = std::unordered_map<std::string, NewDataCallback>;
 
-        using DeletedDataCallback         = std::function<void( std::string deleted_key )>;
+        using DeletedDataCallback         = std::function<void( std::string deleted_key, std::string cid )>;
         using DeletedDataCallbackRegistry = std::unordered_map<std::string, DeletedDataCallback>;
 
         /**
@@ -64,19 +64,20 @@ namespace sgns::crdt
          * @param[in]   key key of the CRDT
          * @param[in]   value value contained on the key
          */
-        void PutDataCallback( const std::string &key, const base::Buffer &value );
+        void PutDataCallback( const std::string &key, const base::Buffer &value, const std::string &cid );
 
         /**
          * @brief       Executes a registered deleted data callback that matches the key
          * @param[in]   deleted_key key of the CRDT that was deleted
          */
-        void DeleteDataCallback( const std::string &deleted_key );
+        void DeleteDataCallback( const std::string &deleted_key, const std::string &cid );
 
     private:
-        std::shared_mutex           new_data_callback_registry_mutex_;     ///< Mutex to manipulate @ref new_data_callback_registry_
-        NewDataCallbackRegistry     new_data_callback_registry_;           ///< New data callback registry
-        std::shared_mutex           deleted_data_callback_registry_mutex_; ///< Mutex to manipulate @ref deleted_data_callback_registry_
-        DeletedDataCallbackRegistry deleted_data_callback_registry_;       ///< Deleted data callback registry
+        std::shared_mutex new_data_callback_registry_mutex_; ///< Mutex to manipulate @ref new_data_callback_registry_
+        NewDataCallbackRegistry new_data_callback_registry_; ///< New data callback registry
+        std::shared_mutex
+            deleted_data_callback_registry_mutex_; ///< Mutex to manipulate @ref deleted_data_callback_registry_
+        DeletedDataCallbackRegistry deleted_data_callback_registry_; ///< Deleted data callback registry
     };
 
 }

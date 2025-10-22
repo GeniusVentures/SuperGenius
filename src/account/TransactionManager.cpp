@@ -83,8 +83,8 @@ namespace sgns
 
             (void)instance->globaldb_m->RegisterNewElementCallback(
                 "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                    crdt::CRDTCallbackManager::NewDataPair new_data )
+                [weak_ptr( std::weak_ptr<TransactionManager>(
+                    instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
@@ -93,7 +93,8 @@ namespace sgns
                 } );
             (void)instance->globaldb_m->RegisterDeletedElementCallback(
                 "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string deleted_key )
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string        deleted_key,
+                                                                             const std::string &cid )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {

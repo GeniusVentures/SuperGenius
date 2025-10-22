@@ -343,8 +343,8 @@ namespace sgns::crdt
          */
         void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
 
-        void PutElementsCallback( const std::string &key, const Buffer &value );
-        void DeleteElementsCallback( const std::string &key );
+        void PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid );
+        void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
         void EnqueueRootCID( const CID &cid );
