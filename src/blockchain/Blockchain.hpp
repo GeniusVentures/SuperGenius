@@ -50,7 +50,7 @@ namespace sgns
          * @brief Start the blockchain with async genesis block handling
          * @param callback Called when genesis block check/creation/retrieval completes
          */
-        void Start( GenesisCallback callback );
+        outcome::result<void> Start( GenesisCallback callback );
 
         /**
          * @brief Handle received genesis block from pubsub
@@ -116,7 +116,7 @@ namespace sgns
 
     Blockchain::~Blockchain() {}
 
-    void Blockchain::Start( GenesisCallback callback )
+    outcome::result<void> Blockchain::Start( GenesisCallback callback )
     {
         auto full_blockchain_topic = std::string( BLOCKCHAIN_TOPIC ) + sgns::version::GetNetAndVersionAppendix();
         db_->AddListenTopic( full_blockchain_topic );
