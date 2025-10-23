@@ -1888,6 +1888,19 @@ namespace sgns
         return nullptr;
     }
 
+    std::shared_ptr<IGeniusTransactions> TransactionManager::GetInTransaction( uint64_t nonce ) const
+    {
+        std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
+        for ( const auto &kv : incoming_tx_processed_m )
+        {
+            if ( kv.second.tx && kv.second.tx->dag_st.nonce() == nonce )
+            {
+                return kv.second.tx;
+            }
+        }
+        return nullptr;
+    }
+
     TransactionManager::State TransactionManager::GetState() const
     {
         return state_m;
@@ -2043,38 +2056,46 @@ namespace sgns
                                  full_node_m,
                                  element.key() );
             }
+            std::shared_ptr<IGeniusTransactions> conflicting_tx;
 
-            auto maybe_existing_value = globaldb_m->Get( element.key() );
-            if ( !maybe_existing_value.has_value() )
+            auto conflicting_tx_res = GetConflictingTransaction( *new_tx );
+            if ( !conflicting_tx_res.has_value() )
             {
-                m_logger->trace( "[{} - full: {}] No existing transaction, accepting new transaction {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 element.key() );
-                break;
-            }
-            m_logger->debug( "[{} - full: {}] Found existing transaction {}, checking mutability window and timestamps",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             element.key() );
+                //maybe it's not been processed yet, but it's on CRDT
+                auto maybe_existing_value = globaldb_m->Get( element.key() );
+                if ( !maybe_existing_value.has_value() )
+                {
+                    m_logger->trace( "[{} - full: {}] No existing transaction, accepting new transaction {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     element.key() );
 
-            auto maybe_existing_tx = DeSerializeTransaction( maybe_existing_value.value() );
-            if ( maybe_existing_tx.has_error() )
-            {
-                m_logger->warn( "[{} - full: {}] Failed to deserialize existing transaction {}, accepting new one",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                element.key() );
-                break;
+                    break;
+                }
+                m_logger->debug(
+                    "[{} - full: {}] Found transaction with the same key {}, checking mutability window and timestamps",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    element.key() );
+
+                conflicting_tx_res = DeSerializeTransaction( maybe_existing_value.value() );
+                if ( conflicting_tx_res.has_error() )
+                {
+                    m_logger->warn( "[{} - full: {}] Failed to deserialize existing transaction {}, accepting new one",
+                                    account_m->GetAddress().substr( 0, 8 ),
+                                    full_node_m,
+                                    element.key() );
+                    break;
+                }
             }
-            auto existing_tx = maybe_existing_tx.value();
+            conflicting_tx = std::move( conflicting_tx_res.value() );
 
             m_logger->debug( "[{} - full: {}] Checking if new tx {} is the correct one",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              new_tx->dag_st.data_hash() );
 
-            should_delete = !ShouldReplaceTransaction( *existing_tx, *new_tx );
+            should_delete = !ShouldReplaceTransaction( *conflicting_tx, *new_tx );
 
         } while ( 0 );
 
@@ -2412,14 +2433,54 @@ namespace sgns
         {
             std::unique_lock out_lock( outgoing_tx_mutex_m );
             auto             it = outgoing_tx_processed_m.find( key );
+            bool             should_add_transaction = false;
 
             if ( ( it != outgoing_tx_processed_m.end() ) &&
                  ( it->second.tx->dag_st.data_hash() != new_tx->dag_st.data_hash() ) )
             {
                 OUTCOME_TRY( auto &&topics, RevertTransaction( it->second.tx ) );
-                it = outgoing_tx_processed_m.end();
+                should_add_transaction = true;
             }
-            if ( it == outgoing_tx_processed_m.end() )
+            else if ( it == outgoing_tx_processed_m.end() )
+            {
+                //try to find transaction with different key but same nonce, which will have to be deleted as well
+                auto conflicting_tx = GetConflictingTransaction( *new_tx );
+                if (conflicting_tx.has_value())
+                {
+                    // Find the key for the conflicting transaction
+                    std::string conflicting_key;
+                    for ( const auto &kv : outgoing_tx_processed_m )
+                    {
+                        if ( kv.second.tx && kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
+                        {
+                            conflicting_key = kv.first;
+                            break;
+                        }
+                    }
+                    
+                    if ( !conflicting_key.empty() )
+                    {
+                        m_logger->debug( "[{} - full: {}] Found conflicting transaction with key: {}, removing it",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m,
+                                         conflicting_key );
+                        
+                        // Unlock before calling RemoveTransactionFromProcessedMaps to avoid deadlock
+                        out_lock.unlock();
+                        OUTCOME_TRY( RemoveTransactionFromProcessedMaps( conflicting_key, true ) );
+                        out_lock.lock();
+                    }
+                    else
+                    {
+                        m_logger->error( "[{} - full: {}] Conflicting transaction found but key not located",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m );
+                    }
+                }
+                should_add_transaction = true;
+            }
+            
+            if ( should_add_transaction )
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
 
@@ -2431,14 +2492,54 @@ namespace sgns
         {
             std::unique_lock in_lock( incoming_tx_mutex_m );
             auto             it = incoming_tx_processed_m.find( key );
+            bool             should_add_transaction = false;
 
             if ( ( it != incoming_tx_processed_m.end() ) &&
                  ( it->second.tx->dag_st.data_hash() != new_tx->dag_st.data_hash() ) )
             {
                 OUTCOME_TRY( auto &&topics, RevertTransaction( it->second.tx ) );
-                it = incoming_tx_processed_m.end();
+                should_add_transaction = true;
             }
-            if ( it == incoming_tx_processed_m.end() )
+            else if ( it == incoming_tx_processed_m.end() )
+            {
+                //try to find transaction with different key but same nonce, which will have to be deleted as well
+                auto conflicting_tx = GetConflictingTransaction( *new_tx );
+                if (conflicting_tx.has_value())
+                {
+                    // Find the key for the conflicting transaction
+                    std::string conflicting_key;
+                    for ( const auto &kv : incoming_tx_processed_m )
+                    {
+                        if ( kv.second.tx && kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
+                        {
+                            conflicting_key = kv.first;
+                            break;
+                        }
+                    }
+                    
+                    if ( !conflicting_key.empty() )
+                    {
+                        m_logger->debug( "[{} - full: {}] Found conflicting transaction with key: {}, removing it",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m,
+                                         conflicting_key );
+                        
+                        // Unlock before calling RemoveTransactionFromProcessedMaps to avoid deadlock
+                        in_lock.unlock();
+                        OUTCOME_TRY( RemoveTransactionFromProcessedMaps( conflicting_key, true ) );
+                        in_lock.lock();
+                    }
+                    else
+                    {
+                        m_logger->error( "[{} - full: {}] Conflicting transaction found but key not located",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m );
+                    }
+                }
+                should_add_transaction = true;
+            }
+            
+            if ( should_add_transaction )
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
 
@@ -2564,4 +2665,26 @@ namespace sgns
         }
     }
 
+    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::GetConflictingTransaction(
+        IGeniusTransactions &element )
+    {
+        if ( element.GetSrcAddress() == account_m->GetAddress() )
+        {
+            auto tx = GetInTransaction( element.dag_st.nonce() );
+            if (( tx ) && (tx->GetSrcAddress() == element.GetSrcAddress()) )
+            {
+                return tx;
+            }
+        }
+        else
+        {
+            auto tx = GetOutTransaction( element.dag_st.nonce() );
+            if (( tx ) && (tx->GetSrcAddress() == element.GetSrcAddress()) )
+            {
+                return tx;
+            }
+        }
+
+        return outcome::failure( boost::system::error_code{} );
+    }
 }

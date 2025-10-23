@@ -95,8 +95,8 @@ namespace sgns
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds(0),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds(0) );
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();
 
@@ -143,6 +143,8 @@ namespace sgns
         State             GetState() const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
+
+        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction( IGeniusTransactions &element );
 
         /**
          * @brief      Stops the TransactionManager processing
@@ -223,6 +225,7 @@ namespace sgns
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce ) const;
+        std::shared_ptr<IGeniusTransactions> GetInTransaction( uint64_t nonce ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
