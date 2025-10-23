@@ -1660,7 +1660,7 @@ namespace sgns
             bool synched = true;
             for ( uint64_t i = 0; i <= network_confirmed_nonce; ++i )
             {
-                auto tx = GetOutTransaction( i );
+                auto tx = GetOutTransaction( i, account_m->GetAddress() );
                 if ( !tx )
                 {
                     synched = false;
@@ -1875,12 +1875,14 @@ namespace sgns
         return nullptr;
     }
 
-    std::shared_ptr<IGeniusTransactions> TransactionManager::GetOutTransaction( uint64_t nonce ) const
+    std::shared_ptr<IGeniusTransactions> TransactionManager::GetOutTransaction( uint64_t           nonce,
+                                                                                const std::string &address ) const
     {
         std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
         for ( const auto &kv : outgoing_tx_processed_m )
         {
-            if ( kv.second.tx && kv.second.tx->dag_st.nonce() == nonce )
+            if ( kv.second.tx && ( kv.second.tx->dag_st.nonce() == nonce ) &&
+                 ( kv.second.tx->GetSrcAddress() == address ) )
             {
                 return kv.second.tx;
             }
@@ -1888,12 +1890,14 @@ namespace sgns
         return nullptr;
     }
 
-    std::shared_ptr<IGeniusTransactions> TransactionManager::GetInTransaction( uint64_t nonce ) const
+    std::shared_ptr<IGeniusTransactions> TransactionManager::GetInTransaction( uint64_t           nonce,
+                                                                               const std::string &address ) const
     {
         std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
         for ( const auto &kv : incoming_tx_processed_m )
         {
-            if ( kv.second.tx && kv.second.tx->dag_st.nonce() == nonce )
+            if ( kv.second.tx && ( kv.second.tx->dag_st.nonce() == nonce ) &&
+                 ( kv.second.tx->GetSrcAddress() == address ) )
             {
                 return kv.second.tx;
             }
@@ -2432,7 +2436,7 @@ namespace sgns
         if ( new_tx->GetSrcAddress() == account_m->GetAddress() )
         {
             std::unique_lock out_lock( outgoing_tx_mutex_m );
-            auto             it = outgoing_tx_processed_m.find( key );
+            auto             it                     = outgoing_tx_processed_m.find( key );
             bool             should_add_transaction = false;
 
             if ( ( it != outgoing_tx_processed_m.end() ) &&
@@ -2445,26 +2449,27 @@ namespace sgns
             {
                 //try to find transaction with different key but same nonce, which will have to be deleted as well
                 auto conflicting_tx = GetConflictingTransaction( *new_tx );
-                if (conflicting_tx.has_value())
+                if ( conflicting_tx.has_value() )
                 {
                     // Find the key for the conflicting transaction
                     std::string conflicting_key;
                     for ( const auto &kv : outgoing_tx_processed_m )
                     {
-                        if ( kv.second.tx && kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
+                        if ( kv.second.tx &&
+                             kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
                         {
                             conflicting_key = kv.first;
                             break;
                         }
                     }
-                    
+
                     if ( !conflicting_key.empty() )
                     {
                         m_logger->debug( "[{} - full: {}] Found conflicting transaction with key: {}, removing it",
                                          account_m->GetAddress().substr( 0, 8 ),
                                          full_node_m,
                                          conflicting_key );
-                        
+
                         // Unlock before calling RemoveTransactionFromProcessedMaps to avoid deadlock
                         out_lock.unlock();
                         OUTCOME_TRY( RemoveTransactionFromProcessedMaps( conflicting_key, true ) );
@@ -2479,7 +2484,7 @@ namespace sgns
                 }
                 should_add_transaction = true;
             }
-            
+
             if ( should_add_transaction )
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
@@ -2491,7 +2496,7 @@ namespace sgns
         else
         {
             std::unique_lock in_lock( incoming_tx_mutex_m );
-            auto             it = incoming_tx_processed_m.find( key );
+            auto             it                     = incoming_tx_processed_m.find( key );
             bool             should_add_transaction = false;
 
             if ( ( it != incoming_tx_processed_m.end() ) &&
@@ -2504,26 +2509,27 @@ namespace sgns
             {
                 //try to find transaction with different key but same nonce, which will have to be deleted as well
                 auto conflicting_tx = GetConflictingTransaction( *new_tx );
-                if (conflicting_tx.has_value())
+                if ( conflicting_tx.has_value() )
                 {
                     // Find the key for the conflicting transaction
                     std::string conflicting_key;
                     for ( const auto &kv : incoming_tx_processed_m )
                     {
-                        if ( kv.second.tx && kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
+                        if ( kv.second.tx &&
+                             kv.second.tx->dag_st.data_hash() == conflicting_tx.value()->dag_st.data_hash() )
                         {
                             conflicting_key = kv.first;
                             break;
                         }
                     }
-                    
+
                     if ( !conflicting_key.empty() )
                     {
                         m_logger->debug( "[{} - full: {}] Found conflicting transaction with key: {}, removing it",
                                          account_m->GetAddress().substr( 0, 8 ),
                                          full_node_m,
                                          conflicting_key );
-                        
+
                         // Unlock before calling RemoveTransactionFromProcessedMaps to avoid deadlock
                         in_lock.unlock();
                         OUTCOME_TRY( RemoveTransactionFromProcessedMaps( conflicting_key, true ) );
@@ -2538,7 +2544,7 @@ namespace sgns
                 }
                 should_add_transaction = true;
             }
-            
+
             if ( should_add_transaction )
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
@@ -2670,16 +2676,16 @@ namespace sgns
     {
         if ( element.GetSrcAddress() == account_m->GetAddress() )
         {
-            auto tx = GetInTransaction( element.dag_st.nonce() );
-            if (( tx ) && (tx->GetSrcAddress() == element.GetSrcAddress()) )
+            auto tx = GetInTransaction( element.dag_st.nonce(), element.GetSrcAddress() );
+            if ( tx )
             {
                 return tx;
             }
         }
         else
         {
-            auto tx = GetOutTransaction( element.dag_st.nonce() );
-            if (( tx ) && (tx->GetSrcAddress() == element.GetSrcAddress()) )
+            auto tx = GetOutTransaction( element.dag_st.nonce(), element.GetSrcAddress() );
+            if ( tx )
             {
                 return tx;
             }
