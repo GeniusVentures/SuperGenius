@@ -149,7 +149,6 @@ namespace sgns
         return retval;
     }
 
-
     TokenID GeniusAccount::GetToken() const
     {
         return token;
@@ -436,7 +435,9 @@ namespace sgns
         SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
         std::lock_guard lock( nonce_mutex_ );
         nonce++;
-        genius_account_logger()->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
+        genius_account_logger()->debug( "Setting the max value between {} and {} as a proposed (next) nonce",
+                                        proposed_nonce_,
+                                        nonce );
         proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
@@ -445,9 +446,9 @@ namespace sgns
         std::lock_guard lock( nonce_mutex_ );
         auto            current_confirmed_nonce = confirmed_nonces_[address];
         genius_account_logger()->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
-                        current_confirmed_nonce,
-                        nonce,
-                        address.substr( 0, 8 ) );
+                                        current_confirmed_nonce,
+                                        nonce,
+                                        address.substr( 0, 8 ) );
         confirmed_nonces_[address] = std::max( nonce, current_confirmed_nonce );
     }
 
@@ -456,9 +457,9 @@ namespace sgns
         std::lock_guard lock( nonce_mutex_ );
         auto            current_confirmed_nonce = confirmed_nonces_[address];
         genius_account_logger()->debug( "Setting the min value between {} and {} as a confirmed nonce for address {}",
-                        current_confirmed_nonce,
-                        nonce,
-                        address.substr( 0, 8 ) );
+                                        current_confirmed_nonce,
+                                        nonce,
+                                        address.substr( 0, 8 ) );
         if ( nonce == current_confirmed_nonce )
         {
             if ( current_confirmed_nonce )
@@ -474,8 +475,8 @@ namespace sgns
             if ( address == eth_keypair->GetEntirePubValue() )
             {
                 genius_account_logger()->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
-                                proposed_nonce_,
-                                current_confirmed_nonce );
+                                                proposed_nonce_,
+                                                current_confirmed_nonce );
                 proposed_nonce_ = current_confirmed_nonce;
             }
         }
@@ -489,6 +490,10 @@ namespace sgns
     void GeniusAccount::IncProposedNonce()
     {
         proposed_nonce_++;
+    }
+    void GeniusAccount::DecProposedNonce()
+    {
+        proposed_nonce_--;
     }
 
     outcome::result<uint64_t> GeniusAccount::GetPeerNonce( std::string address ) const

@@ -221,6 +221,11 @@ namespace sgns
          */
         void IncProposedNonce();
 
+        /**
+         * @brief       Decrement the proposed nonce
+         */
+        void DecProposedNonce();
+
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 

@@ -660,6 +660,7 @@ namespace sgns
                              confirmed_nonce );
             expected_next_nonce = confirmed_nonce + 1;
         }
+        bool valid_batch = true;
 
         for ( auto &transaction_pair : transaction_batch )
         {
@@ -692,10 +693,12 @@ namespace sgns
                     t.tx     = transaction;
                     t.status = TransactionStatus::FAILED;
                 }
-
                 RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
 
-                return outcome::failure( boost::system::error_code{} );
+                expected_next_nonce++;
+                account_m->DecProposedNonce();
+                valid_batch = false;
+                continue;
             }
             else if ( transaction->dag_st.nonce() < expected_next_nonce )
             {
@@ -716,7 +719,10 @@ namespace sgns
                 }
                 RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
 
-                return outcome::failure( boost::system::error_code{} );
+                expected_next_nonce++;
+                account_m->DecProposedNonce();
+                valid_batch = false;
+                continue;
             }
 
             auto                         transaction_path = GetTransactionPath( *transaction );
@@ -749,6 +755,10 @@ namespace sgns
             expected_next_nonce++;
         }
         expected_next_nonce--;
+        if ( !valid_batch )
+        {
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+        }
 
         std::set<std::string> topicSet;
         for ( auto &transaction_pair : transaction_batch )
