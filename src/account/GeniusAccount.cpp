@@ -172,7 +172,7 @@ namespace sgns
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && target_address != GetAddress() )
         {
-            genius_account_logger()->error( "Non-full node cannot store UTXOs for other addresses" );
+            genius_account_logger()->debug( "Non-full node cannot store UTXOs for other addresses" );
             return false;
         }
 
