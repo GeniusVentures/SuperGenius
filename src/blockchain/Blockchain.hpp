@@ -14,6 +14,7 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/GeniusAccount.hpp"
 #include "genesis.pb.h"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -85,7 +86,7 @@ namespace sgns
         outcome::result<void> VerifyGenesisBlock( const std::string &serialized_genesis );
 
         void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
-        void CompleteGenesisCheck( outcome::result<void> result );
+        void InformGenesisResult( outcome::result<void> result );
     };
 
     // Factory method implementation
@@ -126,36 +127,34 @@ namespace sgns
         // Try to get genesis block synchronously first
         auto get_genesis_result = db_->Get( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ) );
 
-        if ( get_genesis_result.has_error() )
+        if ( !get_genesis_result.has_error() )
         {
-            // Genesis block not found locally
-            if ( account_->GetAddress() == FULL_NODE_PUB_ADDRESS )
+            // Genesis block found, verify it immediately
+            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+
+            sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
+            genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
+            auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
+            if ( genesis_cid.has_value() )
             {
-                // Full node creates genesis block immediately
-                auto create_result = CreateGenesisBlock();
-                CompleteGenesisCheck( create_result );
+                genesis_cid_ = std::string( genesis_cid.value().toString() );
             }
-            else
-            {
-                // Regular node requests genesis block via pubsub
-                account_->RequestGenesis();
-            }
+            return outcome::success();
+        }
+        // Genesis block not found locally
+        if ( account_->GetAddress() == FULL_NODE_PUB_ADDRESS )
+        {
+            // Full node creates genesis block immediately
+            auto create_result = CreateGenesisBlock();
+            InformGenesisResult( create_result );
+            return create_result;
         }
         else
         {
-            // Genesis block found, verify it immediately
-            auto genesis_validation_result = OnGenesisBlockReceived( get_genesis_result.value() );
-            if ( !genesis_validation_result.has_error() )
-            {
-                sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
-                genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
-                auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
-                if ( genesis_cid.has_value() )
-                {
-                    genesis_cid_ = std::string( genesis_cid.value().toString() );
-                }
-            }
+            // Regular node requests genesis block via pubsub
+            account_->RequestGenesis();
         }
+        return outcome::success();
     }
 
     outcome::result<void> Blockchain::OnGenesisBlockReceived( const base::Buffer &serialized_genesis )
@@ -164,15 +163,13 @@ namespace sgns
         std::vector<uint8_t> data( serialized_genesis.begin(), serialized_genesis.end() );
         if ( !genesis_block_.ParseFromArray( data.data(), data.size() ) )
         {
-            return CompleteGenesisCheck( outcome::failure( Error::GENESIS_BLOCK_SERIALIZATION_FAILED ) );
+            return outcome::failure( Error::GENESIS_BLOCK_SERIALIZATION_FAILED );
         }
-
-        // Verify the received genesis block
-        auto verify_result = VerifyGenesisBlock( serialized_genesis );
-        return CompleteGenesisCheck( verify_result );
+        return VerifyGenesisBlock( serialized_genesis );
+        ;
     }
 
-    outcome::result<void> Blockchain::CompleteGenesisCheck( outcome::result<void> result )
+    outcome::result<void> Blockchain::InformGenesisResult( outcome::result<void> result )
     {
         if ( genesis_processed_callback_ )
         {
@@ -201,15 +198,19 @@ namespace sgns
                 db_->GetDataStore()->put( genesis_cid_buffer_key, genesis_cid_buffer_value );
                 genesis_cid_ = cid;
             }
+            InformGenesisResult( genesis_validation_result );
         }
     }
 
     outcome::result<void> Blockchain::CreateGenesisBlock()
     {
         sgns::blockchain::GenesisBlock g;
-        g.set_chain_id( "supergenius-mainnet" );
-        g.set_timestamp( static_cast<uint64_t>( std::time( nullptr ) ) );
-        g.set_version( "1" );
+        auto                           timestamp = std::chrono::system_clock::now();
+
+        g.set_chain_id( "supergenius" );
+        g.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
+        g.set_version( version::SuperGeniusVersionFullString() );
 
         // compute or fill hash as needed (placeholder empty for now)
         g.set_hash( std::string{} );

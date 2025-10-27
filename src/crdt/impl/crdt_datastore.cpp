@@ -783,8 +783,8 @@ namespace sgns::crdt
     }
 
     outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
-                                                 const Buffer                &aValue,
-                                                 const std::set<std::string> &topics )
+                                                const Buffer                &aValue,
+                                                const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -809,7 +809,6 @@ namespace sgns::crdt
         }
 
         return Publish( deltaResult.value(), topics );
-
     }
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
@@ -890,12 +889,8 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
-        auto getListResult = heads_->GetList( topics );
-        if ( getListResult.has_failure() )
-        {
-            return outcome::failure( getListResult.error() );
-        }
-        auto [head_map, height] = getListResult.value();
+        OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
+        auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
@@ -906,17 +901,11 @@ namespace sgns::crdt
         {
             for ( const auto &cid : cid_set )
             {
-                //logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), topic_name );
                 headsWithTopics.emplace_back( cid, topic_name );
             }
         }
 
-        auto putBlockResult = PutBlock( headsWithTopics, aDelta, topics );
-        if ( putBlockResult.has_failure() )
-        {
-            return outcome::failure( putBlockResult.error() );
-        }
-        auto node = putBlockResult.value();
+        OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
 
         // Process new block. This makes that every operation applied
         // to this store take effect (delta is merged) before
