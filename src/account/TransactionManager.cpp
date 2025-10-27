@@ -445,7 +445,7 @@ namespace sgns
     {
         if ( taskresult.subtask_results().size() == 0 )
         {
-            m_logger->debug( "[{} - full: {}] No result found on escrow {}",
+            m_logger->error( "[{} - full: {}] No result found on escrow {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              escrow_path );
@@ -453,7 +453,7 @@ namespace sgns
         }
         if ( escrow_path.empty() )
         {
-            m_logger->debug( "[{} - full: {}] Escrow path empty", account_m->GetAddress().substr( 0, 8 ), full_node_m );
+            m_logger->error( "[{} - full: {}] Escrow path empty", account_m->GetAddress().substr( 0, 8 ), full_node_m );
             return outcome::failure( boost::system::error_code{} );
         }
         m_logger->debug( "[{} - full: {}] Fetching escrow from processing DB at {}",
@@ -1768,7 +1768,8 @@ namespace sgns
         std::vector<std::string> invalid_transaction_keys;
         {
             std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            m_logger->debug( "[{} - full: {}] CheckTransactionValidity: Checking transactions",
+            m_logger->debug( "[{} - full: {}] {}: Checking transactions",
+                             __func__,
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
 
@@ -1781,7 +1782,8 @@ namespace sgns
                         continue;
                     }
 
-                    m_logger->debug( "[{} - full: {}] CheckTransactionValidity: Seeing if transaction {} is valid {}",
+                    m_logger->debug( "[{} - full: {}] {}: Seeing if transaction {} is valid {}",
+                                     __func__,
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      it.second.tx->dag_st.nonce(),
@@ -1811,7 +1813,8 @@ namespace sgns
                         }
                         else
                         {
-                            m_logger->debug( "[{} - full: {}] CheckTransactionValidity: Transaction is valid with {}",
+                            m_logger->debug( "[{} - full: {}] {}: Transaction is valid with {}",
+                                             __func__,
                                              account_m->GetAddress().substr( 0, 8 ),
                                              full_node_m,
                                              nonce );
@@ -1821,7 +1824,8 @@ namespace sgns
                             // Collect the key for later removal
                             invalid_transaction_keys.push_back( it.first );
                             changed = true;
-                            m_logger->debug( "[{} - full: {}] CheckTransactionValidity: INVALID TX {}",
+                            m_logger->debug( "[{} - full: {}] {}: INVALID TX {}",
+                                             __func__,
                                              account_m->GetAddress().substr( 0, 8 ),
                                              full_node_m,
                                              nonce );
