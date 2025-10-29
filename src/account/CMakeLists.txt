@@ -24,6 +24,13 @@ add_library(sgns_account
     AccountMessenger.cpp
 )
 
+add_library(passwords STATIC PasswordRepository.hpp)
+target_link_libraries(passwords PUBLIC outcome)
+
+if(WIN32)
+    target_sources(passwords PRIVATE PasswordRepository/Windows.cpp)
+endif()
+
 set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
 
 target_link_libraries(sgns_account
