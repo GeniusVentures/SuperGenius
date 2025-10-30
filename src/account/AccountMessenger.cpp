@@ -97,6 +97,12 @@ namespace sgns
 
     AccountMessenger::~AccountMessenger() {}
 
+    void AccountMessenger::RegisterBlockResponseHandler(BlockResponseHandler handler)
+    {
+        std::lock_guard lock(global_handler_mutex_);
+        global_block_handler_ = std::move(handler);
+    }
+
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         if ( message )
@@ -149,7 +155,7 @@ namespace sgns
                     HandleNonceResponse( acc_msg.nonce_response() );
                     break;
                 case accountComm::AccountMessage::kBlockResponse:
-                    HandleGenesisResponse( acc_msg.block_response() );
+                    HandleBlockResponse( acc_msg.block_response() );
                     break;
                 default:
                     logger_->error( "{}: Unknown AccountMessage type received on {}", __func__ );
@@ -280,7 +286,7 @@ namespace sgns
         return max_nonce;
     }
 
-    void AccountMessenger::RequestGenesis( GenesisCallback callback )
+    void AccountMessenger::RequestGenesis()
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
@@ -295,16 +301,9 @@ namespace sgns
 
         logger_->debug( "[{}] Requesting genesis block with req_id {}", address_.substr( 0, 8 ), req_id );
 
-        {
-            std::lock_guard lock( genesis_callbacks_mutex_ );
-            genesis_callbacks_[req_id] = std::move( callback );
-        }
-
         auto request_result = RequestGenesisBlock( req_id );
         if ( request_result.has_error() )
         {
-            std::lock_guard lock( genesis_callbacks_mutex_ );
-            genesis_callbacks_.erase( req_id );
             logger_->error( "[{}] Failed to request genesis block", address_.substr( 0, 8 ) );
         }
     }
@@ -436,19 +435,20 @@ namespace sgns
         }
     }
 
-    void AccountMessenger::HandleGenesisResponse( const accountComm::SignedBlockResponse &signed_resp )
+    void AccountMessenger::HandleBlockResponse( const accountComm::SignedBlockResponse &signed_resp )
     {
         const auto &resp = signed_resp.data();
 
-        logger_->debug( "[{}] Received a Genesis response from {} with req_id {}",
+        logger_->debug( "[{}] Received a Block response from {} with {} blocks and req_id {}",
                         address_.substr( 0, 8 ),
                         resp.responder_address().substr( 0, 8 ),
+                        resp.blocks_size(),
                         resp.request_id() );
 
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
         {
-            logger_->error( "Failed to serialize GenesisResponse for signature check" );
+            logger_->error( "Failed to serialize BlockResponse for signature check" );
             return;
         }
 
@@ -459,23 +459,25 @@ namespace sgns
                                                                    data_vec );
         if ( verify_signature_result.has_error() )
         {
-            logger_->error( "No verify method for GenesisResponse" );
+            logger_->error( "No verify method for BlockResponse" );
             return;
         }
         if ( !verify_signature_result.value() )
         {
-            logger_->error( "Invalid signature on GenesisResponse from {}", resp.responder_address() );
+            logger_->error( "Invalid signature on BlockResponse from {}", resp.responder_address() );
             return;
         }
 
+        // Call global handler if registered
         {
-            std::lock_guard lock( genesis_callbacks_mutex_ );
-            auto            it = genesis_callbacks_.find( resp.request_id() );
-            if ( it != genesis_callbacks_.end() )
+            std::lock_guard lock(global_handler_mutex_);
+            if (global_block_handler_)
             {
-                auto callback = std::move( it->second );
-                genesis_callbacks_.erase( it );
-                //callback( resp.genesis_block() );
+                global_block_handler_(resp);
+            }
+            else
+            {
+                logger_->debug( "[{}] No global block response handler registered", address_.substr( 0, 8 ) );
             }
         }
     }

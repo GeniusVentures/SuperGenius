@@ -48,7 +48,7 @@ namespace sgns
         static std::shared_ptr<GeniusAccount> New( TokenID          token_id,
                                                    std::string_view base_path,
                                                    const char      *eth_private_key,
-                                                   bool             full_node = false);
+                                                   bool             full_node = false );
         /**
          * @brief       Initialize the messenger for the account
          * @param[in]   pubsub pubsub instance
@@ -220,6 +220,8 @@ namespace sgns
          * @brief       Increment the proposed nonce
          */
         void IncProposedNonce();
+
+        outcome::result<void> RequestGenesis() const;
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes

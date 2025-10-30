@@ -36,7 +36,7 @@ namespace sgns
             PROTO_SERIALIZATION,       ///< Error in protobuf data serialization
             NONCE_REQUEST_IN_PROGRESS, ///< Nonce request already in progress
             NONCE_GET_ERROR,           ///< Nonce couldn't be fetched
-            GENESIS_REQUEST_ERROR,     //sim/< Genesis request failed
+            GENESIS_REQUEST_ERROR,     ///< Genesis request failed
         };
 
         /**
@@ -58,8 +58,8 @@ namespace sgns
             std::function<outcome::result<std::string>()> get_genesis_cid_;
         };
 
-        // Genesis callback type
-        using GenesisCallback = std::function<void(const std::string&)>;
+        // Global block response handler type
+        using BlockResponseHandler = std::function<void( const accountComm::BlockResponse & )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -84,10 +84,15 @@ namespace sgns
         outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms = 150 );
 
         /**
-         * @brief       Request genesis block from the network
-         * @param[in]   callback Callback to be called when genesis block is received
+         * @brief       Request genesis block from the network (no callback)
          */
-        void RequestGenesis(GenesisCallback callback);
+        void RequestGenesis();
+
+        /**
+         * @brief       Register global block response handler
+         * @param[in]   handler Function to call for all block responses
+         */
+        void RegisterBlockResponseHandler( BlockResponseHandler handler );
 
     private:
         /// Basis of the account receiving topic
@@ -107,15 +112,16 @@ namespace sgns
 
         std::unordered_map<uint64_t, std::set<uint64_t>> nonce_responses_; ///< All current nonce responses
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
-                         first_response_time_;   ///< Timestamp of the first response
-        std::mutex       nonce_responses_mutex_; ///< Mutex of the nonce_responses_
-        
-        std::unordered_map<uint64_t, GenesisCallback> genesis_callbacks_; ///< Genesis request callbacks
-        std::mutex                                    genesis_callbacks_mutex_; ///< Mutex for genesis callbacks
-        
-        InterfaceMethods methods_;               ///< Interface methods
+                   first_response_time_;   ///< Timestamp of the first response
+        std::mutex nonce_responses_mutex_; ///< Mutex of the nonce_responses_
+
+        InterfaceMethods methods_; ///< Interface methods
 
         std::random_device rd_; ///< Random device for request IDs
+
+        /// Global block response handler
+        BlockResponseHandler global_block_handler_;
+        std::mutex           global_handler_mutex_;
 
         /**
          * @brief       Private constructor of the Account Messenger 
@@ -176,10 +182,10 @@ namespace sgns
          */
         void HandleGenesisRequest( const accountComm::SignedGenesisRequest &req );
         /**
-         * @brief       Handles the Genesis response package
-         * @param[in]   resp The proto genesis response package
+         * @brief       Handles the Block response package (calls global handler)
+         * @param[in]   resp The proto block response package
          */
-        void HandleGenesisResponse( const accountComm::SignedBlockResponse &resp );
+        void HandleBlockResponse( const accountComm::SignedBlockResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

@@ -148,7 +148,6 @@ namespace sgns
         return retval;
     }
 
-
     TokenID GeniusAccount::GetToken() const
     {
         return token;
@@ -514,6 +513,10 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
         uint64_t result = 0;
         logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 
@@ -529,5 +532,18 @@ namespace sgns
             return outcome::failure( std::errc::timed_out );
         }
         return result;
+    }
+
+    outcome::result<void> GeniusAccount::RequestGenesis() const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        logger_->debug( "Requesting Genesis block from the network" );
+
+        messenger_->RequestGenesis();
+
+        return outcome::success();
     }
 }
