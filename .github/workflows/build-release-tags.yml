@@ -7,6 +7,14 @@ on:
         description: 'Tag to create releases for'
         required: true
         type: string
+      thirdparty_tag:
+        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified)'
+        required: false
+        type: string
+      zkllvm_tag:
+        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -93,7 +101,9 @@ jobs:
         working-directory: ${{github.workspace}}
         run: |
           TAG_NAME="${{ github.event.inputs.tag }}"
+          THIRDPARTY_TAG="${{ github.event.inputs.thirdparty_tag || github.event.inputs.tag }}"
           echo "Building for tag: ${TAG_NAME}"
+          echo "Using thirdparty tag: ${THIRDPARTY_TAG}"
 
           if [ '${{matrix.abi}}' ]; then
             FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${{matrix.build-type}}.tar.gz
@@ -105,10 +115,10 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
-          # Download from the tag's release
-          echo "Downloading thirdparty from tag: ${TAG_NAME}"
+          # Download from the specified thirdparty tag's release
+          echo "Downloading thirdparty from tag: ${THIRDPARTY_TAG}"
 
-          gh release download ${TAG_NAME} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          gh release download ${THIRDPARTY_TAG} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
@@ -125,11 +135,13 @@ jobs:
         working-directory: ${{github.workspace}}
         run: |
           TAG_NAME="${{ github.event.inputs.tag }}"
+          ZKLLVM_TAG="${{ github.event.inputs.zkllvm_tag || github.event.inputs.tag }}"
+          echo "Using zkLLVM tag: ${ZKLLVM_TAG}"
           
           mkdir zkLLVM
           cd zkLLVM
 
-          echo "Downloading zkLLVM from tag: ${TAG_NAME}"
+          echo "Downloading zkLLVM from tag: ${ZKLLVM_TAG}"
 
           if [ "${{ matrix.target }}" = "Windows" ]; then
               ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
@@ -142,7 +154,7 @@ jobs:
               ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
           fi
 
-          gh release download ${TAG_NAME} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+          gh release download ${ZKLLVM_TAG} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
 
