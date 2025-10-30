@@ -140,6 +140,16 @@ namespace sgns::crdt
                             auto process_res = self->ProcessJobIteration( job_to_process );
                             if ( process_res.has_failure() )
                             {
+                                // Signal job failure
+                                {
+                                    std::lock_guard lock_jobs( self->dagWorkerMutex_ );
+                                    auto job_it = self->pending_jobs_.find( job_to_process.root_node_->getCID() );
+                                    if ( job_it != self->pending_jobs_.end() )
+                                    {
+                                        job_it->second = JobStatus::FAILED;
+                                    }
+                                }
+
                                 self->logger_->error( "CID PROCESSING ERROR: Cleaning up jobs for root CID {}",
                                                       job_to_process.root_node_->getCID().toString().value() );
 
@@ -618,8 +628,6 @@ namespace sgns::crdt
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
         OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
 
-        //OUTCOME_TRY( dagSyncer_->DeleteCIDBlock( job_to_process.node_->getCID() ));
-
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
         OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
@@ -649,7 +657,18 @@ namespace sgns::crdt
                 activeRootCID_.reset(); // this root fully done
             }
             dagWorkerCv_.notify_all(); // let one worker seed the next root
+
+            // Signal job completion after UpdateCRDTHeads is done
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                auto            it = pending_jobs_.find( job_to_process.root_node_->getCID() );
+                if ( it != pending_jobs_.end() )
+                {
+                    it->second = JobStatus::COMPLETED;
+                }
+            }
         }
+
         return outcome::success();
     }
 
@@ -942,31 +961,67 @@ namespace sgns::crdt
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
+            pending_jobs_[node->getCID()] = JobStatus::PENDING;
             rootCIDJobList_.push( rootJob );
         }
         dagWorkerCv_.notify_one();
 
-        // Timeout check for node insertion
-        auto start      = std::chrono::steady_clock::now();
-        bool node_found = false;
-        while ( std::chrono::steady_clock::now() - start < std::chrono::seconds( 5 ) )
-        {
-            auto get_result = dagSyncer_->GetNodeWithoutRequest( node->getCID() );
-            if ( get_result.has_value() )
-            {
-                node_found = true;
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Poll every 100ms
-        }
-        if ( !node_found )
-        {
-            logger_->error( "AddDAGNode: Timeout waiting for node {} to be inserted",
-                            node->getCID().toString().value() );
-            return outcome::failure( Error::NODE_CREATION ); // Or a custom error code like Error::NODE_TIMEOUT
-        }
+        return WaitForJob( node->getCID() );
+    }
 
-        return node->getCID();
+    outcome::result<CID> CrdtDatastore::WaitForJob( const CID &cid )
+    {
+        logger_->debug("WaitForJob: Starting to wait for CID {} completion", cid.toString().value());
+        
+        auto timeout_duration = std::chrono::minutes(20);
+        auto start_time = std::chrono::steady_clock::now();
+        auto last_log_time = start_time;
+        
+        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        {
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                auto            it = pending_jobs_.find( cid );
+                if ( it != pending_jobs_.end() )
+                {
+                    if ( it->second == JobStatus::COMPLETED )
+                    {
+                        pending_jobs_.erase( it );
+                        logger_->debug("WaitForJob: CID {} completed successfully", cid.toString().value());
+                        return cid;
+                    }
+                    else if ( it->second == JobStatus::FAILED )
+                    {
+                        pending_jobs_.erase( it );
+                        logger_->error("WaitForJob: CID {} processing failed", cid.toString().value());
+                        return outcome::failure( Error::NODE_CREATION );
+                    }
+                }
+            }
+            
+            auto current_time = std::chrono::steady_clock::now();
+            
+            // Log progress every 30 seconds
+            if ( current_time - last_log_time >= std::chrono::seconds(30) )
+            {
+                auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+                logger_->info("WaitForJob: Still waiting for CID {} (elapsed: {}s)", 
+                             cid.toString().value(), elapsed_seconds);
+                last_log_time = current_time;
+            }
+            
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        
+        // Timeout reached
+        logger_->error("WaitForJob: Timeout (20 minutes) waiting for CID {} - possible system failure", 
+                      cid.toString().value());
+        // Clean up the pending job
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_.erase( cid );
+        }
+        return outcome::failure( Error::NODE_CREATION );
     }
 
     outcome::result<void> CrdtDatastore::PrintDAG()

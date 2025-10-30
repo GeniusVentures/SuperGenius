@@ -357,6 +357,8 @@ namespace sgns::crdt
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
         void EnqueueRootCID( const CID &cid );
 
+        outcome::result<CID> WaitForJob( const CID &cid );
+
     private:
         CrdtDatastore() = default;
 
@@ -411,6 +413,14 @@ namespace sgns::crdt
         bool                    isFullNode = false;
 
         CRDTCallbackManager crdt_cb_manager_;
+
+        enum class JobStatus {
+            PENDING,
+            COMPLETED,
+            FAILED
+        };
+
+        std::map<CID, JobStatus> pending_jobs_;
     };
 
 }
