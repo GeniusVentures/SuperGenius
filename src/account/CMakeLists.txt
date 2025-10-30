@@ -5,9 +5,48 @@ if (BUILD_WITH_PROOFS)
     add_compile_definitions(_PROOF_ENABLED)
 endif()
 
-
-add_library(sgns_account
+# Create the GeniusAccount library
+add_library(sgns_genius_account
     GeniusAccount.cpp
+    AccountMessenger.cpp
+)
+
+set_target_properties(sgns_genius_account PROPERTIES UNITY_BUILD ON)
+
+target_link_libraries(sgns_genius_account
+    PUBLIC
+    Boost::headers
+    KeyGeneration
+    outcome
+    logger
+    ipfs-pubsub
+    PRIVATE
+    json_secure_storage
+    component_factory
+    SGAccountCommProto
+    ${WIN_API_LIBRARY}
+    ${USER_ENV_LIBRARY}
+    TrustWalletCore
+    wallet_core_rs
+    TrezorCrypto
+    protobuf::libprotobuf
+    ${WIN_CRYPT_LIBRARY}
+)
+
+target_include_directories(
+    sgns_genius_account
+    PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+if (MSVC)
+    target_compile_options(sgns_genius_account PUBLIC /constexpr:steps1500000)
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
+endif()
+
+# Create the main account library (without GeniusAccount files)
+add_library(genius_node
     TransactionManager.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
@@ -21,12 +60,11 @@ add_library(sgns_account
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
-    AccountMessenger.cpp
 )
 
-set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
+set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)
 
-target_link_libraries(sgns_account
+target_link_libraries(genius_node
     PUBLIC
     Boost::headers
     KeyGeneration
@@ -35,6 +73,7 @@ target_link_libraries(sgns_account
     crdt_globaldb
     processing_service
     gnus_upnp
+    sgns_genius_account  # Link to the GeniusAccount library
     PRIVATE
     json_secure_storage
     component_factory
@@ -53,7 +92,6 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto    
-    SGAccountCommProto
     ScaledInteger
     sgns_version
     AsyncIOManager
@@ -69,7 +107,7 @@ target_link_libraries(sgns_account
 )
 
 if (BUILD_WITH_PROOFS)
-    target_link_libraries(sgns_account
+    target_link_libraries(genius_node
     PRIVATE
     transfer_proof
     processing_proof
@@ -77,17 +115,19 @@ if (BUILD_WITH_PROOFS)
 endif()
 
 target_include_directories(
-    sgns_account
+    genius_node
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
-set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
+set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if (MSVC)
-    target_compile_options(sgns_account PUBLIC /constexpr:steps1500000)
+    target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
-    target_compile_options(sgns_account PUBLIC -fconstexpr-steps=10000000)
+    target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
 endif()
 
-supergenius_install(sgns_account)
+# Install both libraries
+supergenius_install(sgns_genius_account)
+supergenius_install(genius_node)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/../../ProofSystem/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" FILES_MATCHING PATTERN "*.h*")

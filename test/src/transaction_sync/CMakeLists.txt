@@ -5,17 +5,17 @@ transaction_sync_test.cpp
 target_include_directories(transaction_sync_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(transaction_sync_test
-    sgns_account
+    genius_node
 )
 
 if(WIN32)
-    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
+    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
-    target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")
+    target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
     target_link_options(transaction_sync_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:sgns_account>"
+        "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"
     )
 endif()
@@ -27,17 +27,17 @@ migration_sync_test.cpp
 target_include_directories(migration_sync_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(migration_sync_test
-    sgns_account
+    genius_node
 )
 
 if(WIN32)
-    target_link_options(migration_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
+    target_link_options(migration_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
-    target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")
+    target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
     target_link_options(migration_sync_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:sgns_account>"
+        "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"
     )
 endif()
@@ -50,17 +50,17 @@ transaction_crash_test.cpp
 target_include_directories(transaction_crash_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(transaction_crash_test
-    sgns_account
+    genius_node
 )
 
 if(WIN32)
-    target_link_options(transaction_crash_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
+    target_link_options(transaction_crash_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
-    target_link_options(transaction_crash_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")
+    target_link_options(transaction_crash_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
     target_link_options(transaction_crash_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:sgns_account>"
+        "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"
     )
 endif()
