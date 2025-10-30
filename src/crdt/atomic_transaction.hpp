@@ -5,7 +5,7 @@
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
-
+#include "primitives/cid/cid.hpp"
 #include <memory>
 #include <vector>
 #include <optional>
