@@ -643,13 +643,6 @@ namespace sgns
         auto     nonce_result        = account_m->GetConfirmedNonce( 3000 );
         uint64_t expected_next_nonce = 0;
         uint64_t confirmed_nonce     = 0;
-        if ( !nonce_result.has_value() )
-        {
-            m_logger->debug( "[{} - full: {}] Can't fetch nonce from the network, getting local",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            nonce_result = account_m->GetLocalConfirmedNonce();
-        }
 
         if ( nonce_result.has_value() )
         {
@@ -660,6 +653,22 @@ namespace sgns
                              confirmed_nonce );
             expected_next_nonce = confirmed_nonce + 1;
         }
+        else if ( ( !nonce_result.has_value() ) &&
+                  ( nonce_result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE ) )
+        {
+            m_logger->error( "[{} - full: {}] No confirmed nonce anywhere, setting first transaction to 0",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+        }
+        else if ( ( !nonce_result.has_value() ) &&
+                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) )
+        {
+            m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+        }
+
         bool valid_batch = true;
 
         for ( auto &transaction_pair : transaction_batch )
