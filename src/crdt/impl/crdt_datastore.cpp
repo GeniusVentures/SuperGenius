@@ -997,6 +997,11 @@ namespace sgns::crdt
                         return outcome::failure( Error::NODE_CREATION );
                     }
                 }
+                else
+                {
+                    logger_->error("WaitForJob: CID {} not found in pending jobs", cid.toString().value());
+                    return outcome::failure( Error::NODE_CREATION );
+                }
             }
             
             auto current_time = std::chrono::steady_clock::now();
@@ -1014,8 +1019,9 @@ namespace sgns::crdt
         }
         
         // Timeout reached
-        logger_->error("WaitForJob: Timeout (20 minutes) waiting for CID {} - possible system failure", 
-                      cid.toString().value());
+        logger_->error("WaitForJob: Timeout (20 minutes) waiting for CID {} - size of the rootCIDJobList_: {}",
+                       cid.toString().value(),
+                       rootCIDJobList_.size());
         // Clean up the pending job
         {
             std::lock_guard lock( dagWorkerMutex_ );
