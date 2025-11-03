@@ -491,6 +491,7 @@ namespace sgns
     {
         proposed_nonce_++;
     }
+
     void GeniusAccount::DecProposedNonce()
     {
         proposed_nonce_--;
@@ -529,10 +530,15 @@ namespace sgns
             result = latest_nonce_result.value();
             genius_account_logger()->debug( "Nonce replied with value {}", result );
         }
-        else
+        else if ( latest_nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED )
         {
-            genius_account_logger()->debug( "Using local nonce {}", result );
-            return outcome::failure( std::errc::timed_out );
+            genius_account_logger()->debug( "Network didn't answer nonce request " );
+            return latest_nonce_result;
+        }
+        else if ( latest_nonce_result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
+        {
+            genius_account_logger()->debug( "No nonce information on the network, get local data " );
+            return GetLocalConfirmedNonce();
         }
         return result;
     }

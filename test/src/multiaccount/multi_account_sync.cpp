@@ -29,7 +29,6 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/wait_condition.hpp"
 
-
 class MultiAccountTest : public ::testing::Test
 {
 protected:
@@ -146,6 +145,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_main";
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
 
     mint_result = node_proc1->MintTokens( 50000000000,
                                           "",
