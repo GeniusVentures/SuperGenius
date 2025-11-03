@@ -685,6 +685,24 @@ namespace sgns
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
+        else if ( ( !nonce_result.has_value() ) &&
+                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( full_node_m ) )
+        {
+            m_logger->warn( "[{} - full: {}] Could not fetch nonce, but proceeding since full node",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            auto local_confirmed = account_m->GetLocalConfirmedNonce();
+            if ( local_confirmed.has_value() )
+            {
+                confirmed_nonce = static_cast<int64_t>( local_confirmed.value() );
+
+                m_logger->debug( "[{} - full: {}] Using local confirmed nonce {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 local_confirmed.value() );
+                expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
+            }
+        }
 
         bool valid_batch = true;
 
