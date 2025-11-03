@@ -194,10 +194,11 @@ namespace sgns
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
             const std::shared_ptr<IGeniusTransactions> & );
 
-        void                     Update();
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<bool>    SendTransaction();
-        outcome::result<void>    ConfirmTransactions();
+        void                                Update();
+        SGTransaction::DAGStruct            FillDAGStruct( std::string transaction_hash = "" ) const;
+        outcome::result<std::set<uint64_t>> SendTransactionItem( TransactionItem &item );
+        outcome::result<void>               ConfirmTransactions();
+        outcome::result<void>               RollbackTransactions( TransactionItem &item_to_rollback );
 
         static std::string           GetTransactionBasePath( const std::string &address );
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
@@ -241,7 +242,7 @@ namespace sgns
         std::mutex                               state_change_callback_mutex_;
         StateChangeCallback                      state_change_callback_;
 
-        // for the SendTransaction thread support
+        // for the SendTransactionItem thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
