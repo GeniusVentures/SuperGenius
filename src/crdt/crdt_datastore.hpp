@@ -368,6 +368,14 @@ namespace sgns::crdt
                        std::shared_ptr<Broadcaster> aBroadcaster,
                        std::shared_ptr<CrdtOptions> aOptions );
 
+        bool ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker );
+        bool ProcessSelfCreatedJobs();
+        bool ProcessExternalJobs();
+        bool SeedNextExternalRoot();
+        void HandleJobProcessingFailure( const RootCIDJob &job );
+        void HandleJobProcessingSuccess( const RootCIDJob &job );
+        void CleanupFailedJob( const RootCIDJob &job );
+
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
 
@@ -397,7 +405,8 @@ namespace sgns::crdt
         std::mutex              dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
 
-        std::queue<RootCIDJob>                               rootCIDJobList_;
+        std::queue<RootCIDJob>                               rootCIDJobList_;     // External jobs
+        std::queue<RootCIDJob>                               selfCreatedJobList_; // Self-created jobs (high priority)
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
         std::mutex                                           pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
@@ -414,7 +423,8 @@ namespace sgns::crdt
 
         CRDTCallbackManager crdt_cb_manager_;
 
-        enum class JobStatus {
+        enum class JobStatus
+        {
             PENDING,
             COMPLETED,
             FAILED
