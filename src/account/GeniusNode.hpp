@@ -196,6 +196,18 @@ namespace sgns
 
         TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
 
+        /**
+         * @brief Set the authorized full node address for blockchain genesis verification
+         * @param pub_address The public address that is authorized to create genesis blocks
+         */
+        void SetAuthorizedFullNodeAddress( const std::string &pub_address );
+
+        /**
+         * @brief Get the current authorized full node public address
+         * @return The authorized full node public address
+         */
+        const std::string &GetAuthorizedFullNodeAddress() const;
+
     protected:
         friend class TransactionSyncTest;
 

@@ -388,6 +388,7 @@ namespace sgns::crdt
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
+            logger_->trace( "{}: Received CID {}", __func__, bCastHeadCID.toString().value() );
             auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
             if ( dagSyncerResult.has_failure() )
             {

@@ -248,37 +248,38 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = base_path + "/sgnslog2.log";
 #endif
-        node_logger_                = base::createLogger( "SuperGeniusNode", logdir );
-        auto loggerGlobalDB         = base::createLogger( "GlobalDB", logdir );
-        auto loggerDAGSyncer        = base::createLogger( "GraphsyncDAGSyncer", logdir );
-        auto loggerGraphsync        = base::createLogger( "graphsync", logdir );
-        auto loggerBroadcaster      = base::createLogger( "PubSubBroadcasterExt", logdir );
-        auto loggerDataStore        = base::createLogger( "CrdtDatastore", logdir );
-        auto loggerCRDTHeads        = base::createLogger( "CrdtHeads", logdir );
-        auto loggerTransactions     = base::createLogger( "TransactionManager", logdir );
-        auto loggerMigration        = base::createLogger( "MigrationManager", logdir );
-        auto loggerMigrationStep    = base::createLogger( "MigrationStep", logdir );
-        auto loggerQueue            = base::createLogger( "ProcessingTaskQueueImpl", logdir );
-        auto loggerRocksDB          = base::createLogger( "rocksdb", logdir );
-        auto logkad                 = base::createLogger( "Kademlia", logdir );
-        auto logNoise               = base::createLogger( "Noise", logdir );
-        auto logProcessingEngine    = base::createLogger( "ProcessingEngine", logdir );
-        auto loggerSubQueue         = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
-        auto loggerProcServ         = base::createLogger( "ProcessingService", logdir );
-        auto loggerProcqm           = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
-        auto loggerUPNP             = base::createLogger( "UPNP", logdir );
-        auto loggerProcessingNode   = base::createLogger( "ProcessingNode", logdir );
-        auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
-        auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
-        auto loggerGeniusAccount    = base::createLogger( "GeniusAccount", logdir );
-        auto loggerBlockchain       = base::createLogger( "Blockchain", logdir );
+        node_logger_                   = base::createLogger( "SuperGeniusNode", logdir );
+        auto loggerGlobalDB            = base::createLogger( "GlobalDB", logdir );
+        auto loggerDAGSyncer           = base::createLogger( "GraphsyncDAGSyncer", logdir );
+        auto loggerGraphsync           = base::createLogger( "graphsync", logdir );
+        auto loggerBroadcaster         = base::createLogger( "PubSubBroadcasterExt", logdir );
+        auto loggerDataStore           = base::createLogger( "CrdtDatastore", logdir );
+        auto loggerCRDTHeads           = base::createLogger( "CrdtHeads", logdir );
+        auto loggerTransactions        = base::createLogger( "TransactionManager", logdir );
+        auto loggerMigration           = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep       = base::createLogger( "MigrationStep", logdir );
+        auto loggerQueue               = base::createLogger( "ProcessingTaskQueueImpl", logdir );
+        auto loggerRocksDB             = base::createLogger( "rocksdb", logdir );
+        auto logkad                    = base::createLogger( "Kademlia", logdir );
+        auto logNoise                  = base::createLogger( "Noise", logdir );
+        auto logProcessingEngine       = base::createLogger( "ProcessingEngine", logdir );
+        auto loggerSubQueue            = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
+        auto loggerProcServ            = base::createLogger( "ProcessingService", logdir );
+        auto loggerProcqm              = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
+        auto loggerUPNP                = base::createLogger( "UPNP", logdir );
+        auto loggerProcessingNode      = base::createLogger( "ProcessingNode", logdir );
+        auto loggerGossipPubsub        = base::createLogger( "GossipPubSub", logdir );
+        auto loggerAccountMessenger    = base::createLogger( "AccountMessenger", logdir );
+        auto loggerGeniusAccount       = base::createLogger( "GeniusAccount", logdir );
+        auto loggerBlockchain          = base::createLogger( "Blockchain", logdir );
+        auto loggerCRDTCallbackManager = base::createLogger( "CRDTCallbackManager", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger_->set_level( spdlog::level::debug );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::trace );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::err );
@@ -294,9 +295,10 @@ namespace sgns
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerAccountMessenger->set_level( spdlog::level::err );
-        loggerGeniusAccount->set_level( spdlog::level::err );
+        loggerAccountMessenger->set_level( spdlog::level::trace );
+        loggerGeniusAccount->set_level( spdlog::level::debug );
         loggerBlockchain->set_level( spdlog::level::trace );
+        loggerCRDTCallbackManager->set_level( spdlog::level::err );
 #else
         node_logger_->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -320,6 +322,7 @@ namespace sgns
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
         loggerBlockchain->set_level( spdlog::level::err );
+        loggerCRDTCallbackManager->set_level( spdlog::level::err );
 #endif
         return true;
     }
@@ -1307,5 +1310,24 @@ namespace sgns
             default:
                 break;
         }
+    }
+
+    void GeniusNode::SetAuthorizedFullNodeAddress( const std::string &pub_address )
+    {
+        if ( blockchain_ )
+        {
+            blockchain_->SetAuthorizedFullNodeAddress( pub_address );
+            blockchain_->Start();
+        }
+    }
+
+    const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
+    {
+        if ( blockchain_ )
+        {
+            return blockchain_->GetAuthorizedFullNodeAddress();
+        }
+        static const std::string empty;
+        return empty;
     }
 }
