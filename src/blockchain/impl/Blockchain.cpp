@@ -39,7 +39,7 @@ namespace sgns
                                  instance->authorized_full_node_address_.substr( 0, 8 ) );
 
         (void)instance->db_->RegisterNewElementCallback(
-            "gnus-genesis-block",
+            "/?" + std::string( GENESIS_KEY ), 
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
             {
@@ -95,16 +95,18 @@ namespace sgns
 
     outcome::result<void> Blockchain::Start( GenesisCallback callback )
     {
+        genesis_processed_callback_ = std::move( callback );
+        return Start();
+    }
+
+    outcome::result<void> Blockchain::Start()
+    {
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
                        authorized_full_node_address_.substr( 0, 8 ) );
+        db_->AddListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
 
-        auto full_blockchain_topic = std::string( BLOCKCHAIN_TOPIC ) + sgns::version::GetNetAndVersionAppendix();
-        db_->AddListenTopic( full_blockchain_topic );
-
-        logger_->debug( "[{}] Added listen topic: {}", account_->GetAddress().substr( 0, 8 ), full_blockchain_topic );
-
-        genesis_processed_callback_ = std::move( callback );
+        logger_->debug( "[{}] Added listen topic: {}", account_->GetAddress().substr( 0, 8 ), BLOCKCHAIN_TOPIC );
 
         // Try to get genesis block synchronously first
         logger_->debug( "[{}] Attempting to retrieve genesis block from local storage",

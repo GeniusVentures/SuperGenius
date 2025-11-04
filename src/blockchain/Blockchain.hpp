@@ -59,6 +59,13 @@ namespace sgns
         outcome::result<void> Start( GenesisCallback callback );
 
         /**
+         * @brief       Tries to start blockchain.
+         * @return      A @ref outcome::result<void>
+         * @note        Only works after calling Start with callback.
+         */
+        outcome::result<void> Start();
+
+        /**
          * @brief Handle received genesis block from pubsub
          * @param serialized_genesis The received genesis block data
          */
