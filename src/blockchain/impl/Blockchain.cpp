@@ -49,6 +49,16 @@ namespace sgns
                 }
             } );
 
+        instance->account_->SetGetGenesisCIDMethod(
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]() -> outcome::result<std::string>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->genesis_cid_;
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         instance->logger_->debug( "[{}] Genesis block callback registered",
                                   instance->account_->GetAddress().substr( 0, 8 ) );
 

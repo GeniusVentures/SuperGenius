@@ -135,8 +135,21 @@ namespace sgns
                     strong->TransactionStateChanged( old_state, new_state );
                 }
             } );
-        instance->transaction_manager_->Start();
 
+        instance->blockchain_->Start(
+            [wptr( std::weak_ptr<GeniusNode>( instance ) )]( outcome::result<void> result )
+            {
+                if ( auto strong = wptr.lock() )
+                {
+                    if ( result.has_error() )
+                    {
+                        strong->node_logger_->error( "Error starting blockchain: {}", result.error().message() );
+                        return;
+                    }
+                    strong->node_logger_->debug( "Blockchain started successfully, starting transaction manager" );
+                    strong->transaction_manager_->Start();
+                }
+            } );
         if ( instance->autodht_ )
         {
             instance->DHTInit();
@@ -188,6 +201,8 @@ namespace sgns
             throw std::runtime_error( "GlobalDB initialization error" );
         }
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+
+        blockchain_ = Blockchain::New( tx_globaldb_, account_ );
 
         if ( !InitProcessingModules() )
         {
@@ -256,6 +271,7 @@ namespace sgns
         auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
         auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
         auto loggerGeniusAccount    = base::createLogger( "GeniusAccount", logdir );
+        auto loggerBlockchain       = base::createLogger( "Blockchain", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger_->set_level( spdlog::level::debug );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -280,6 +296,7 @@ namespace sgns
         loggerGossipPubsub->set_level( spdlog::level::err );
         loggerAccountMessenger->set_level( spdlog::level::err );
         loggerGeniusAccount->set_level( spdlog::level::err );
+        loggerBlockchain->set_level( spdlog::level::trace );
 #else
         node_logger_->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -302,6 +319,7 @@ namespace sgns
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
+        loggerBlockchain->set_level( spdlog::level::err );
 #endif
         return true;
     }
@@ -422,6 +440,8 @@ namespace sgns
                 break;
             }
             tx_globaldb_ = std::move( global_db_ret.value() );
+
+            tx_globaldb_->Start();
 
             ret = true;
         } while ( 0 );

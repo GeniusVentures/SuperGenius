@@ -13,6 +13,7 @@
 #include <vector>
 #include <shared_mutex>
 #include <tuple>
+#include <functional>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -223,6 +224,10 @@ namespace sgns
 
         outcome::result<void> RequestGenesis() const;
 
+    protected:
+        friend class Blockchain;
+        void SetGetGenesisCIDMethod( std::function<outcome::result<std::string>()> method );
+
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 
@@ -238,6 +243,8 @@ namespace sgns
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
         std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
+        std::mutex                                      genesis_method_mutex_;   ///< Mutex for the genesis method
+        std::function<outcome::result<std::string>()>   get_genesis_cid_method_; ///< Function to get genesis CID
         /// Logger instance
         base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
 

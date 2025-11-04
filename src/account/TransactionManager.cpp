@@ -102,7 +102,6 @@ namespace sgns
                     }
                 } );
         }
-        instance->globaldb_m->Start();
 
         return instance;
     }
@@ -125,25 +124,6 @@ namespace sgns
         last_loop_time_( std::chrono::steady_clock::now() )
 
     {
-        m_logger->info( "[{} - full: {}] Initializing values by reading whole blockchain",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m );
-
-        full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
-
-        globaldb_m->AddListenTopic( account_m->GetAddress() );
-        m_logger->info( "[{} - full: {}] Adding broadcast to full node on {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        full_node_topic_m );
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Listening full node on {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             full_node_topic_m );
-            globaldb_m->AddListenTopic( full_node_topic_m );
-        }
     }
 
     TransactionManager::~TransactionManager()
@@ -169,6 +149,26 @@ namespace sgns
         if ( GetState() != State::CREATING || stopped_.load() )
         {
             return;
+        }
+
+        m_logger->info( "[{} - full: {}] Initializing values by reading whole blockchain",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m );
+
+        full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
+
+        globaldb_m->AddListenTopic( account_m->GetAddress() );
+        m_logger->info( "[{} - full: {}] Adding broadcast to full node on {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        full_node_topic_m );
+        if ( full_node_m )
+        {
+            m_logger->debug( "[{} - full: {}] Listening full node on {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             full_node_topic_m );
+            globaldb_m->AddListenTopic( full_node_topic_m );
         }
 
         ChangeState( State::INITIALIZING );

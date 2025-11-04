@@ -96,6 +96,25 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             }
         };
+        methods.get_genesis_cid_ = [weakptr( weak_from_this() )]() -> outcome::result<std::string>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->genesis_method_mutex_ );
+                if ( self->get_genesis_cid_method_ )
+                {
+                    return self->get_genesis_cid_method_();
+                }
+                else
+                {
+                    return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
+                }
+            }
+            else
+            {
+                return outcome::failure( std::errc::owner_dead );
+            }
+        };
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
@@ -545,5 +564,11 @@ namespace sgns
         messenger_->RequestGenesis();
 
         return outcome::success();
+    }
+
+    void GeniusAccount::SetGetGenesisCIDMethod( std::function<outcome::result<std::string>()> method )
+    {
+        std::lock_guard lock( genesis_method_mutex_ );
+        get_genesis_cid_method_ = method;
     }
 }

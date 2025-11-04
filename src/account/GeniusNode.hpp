@@ -19,6 +19,7 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
+#include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 
@@ -223,6 +224,7 @@ namespace sgns
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
         uint16_t                                              pubsubport_;
+        std::shared_ptr<Blockchain>                           blockchain_;
 
         GeniusNode( const DevConfig_st &dev_config,
                     const char         *eth_private_key,
