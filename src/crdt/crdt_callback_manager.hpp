@@ -12,6 +12,7 @@
 #include <shared_mutex>
 
 #include "base/buffer.hpp"
+#include "base/logger.hpp"
 
 namespace sgns::crdt
 {
@@ -78,6 +79,8 @@ namespace sgns::crdt
         std::shared_mutex
             deleted_data_callback_registry_mutex_; ///< Mutex to manipulate @ref deleted_data_callback_registry_
         DeletedDataCallbackRegistry deleted_data_callback_registry_; ///< Deleted data callback registry
+
+        base::Logger logger_ = base::createLogger( "CRDTCallbackManager" ); ///< Logger instance
     };
 
 }
