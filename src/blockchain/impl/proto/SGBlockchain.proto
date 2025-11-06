@@ -28,3 +28,12 @@ message GenesisBlockResponse {
   string error_message = 2;
   GenesisBlock genesis_block = 3;
 }
+
+message AccountCreationBlock {
+    string account_address = 1;      // The account address being created
+    string genesis_block_cid = 2;    // CID of the genesis block this links to
+    uint64 timestamp = 3;            // Creation timestamp
+    string version = 4;              // Version of the software
+    string signature = 5;            // Signature by the account owner
+    string hash = 6;                 // Block hash (optional)
+}
