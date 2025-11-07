@@ -136,7 +136,9 @@ namespace sgns
                 }
             } );
 
-        instance->blockchain_->Start(
+        instance->blockchain_ = Blockchain::New(
+            instance->tx_globaldb_,
+            instance->account_,
             [wptr( std::weak_ptr<GeniusNode>( instance ) )]( outcome::result<void> result )
             {
                 if ( auto strong = wptr.lock() )
@@ -150,6 +152,7 @@ namespace sgns
                     strong->transaction_manager_->Start();
                 }
             } );
+        instance->blockchain_->Start();
         if ( instance->autodht_ )
         {
             instance->DHTInit();
@@ -201,8 +204,6 @@ namespace sgns
             throw std::runtime_error( "GlobalDB initialization error" );
         }
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-
-        blockchain_ = Blockchain::New( tx_globaldb_, account_ );
 
         if ( !InitProcessingModules() )
         {

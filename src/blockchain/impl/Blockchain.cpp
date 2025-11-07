@@ -187,7 +187,7 @@ namespace sgns
                                account_->GetAddress().substr( 0, 8 ) );
 
                 account_->RequestAccountCreation( TIMEOUT_ACC_CREATION_BLOCK_MS,
-                                                  [weakptr( weak_from_this() )]( std::string &creation_cid )
+                                                  [weakptr( weak_from_this() )]( std::string creation_cid )
                                                   {
                                                       if ( auto self = weakptr.lock() )
                                                       {
@@ -384,7 +384,7 @@ namespace sgns
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
             account_->RequestAccountCreation( TIMEOUT_ACC_CREATION_BLOCK_MS,
-                                              [weakptr( weak_from_this() )]( std::string &creation_cid )
+                                              [weakptr( weak_from_this() )]( std::string creation_cid )
                                               {
                                                   if ( auto self = weakptr.lock() )
                                                   {
@@ -623,7 +623,7 @@ namespace sgns
         return verification_result;
     }
 
-    void Blockchain::InformAccountCreationResponse( const std::string &creation_cid )
+    void Blockchain::InformAccountCreationResponse( const std::string creation_cid )
     {
         if ( creation_cid.empty() )
         {
