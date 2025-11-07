@@ -97,10 +97,10 @@ namespace sgns
 
     AccountMessenger::~AccountMessenger() {}
 
-    void AccountMessenger::RegisterBlockResponseHandler(BlockResponseHandler handler)
+    void AccountMessenger::RegisterBlockResponseHandler( BlockResponseHandler handler )
     {
-        std::lock_guard lock(global_handler_mutex_);
-        global_block_handler_ = std::move(handler);
+        std::lock_guard lock( global_handler_mutex_ );
+        global_block_handler_ = std::move( handler );
     }
 
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
@@ -360,7 +360,7 @@ namespace sgns
         }
 
         // get blocks with routing info (CID, peerID, addresses)
-        auto genesis_cid_result = methods_.get_genesis_cid_();
+        auto genesis_cid_result = methods_.get_block_cid_( 0 );
         if ( genesis_cid_result.has_error() )
         {
             logger_->debug( "[{}] I don't have the genesis block share", address_.substr( 0, 8 ) );
@@ -399,11 +399,11 @@ namespace sgns
             logger_->error( "Failed to serialize GenesisResponse" );
             return;
         }
-        
+
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-        
+
         auto signature_res = methods_.sign_( resp_bytes );
-        if ( signature_res.has_error(  ) )
+        if ( signature_res.has_error() )
         {
             logger_->error( "Failed to sign" );
             return;
@@ -468,18 +468,130 @@ namespace sgns
             return;
         }
 
+        // Store block CIDs for any waiting RequestAccountCreation caller
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto           &set_ref = block_responses_[resp.request_id()];
+            if ( set_ref.empty() )
+            {
+                block_first_response_time_[resp.request_id()] = std::chrono::steady_clock::now();
+            }
+            for ( const auto &b : resp.blocks() )
+            {
+                set_ref.insert( b.cid() );
+            }
+        }
+
         // Call global handler if registered
         {
-            std::lock_guard lock(global_handler_mutex_);
-            if (global_block_handler_)
+            std::lock_guard lock( global_handler_mutex_ );
+            if ( global_block_handler_ )
             {
-                global_block_handler_(resp);
+                global_block_handler_( resp );
             }
             else
             {
                 logger_->debug( "[{}] No global block response handler registered", address_.substr( 0, 8 ) );
             }
         }
+    }
+
+    outcome::result<void> AccountMessenger::RequestAccountCreation( uint64_t                           timeout_ms,
+                                                                    std::function<void( std::string )> callback )
+    {
+        // create request id similarly to GetLatestNonce / RequestGenesis
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
+
+        std::string              to_hash = address_ + std::to_string( random_value );
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+
+        uint64_t req_id = 0;
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
+
+        logger_->debug( "[{}] Requesting account creation with req_id {} and timeout {}",
+                        address_.substr( 0, 8 ),
+                        req_id,
+                        timeout_ms );
+
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        OUTCOME_TRY( RequestGenesisBlock( req_id ) );
+
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( 150 ); // same silent window as GetLatestNonce
+
+        bool first_seen = false;
+
+        while ( true )
+        {
+            {
+                std::lock_guard lock( block_responses_mutex_ );
+                auto            it = block_responses_.find( req_id );
+                if ( it != block_responses_.end() && !it->second.empty() )
+                {
+                    if ( !first_seen )
+                    {
+                        first_seen                         = true;
+                        block_first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break; // silent window passed
+                        }
+                    }
+                }
+            }
+
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            {
+                break; // total timeout reached
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        std::set<std::string> cids;
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto            it = block_responses_.find( req_id );
+            if ( it == block_responses_.end() || it->second.empty() )
+            {
+                block_responses_.erase( req_id );
+                block_first_response_time_.erase( req_id );
+                logger_->debug( "[{}] No block response received within timeout for req_id {}",
+                                address_.substr( 0, 8 ),
+                                req_id );
+                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+            }
+            cids = it->second;
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        // invoke callback for each collected CID
+        for ( const auto &cid : cids )
+        {
+            try
+            {
+                callback( cid );
+            }
+            catch ( const std::exception &e )
+            {
+                logger_->error( "Callback threw exception: {}", e.what() );
+            }
+        }
+
+        return outcome::success();
     }
 
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,

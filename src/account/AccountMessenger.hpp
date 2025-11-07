@@ -55,7 +55,7 @@ namespace sgns
             std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
 
             /// @brief Get local genesis block method
-            std::function<outcome::result<std::string>()> get_genesis_cid_;
+            std::function<outcome::result<std::string>( uint8_t block_index )> get_block_cid_;
         };
 
         // Global block response handler type
@@ -89,6 +89,15 @@ namespace sgns
         void RequestGenesis();
 
         /**
+         * @brief       Request account creation from the network and invoke callback with found CIDs
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   callback Function to be called for each CID found (signature: void(std::string))
+         * @return      success on scheduled request, error otherwise
+         */
+        outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
+                                                      std::function<void( std::string )> callback );
+
+        /**
          * @brief       Register global block response handler
          * @param[in]   handler Function to call for all block responses
          */
@@ -114,6 +123,12 @@ namespace sgns
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
                    first_response_time_;   ///< Timestamp of the first response
         std::mutex nonce_responses_mutex_; ///< Mutex of the nonce_responses_
+
+        // Block responses storage for account/genesis requests
+        std::unordered_map<uint64_t, std::set<std::string>> block_responses_; ///< collected block CIDs per req_id
+        std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
+                   block_first_response_time_; ///< Timestamp of the first block response
+        std::mutex block_responses_mutex_;     ///< Mutex protecting block_responses_
 
         InterfaceMethods methods_; ///< Interface methods
 
