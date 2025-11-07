@@ -96,14 +96,14 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             }
         };
-        methods.get_genesis_cid_ = [weakptr( weak_from_this() )]() -> outcome::result<std::string>
+        methods.get_block_cid_ = [weakptr( weak_from_this() )]( uint8_t block_index ) -> outcome::result<std::string>
         {
             if ( auto self = weakptr.lock() )
             {
-                std::lock_guard lock( self->genesis_method_mutex_ );
-                if ( self->get_genesis_cid_method_ )
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->get_cids_method_ )
                 {
-                    return self->get_genesis_cid_method_();
+                    return self->get_cids_method_( block_index );
                 }
                 else
                 {
@@ -566,9 +566,23 @@ namespace sgns
         return outcome::success();
     }
 
-    void GeniusAccount::SetGetGenesisCIDMethod( std::function<outcome::result<std::string>()> method )
+    outcome::result<void> GeniusAccount::RequestAccountCreation( uint64_t                           timeout_ms,
+                                                                 std::function<void( std::string )> callback ) const
     {
-        std::lock_guard lock( genesis_method_mutex_ );
-        get_genesis_cid_method_ = method;
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        logger_->debug( "Requesting Genesis block from the network" );
+
+        messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
+
+        return outcome::success();
+    }
+
+    void GeniusAccount::SetGetBlockChainCIDMethod( std::function<outcome::result<std::string>( uint8_t )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_cids_method_ = method;
     }
 }

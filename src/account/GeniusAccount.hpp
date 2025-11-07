@@ -223,10 +223,12 @@ namespace sgns
         void IncProposedNonce();
 
         outcome::result<void> RequestGenesis() const;
+        outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
+                                                      std::function<void( std::string )> callback ) const;
 
     protected:
         friend class Blockchain;
-        void SetGetGenesisCIDMethod( std::function<outcome::result<std::string>()> method );
+        void SetGetBlockChainCIDMethod( std::function<outcome::result<std::string>( uint8_t )> method );
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -243,8 +245,8 @@ namespace sgns
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
         std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
-        std::mutex                                      genesis_method_mutex_;   ///< Mutex for the genesis method
-        std::function<outcome::result<std::string>()>   get_genesis_cid_method_; ///< Function to get genesis CID
+        std::mutex                                      get_cids_mutex_;   ///< Mutex for the genesis method
+        std::function<outcome::result<std::string>( uint8_t )> get_cids_method_; ///< Function to get genesis CID
         /// Logger instance
         base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
 
