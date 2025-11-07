@@ -120,8 +120,8 @@ namespace sgns
                 case accountComm::AccountMessage::kNonceRequest:
                     HandleNonceRequest( acc_msg.nonce_request() );
                     break;
-                case accountComm::AccountMessage::kGenesisRequest:
-                    HandleGenesisRequest( acc_msg.genesis_request() );
+                case accountComm::AccountMessage::kBlockRequest:
+                    HandleBlockRequest( acc_msg.block_request() );
                     break;
                 case accountComm::AccountMessage::kNonceResponse:
                 case accountComm::AccountMessage::kBlockResponse:
@@ -301,21 +301,22 @@ namespace sgns
 
         logger_->debug( "[{}] Requesting genesis block with req_id {}", address_.substr( 0, 8 ), req_id );
 
-        auto request_result = RequestGenesisBlock( req_id );
+        auto request_result = RequestBlock( req_id, 0 );
         if ( request_result.has_error() )
         {
             logger_->error( "[{}] Failed to request genesis block", address_.substr( 0, 8 ) );
         }
     }
 
-    outcome::result<void> AccountMessenger::RequestGenesisBlock( uint64_t req_id )
+    outcome::result<void> AccountMessenger::RequestBlock( uint64_t req_id, uint8_t block_index )
     {
-        accountComm::GenesisRequest req;
+        accountComm::BlockRequest req;
         req.set_requester_address( address_ );
         req.set_request_id( req_id );
         req.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+        req.set_block_index( static_cast<uint32_t>( block_index ) );
 
         std::string encoded;
         if ( !req.SerializeToString( &encoded ) )
@@ -326,27 +327,30 @@ namespace sgns
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
         OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
 
-        accountComm::SignedGenesisRequest signed_req;
+        accountComm::SignedBlockRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature.data(), signature.size() );
 
         accountComm::AccountMessage envelope;
-        *envelope.mutable_genesis_request() = signed_req;
+        *envelope.mutable_block_request() = signed_req;
 
         return SendAccountMessage( envelope, { requests_topic_ } );
     }
 
-    void AccountMessenger::HandleGenesisRequest( const accountComm::SignedGenesisRequest &signed_req )
+    void AccountMessenger::HandleBlockRequest( const accountComm::SignedBlockRequest &signed_req )
     {
         const auto &req = signed_req.data();
 
-        logger_->debug( "[{}] Received a Genesis request req_id {}", address_.substr( 0, 8 ), req.request_id() );
+        logger_->debug( "[{}] Received a Block request req_id {} index {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.block_index() );
 
-        // verify genesis request signature (keep your existing checks)
+        // verify request signature
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
-            logger_->error( "Failed to serialize GenesisRequest for signature check" );
+            logger_->error( "Failed to serialize BlockRequest for signature check" );
             return;
         }
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
@@ -355,19 +359,21 @@ namespace sgns
                                                                    serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
-            logger_->error( "Invalid signature on GenesisRequest from {}", req.requester_address() );
+            logger_->error( "Invalid signature on BlockRequest from {}", req.requester_address() );
             return;
         }
 
-        // get blocks with routing info (CID, peerID, addresses)
-        auto genesis_cid_result = methods_.get_block_cid_( 0 );
-        if ( genesis_cid_result.has_error() )
+        // get block CID for requested index
+        auto cid_result = methods_.get_block_cid_( static_cast<uint8_t>( req.block_index() ) );
+        if ( cid_result.has_error() )
         {
-            logger_->debug( "[{}] I don't have the genesis block share", address_.substr( 0, 8 ) );
+            logger_->debug( "[{}] I don't have the block share for index {}",
+                            address_.substr( 0, 8 ),
+                            req.block_index() );
             return;
         }
 
-        // build generic BlockResponse (contains repeated BlockInfo with CIDs)
+        // build BlockResponse
         accountComm::BlockResponse resp;
         resp.set_responder_address( address_ );
         resp.set_requester_address( req.requester_address() );
@@ -376,27 +382,26 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
 
-        auto *genesis_info = resp.add_blocks();
-        genesis_info->set_cid( genesis_cid_result.value() );
+        auto *info = resp.add_blocks();
+        info->set_cid( cid_result.value() );
         auto peer_info = pubsub_->GetHost()->getPeerInfo();
-
-        genesis_info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+        info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
         auto mas = peer_info.addresses;
         for ( auto &address : mas )
         {
-            genesis_info->add_addresses( address.getStringAddress() );
+            info->add_addresses( address.getStringAddress() );
             logger_->info( "Address Broadcast: {}", address.getStringAddress() );
         }
-        if ( genesis_info->addresses_size() <= 0 )
+        if ( info->addresses_size() <= 0 )
         {
-            logger_->error( "No addresses found for GenesisResponse." );
+            logger_->error( "No addresses found for BlockResponse." );
             return;
         }
 
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
         {
-            logger_->error( "Failed to serialize GenesisResponse" );
+            logger_->error( "Failed to serialize BlockResponse" );
             return;
         }
 
@@ -405,7 +410,7 @@ namespace sgns
         auto signature_res = methods_.sign_( resp_bytes );
         if ( signature_res.has_error() )
         {
-            logger_->error( "Failed to sign" );
+            logger_->error( "Failed to sign BlockResponse" );
             return;
         }
         auto signature = signature_res.value();
@@ -427,7 +432,7 @@ namespace sgns
         }
         else
         {
-            logger_->debug( "[{}] Sent {} Genesis BlockInfo entries to {} (req_id {})",
+            logger_->debug( "[{}] Sent {} BlockInfo entries to {} (req_id {})",
                             address_.substr( 0, 8 ),
                             resp.blocks_size(),
                             req.requester_address().substr( 0, 8 ),
@@ -482,12 +487,21 @@ namespace sgns
             }
         }
 
-        // Call global handler if registered
+        // Call global handler for each BlockInfo if registered
         {
             std::lock_guard lock( global_handler_mutex_ );
             if ( global_block_handler_ )
             {
-                global_block_handler_( resp );
+                for ( const auto &block_info : resp.blocks() )
+                {
+                    std::string first_address;
+                    if ( block_info.addresses_size() > 0 )
+                    {
+                        first_address = block_info.addresses( 0 );
+                    }
+
+                    global_block_handler_( block_info.cid(), block_info.peer_id(), first_address );
+                }
             }
             else
             {
@@ -522,7 +536,8 @@ namespace sgns
             block_first_response_time_.erase( req_id );
         }
 
-        OUTCOME_TRY( RequestGenesisBlock( req_id ) );
+        // request block index 1 (account creation block)
+        OUTCOME_TRY( RequestBlock( req_id, 1 ) );
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );

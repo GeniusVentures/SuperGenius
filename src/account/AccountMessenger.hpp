@@ -59,7 +59,8 @@ namespace sgns
         };
 
         // Global block response handler type
-        using BlockResponseHandler = std::function<void( const accountComm::BlockResponse & )>;
+        using BlockResponseHandler =
+            std::function<bool( const std::string &cid, const std::string peer_id, const std::string address )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -155,11 +156,10 @@ namespace sgns
         outcome::result<void> RequestNonce( uint64_t req_id );
 
         /**
-         * @brief       Requests the genesis block to the network
-         * @param[in]   req_id The current request ID
-         * @return      Success if requested, error otherwise
+         * @brief       Request a block (by index) from the network (no callback)
+         * @param[in]   block_index index of the requested block (0 = genesis, 1 = account, ...)
          */
-        outcome::result<void> RequestGenesisBlock( uint64_t req_id );
+        outcome::result<void> RequestBlock( uint64_t req_id, uint8_t block_index );
 
         /**
          * @brief       Callback of pubsub message when a response was received
@@ -195,7 +195,7 @@ namespace sgns
          * @brief       Handles the Genesis request package
          * @param[in]   req The proto genesis request package
          */
-        void HandleGenesisRequest( const accountComm::SignedGenesisRequest &req );
+        void HandleBlockRequest( const accountComm::SignedBlockRequest &req );
         /**
          * @brief       Handles the Block response package (calls global handler)
          * @param[in]   resp The proto block response package
