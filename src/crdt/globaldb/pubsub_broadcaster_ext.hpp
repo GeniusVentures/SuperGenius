@@ -3,6 +3,7 @@
 
 #include "crdt/broadcaster.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "crdt/crdt_datastore.hpp"
 #include "base/logger.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <queue>
@@ -16,7 +17,6 @@
 
 namespace sgns::crdt
 {
-    class CrdtDatastore;
 
     /**
      * @brief Extended PubSub broadcaster that integrates with a CRDT datastore and Graphsync DAG syncer.
@@ -26,7 +26,7 @@ namespace sgns::crdt
     class PubSubBroadcasterExt : public Broadcaster, public std::enable_shared_from_this<PubSubBroadcasterExt>
     {
     public:
-        using GossipPubSub      = sgns::ipfs_pubsub::GossipPubSub;
+        using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
         ~PubSubBroadcasterExt();
 
         /**
@@ -109,6 +109,11 @@ namespace sgns::crdt
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;
+
+        bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
+        bool AddMultiCIDInfo( const std::vector<CID>                         &cids,
+                              const libp2p::peer::PeerId                     &peer_id,
+                              const std::vector<libp2p::multi::Multiaddress> &addr_vector );
     };
 }
 

@@ -135,8 +135,8 @@ namespace sgns::crdt
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
         outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
-                                      const Buffer                &aValue,
-                                      const std::set<std::string> &topics );
+                                     const Buffer                &aValue,
+                                     const std::set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
@@ -211,6 +211,8 @@ namespace sgns::crdt
         outcome::result<void> AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
 
     protected:
+        friend class PubSubBroadcasterExt;
+
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
