@@ -19,7 +19,8 @@ target_link_libraries(sgns_genius_account
     KeyGeneration
     outcome
     logger
-    ipfs-pubsub
+    crdt_globaldb
+    ipfs-pubsub    
     PRIVATE
     json_secure_storage
     component_factory
