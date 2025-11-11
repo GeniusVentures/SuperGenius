@@ -66,8 +66,6 @@ namespace sgns
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
-        account_->InitMessenger( pubsub_ );
-
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
@@ -88,6 +86,8 @@ namespace sgns
         }
 
         globaldb_ = std::move( globaldc_ret.value() );
+
+        account_->InitMessenger( pubsub_, globaldb_->GetBroadcaster() );
 
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );

@@ -22,6 +22,7 @@
 #include "account/UTXOTxParameters.hpp"
 #include "account/TokenID.hpp"
 #include "base/logger.hpp"
+
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -31,6 +32,11 @@ namespace sgns
     namespace ipfs_pubsub
     {
         class GossipPubSub;
+    }
+
+    namespace crdt
+    {
+        class PubSubBroadcasterExt;
     }
     class AccountMessenger;
 
@@ -56,7 +62,8 @@ namespace sgns
          * @param[in]   full_node parameter to indicate if the account is a full node
          * @return      true if succeeds, false otherwise
          */
-        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub,
+                            std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -228,7 +235,8 @@ namespace sgns
 
     protected:
         friend class Blockchain;
-        void SetGetBlockChainCIDMethod( std::function<outcome::result<std::string>( uint8_t )> method );
+        void SetGetBlockChainCIDMethod(
+            std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -246,7 +254,8 @@ namespace sgns
         uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
         std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
         std::mutex                                      get_cids_mutex_;   ///< Mutex for the genesis method
-        std::function<outcome::result<std::string>( uint8_t )> get_cids_method_; ///< Function to get genesis CID
+        std::function<outcome::result<std::string>( uint8_t, const std::string & )>
+            get_cids_method_; ///< Function to get blockchain CIDs
         /// Logger instance
         base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
 

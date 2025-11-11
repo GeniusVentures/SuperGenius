@@ -10,6 +10,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 
 namespace
 {
@@ -56,7 +57,8 @@ namespace sgns
         return instance;
     }
 
-    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
+    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub,
+                                       std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster )
     {
         bool                               ret = false;
         AccountMessenger::InterfaceMethods methods;
@@ -96,14 +98,16 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             }
         };
-        methods.get_block_cid_ = [weakptr( weak_from_this() )]( uint8_t block_index ) -> outcome::result<std::string>
+        methods.get_block_cid_ = [weakptr( weak_from_this() )](
+                                     uint8_t            block_index,
+                                     const std::string &address ) -> outcome::result<std::string>
         {
             if ( auto self = weakptr.lock() )
             {
                 std::lock_guard lock( self->get_cids_mutex_ );
                 if ( self->get_cids_method_ )
                 {
-                    return self->get_cids_method_( block_index );
+                    return self->get_cids_method_( block_index, address );
                 }
                 else
                 {
@@ -118,6 +122,17 @@ namespace sgns
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
+
+        messenger_->RegisterBlockResponseHandler(
+            [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>(
+                broadcaster ) }]( const std::string &cid, const std::string &peer_id, const std::string &address )
+            {
+                if ( auto strong = weakptr.lock() )
+                {
+                    return strong->AddSingleCIDInfo( cid, peer_id, address );
+                }
+                return false;
+            } );
         if ( messenger_ )
         {
             logger_->debug( "Created AccountMessenger" );
@@ -580,7 +595,8 @@ namespace sgns
         return outcome::success();
     }
 
-    void GeniusAccount::SetGetBlockChainCIDMethod( std::function<outcome::result<std::string>( uint8_t )> method )
+    void GeniusAccount::SetGetBlockChainCIDMethod(
+        std::function<outcome::result<std::string>( uint8_t, const std::string & )> method )
     {
         std::lock_guard lock( get_cids_mutex_ );
         get_cids_method_ = method;

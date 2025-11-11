@@ -197,12 +197,12 @@ namespace sgns
             throw std::runtime_error( "Network initialization error" );
         }
 
-        account_->InitMessenger( pubsub_ );
-
+        
         if ( !InitDatabase() )
         {
             throw std::runtime_error( "GlobalDB initialization error" );
         }
+        account_->InitMessenger( pubsub_, tx_globaldb_->GetBroadcaster() );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
         if ( !InitProcessingModules() )
