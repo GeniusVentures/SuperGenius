@@ -197,7 +197,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Setting authorized full node address to: " << authorized_address << std::endl;
 
     node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-    
+
     node_full->SetAuthorizedFullNodeAddress( authorized_address );
     node_regular_1->SetAuthorizedFullNodeAddress( authorized_address );
     //node_regular_2->SetAuthorizedFullNodeAddress( authorized_address );
@@ -239,6 +239,106 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     //ASSERT_EQ( node_regular_2->GetAuthorizedFullNodeAddress(), authorized_address );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
+}
+
+TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
+{
+    std::cout << "=== Starting With Authorization Sync + Transactions Test ===" << std::endl;
+
+    // Create the full node first (this will be the genesis creator)
+    auto node_full = CreateNode( "full_node_tx_test",
+                                 "0xcafe",
+                                 "1.0",
+                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                 true,
+                                 true );
+
+    // Create two regular nodes that will exchange transactions once synced
+    auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
+                                      "0xcafe",
+                                      "1.0",
+                                      sgns::TokenID::FromBytes( { 0x00 } ),
+                                      false,
+                                      false );
+
+    auto node_regular_2 = CreateNode( "regular_node_tx_test_2",
+                                      "0xcafe",
+                                      "1.0",
+                                      sgns::TokenID::FromBytes( { 0x00 } ),
+                                      false,
+                                      true );
+
+    // Establish connectivity for gossiping blocks/transactions
+    node_regular_1->GetPubSub()->AddPeers(
+        { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
+    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+    
+    auto        token_id    = sgns::TokenID::FromBytes( { 0x00 } );
+    std::string auth_addr   = node_full->GetAddress();
+    uint64_t    mint_amount = 10000000000ULL;
+
+    node_full->SetAuthorizedFullNodeAddress( auth_addr );
+    node_regular_1->SetAuthorizedFullNodeAddress( auth_addr );
+    node_regular_2->SetAuthorizedFullNodeAddress( auth_addr );
+
+    std::cout << "Authorized address set: " << auth_addr << std::endl;
+
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "full node not ready" );
+    test::assertWaitForCondition(
+        [&]() { return node_regular_1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "regular node 1 not ready" );
+    test::assertWaitForCondition(
+        [&]() { return node_regular_2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "regular node 2 not ready" );
+
+    auto balance_regular_1_before = node_regular_1->GetBalance();
+    auto balance_regular_2_before = node_regular_2->GetBalance();
+
+    // Mint tokens on the first regular node after sync is confirmed
+    auto mint_result = node_regular_1->MintTokens( mint_amount,
+                                                   "",
+                                                   "",
+                                                   token_id,
+                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+
+    auto [mint_tx_id, mint_duration] = mint_result.value();
+    std::cout << "Mint transaction (" << mint_tx_id << ") completed in " << mint_duration << " ms" << std::endl;
+    EXPECT_EQ( node_regular_1->GetBalance(), balance_regular_1_before + mint_amount )
+        << "Mint should credit the sender balance";
+
+    // Transfer the freshly minted amount to the second node
+    auto transfer_result = node_regular_1->TransferFunds( mint_amount,
+                                                          node_regular_2->GetAddress(),
+                                                          token_id,
+                                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
+
+    auto [transfer_tx_id, transfer_duration] = transfer_result.value();
+    std::cout << "Transfer transaction (" << transfer_tx_id << ") completed in " << transfer_duration << " ms"
+              << std::endl;
+
+    auto recipient_status = node_regular_2->WaitForTransactionIncoming(
+        transfer_tx_id,
+        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( recipient_status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    auto full_node_status = node_full->WaitForTransactionIncoming(
+        transfer_tx_id,
+        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( full_node_status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    EXPECT_EQ( node_regular_1->GetBalance(), balance_regular_1_before )
+        << "Sender balance should return to its starting value after transfer";
+    EXPECT_EQ( node_regular_2->GetBalance(), balance_regular_2_before + mint_amount )
+        << "Recipient balance should include the transferred amount";
+
+    std::cout << "=== With Authorization Sync + Transactions Test Completed Successfully ===" << std::endl;
 }
 
 TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )

@@ -414,7 +414,8 @@ namespace sgns
         }
 
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-        auto                 signature_res = methods_.sign_( resp_bytes );
+
+        auto signature_res = methods_.sign_( resp_bytes );
         if ( signature_res.has_error() )
         {
             logger_->error( "Failed to sign BlockResponse" );
@@ -429,9 +430,6 @@ namespace sgns
         accountComm::AccountMessage msg;
         *msg.mutable_block_response() = signed_resp;
 
-        // ------------------------------------------------------------
-        // Send to requester's topic
-        // ------------------------------------------------------------
         auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
                              sgns::version::GetNetAndVersionAppendix();
 
@@ -580,9 +578,6 @@ namespace sgns
 
         bool first_seen = false;
 
-        // ------------------------------------------------------------
-        // Wait until responses stabilize (same logic as before)
-        // ------------------------------------------------------------
         while ( true )
         {
             {
