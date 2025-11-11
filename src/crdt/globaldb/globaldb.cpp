@@ -355,4 +355,9 @@ namespace sgns::crdt
     {
         return m_crdtDatastore->AddHead( aCid, topic, priority );
     }
+
+    std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
+    {
+        return m_broadcaster;
+    }
 }

@@ -135,7 +135,8 @@ namespace sgns::crdt
 
         void PrintDataStore();
 
-        std::shared_ptr<RocksDB> GetDataStore();
+        std::shared_ptr<RocksDB>                          GetDataStore();
+        std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
