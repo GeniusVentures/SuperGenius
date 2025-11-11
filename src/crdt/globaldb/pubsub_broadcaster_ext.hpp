@@ -81,6 +81,8 @@ namespace sgns::crdt
 
         void Stop();
 
+        bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
+
     private:
         /**
          * @brief Private constructor initializing members with provided topics and syncer.
@@ -110,7 +112,6 @@ namespace sgns::crdt
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;
 
-        bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
         bool AddMultiCIDInfo( const std::vector<CID>                         &cids,
                               const libp2p::peer::PeerId                     &peer_id,
                               const std::vector<libp2p::multi::Multiaddress> &addr_vector );
