@@ -72,7 +72,8 @@ namespace sgns
                 }
             } );
         instance->account_->SetGetBlockChainCIDMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( uint8_t block_index ) -> outcome::result<std::string>
+            [weak_ptr( std::weak_ptr<Blockchain>(
+                instance ) )]( uint8_t block_index, const std::string &address ) -> outcome::result<std::string>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -85,6 +86,10 @@ namespace sgns
                             }
                             break;
                         case 1:
+                            if ( address != strong->account_->GetAddress() )
+                            {
+                                break;
+                            }
                             if ( strong->cids_.hasAccount() )
                             {
                                 return strong->cids_.account_.value();
@@ -205,14 +210,6 @@ namespace sgns
                     logger_->info( "[{}] Full node detected, creating genesis block",
                                    account_->GetAddress().substr( 0, 8 ) );
                     auto create_result = CreateGenesisBlock();
-                    if ( create_result.has_value() )
-                    {
-                        // After genesis creation, check account creation
-                        auto account_creation_result = CreateAccountCreationBlock();
-                        InformBlockchainResult( account_creation_result );
-                        return account_creation_result;
-                    }
-                    InformBlockchainResult( create_result );
                     return create_result;
                 }
                 else
@@ -377,21 +374,37 @@ namespace sgns
         if ( new_genesis_return.has_error() )
         {
             InformBlockchainResult( new_genesis_return );
+            return;
         }
-        else
-        {
-            logger_->info( "[{}] Genesis block processed successfully", account_->GetAddress().substr( 0, 8 ) );
-            logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
-            account_->RequestAccountCreation( TIMEOUT_ACC_CREATION_BLOCK_MS,
-                                              [weakptr( weak_from_this() )]( std::string creation_cid )
-                                              {
-                                                  if ( auto self = weakptr.lock() )
-                                                  {
-                                                      self->InformAccountCreationResponse( creation_cid );
-                                                  }
-                                              } );
-        }
+        std::thread(
+            [weakptr = weak_from_this()]
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->logger_->info( "[{}] Requesting account creation block via pubsub (async)",
+                                         self->account_->GetAddress().substr( 0, 8 ) );
+
+                    auto result = self->account_->RequestAccountCreation(
+                        TIMEOUT_ACC_CREATION_BLOCK_MS,
+                        [weakself = weakptr]( std::string creation_cid )
+                        {
+                            if ( auto s = weakself.lock() )
+                            {
+                                s->InformAccountCreationResponse( creation_cid );
+                            }
+                        } );
+
+                    if ( result.has_error() )
+                    {
+                        self->logger_->error( "[{}] Account creation request failed asynchronously: {}",
+                                              self->account_->GetAddress().substr( 0, 8 ),
+                                              result.error().message() );
+                        self->InformBlockchainResult( result );
+                    }
+                }
+            } )
+            .detach();
     }
 
     outcome::result<void> Blockchain::CreateGenesisBlock()
