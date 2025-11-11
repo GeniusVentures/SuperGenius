@@ -154,9 +154,15 @@ namespace sgns::crdt
         std::lock_guard lock( dagMutex_ );
         auto            cid = node->getCID();
         auto            ret = dagService_.addNode( std::move( node ) );
+
         if ( !ret.has_error() )
         {
+            logger_->debug( "{}: Added node {} on dagService ", __func__, cid.toString().value() );
             EraseRoute( cid );
+        }
+        else
+        {
+            logger_->error( "{}: ERROR Adding node {} on dagService ", __func__, cid.toString().value() );
         }
         return ret;
     }
@@ -284,7 +290,7 @@ namespace sgns::crdt
                 case Graphsync::RequestState::IN_PROGRESS:
                 {
                     // Still in progress, keep waiting
-                    logger_->debug( "Request for CID {} from peer {} - In Progress",
+                    logger_->trace( "Request for CID {} from peer {} - In Progress",
                                     cid.toString().value(),
                                     peerID.toBase58() );
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
