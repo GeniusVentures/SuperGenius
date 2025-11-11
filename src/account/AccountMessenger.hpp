@@ -55,12 +55,13 @@ namespace sgns
             std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
 
             /// @brief Get local genesis block method
-            std::function<outcome::result<std::string>( uint8_t block_index )> get_block_cid_;
+            std::function<outcome::result<std::string>( uint8_t block_index, const std::string &address )>
+                get_block_cid_;
         };
 
         // Global block response handler type
         using BlockResponseHandler =
-            std::function<bool( const std::string &cid, const std::string peer_id, const std::string address )>;
+            std::function<bool( const std::string &cid, const std::string &peer_id, const std::string &address )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger

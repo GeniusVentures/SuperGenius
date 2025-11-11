@@ -346,7 +346,6 @@ namespace sgns
                         req.request_id(),
                         req.block_index() );
 
-        // verify request signature
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
@@ -363,17 +362,16 @@ namespace sgns
             return;
         }
 
-        // get block CID for requested index
-        auto cid_result = methods_.get_block_cid_( static_cast<uint8_t>( req.block_index() ) );
-        if ( cid_result.has_error() )
+        auto cid_result = methods_.get_block_cid_( static_cast<uint8_t>( req.block_index() ), req.requester_address() );
+        bool have_cid   = !cid_result.has_error();
+
+        if ( !have_cid )
         {
-            logger_->debug( "[{}] I don't have the block share for index {}",
+            logger_->debug( "[{}] I don't have the block index {}, will send empty BlockResponse",
                             address_.substr( 0, 8 ),
                             req.block_index() );
-            return;
         }
 
-        // build BlockResponse
         accountComm::BlockResponse resp;
         resp.set_responder_address( address_ );
         resp.set_requester_address( req.requester_address() );
@@ -382,20 +380,30 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
 
-        auto *info = resp.add_blocks();
-        info->set_cid( cid_result.value() );
-        auto peer_info = pubsub_->GetHost()->getPeerInfo();
-        info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
-        auto mas = peer_info.addresses;
-        for ( auto &address : mas )
+        if ( have_cid )
         {
-            info->add_addresses( address.getStringAddress() );
-            logger_->info( "Address Broadcast: {}", address.getStringAddress() );
-        }
-        if ( info->addresses_size() <= 0 )
-        {
-            logger_->error( "No addresses found for BlockResponse." );
-            return;
+            auto *info = resp.add_blocks();
+            info->set_cid( cid_result.value() );
+
+            auto peer_info = pubsub_->GetHost()->getPeerInfo();
+            info->set_peer_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+
+            auto pubsubObserved = pubsub_->GetHost()->getObservedAddressesReal();
+            for ( auto &addr : pubsubObserved )
+            {
+                info->add_addresses( addr.getStringAddress() );
+                logger_->debug( "Address Broadcast: {}", addr.getStringAddress() );
+            }
+            for ( auto &addr : peer_info.addresses )
+            {
+                info->add_addresses( addr.getStringAddress() );
+                logger_->debug( "Address Broadcast: {}", addr.getStringAddress() );
+            }
+
+            if ( info->addresses_size() == 0 )
+            {
+                logger_->error( "No addresses found for BlockResponse" );
+            }
         }
 
         std::string resp_serialized;
@@ -406,37 +414,41 @@ namespace sgns
         }
 
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-
-        auto signature_res = methods_.sign_( resp_bytes );
+        auto                 signature_res = methods_.sign_( resp_bytes );
         if ( signature_res.has_error() )
         {
             logger_->error( "Failed to sign BlockResponse" );
             return;
         }
-        auto signature = signature_res.value();
 
         accountComm::SignedBlockResponse signed_resp;
         *signed_resp.mutable_data() = resp;
+        auto signature              = signature_res.value();
         signed_resp.set_signature( signature.data(), signature.size() );
 
         accountComm::AccountMessage msg;
         *msg.mutable_block_response() = signed_resp;
 
+        // ------------------------------------------------------------
+        // Send to requester's topic
+        // ------------------------------------------------------------
         auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
                              sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
         if ( send_ret.has_error() )
         {
-            logger_->error( "Failed to send BlockResponse" );
+            logger_->error( "[{}] Failed to send BlockResponse for req_id {}",
+                            address_.substr( 0, 8 ),
+                            req.request_id() );
         }
         else
         {
-            logger_->debug( "[{}] Sent {} BlockInfo entries to {} (req_id {})",
+            logger_->debug( "[{}] Sent BlockResponse ({} block entries) to {} (req_id {})",
                             address_.substr( 0, 8 ),
                             resp.blocks_size(),
                             req.requester_address().substr( 0, 8 ),
-                            resp.request_id() );
+                            req.request_id() );
         }
     }
 
@@ -450,6 +462,7 @@ namespace sgns
                         resp.blocks_size(),
                         resp.request_id() );
 
+        // Verify signature
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
         {
@@ -458,10 +471,10 @@ namespace sgns
         }
 
         std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
-
-        auto verify_signature_result = methods_.verify_signature_( resp.responder_address(),
+        auto                 verify_signature_result = methods_.verify_signature_( resp.responder_address(),
                                                                    signed_resp.signature(),
                                                                    data_vec );
+
         if ( verify_signature_result.has_error() )
         {
             logger_->error( "No verify method for BlockResponse" );
@@ -473,39 +486,61 @@ namespace sgns
             return;
         }
 
-        // Store block CIDs for any waiting RequestAccountCreation caller
+        // ------------------------------------------------------------
+        // Store response information — even if blocks_size() == 0
+        // ------------------------------------------------------------
+        bool has_valid_cid = false;
         {
             std::lock_guard lock( block_responses_mutex_ );
             auto           &set_ref = block_responses_[resp.request_id()];
+
             if ( set_ref.empty() )
             {
+                // mark first time we saw any response for this req_id
                 block_first_response_time_[resp.request_id()] = std::chrono::steady_clock::now();
             }
+
             for ( const auto &b : resp.blocks() )
             {
-                set_ref.insert( b.cid() );
-            }
-        }
-
-        // Call global handler for each BlockInfo if registered
-        {
-            std::lock_guard lock( global_handler_mutex_ );
-            if ( global_block_handler_ )
-            {
-                for ( const auto &block_info : resp.blocks() )
+                if ( !b.cid().empty() )
                 {
-                    std::string first_address;
-                    if ( block_info.addresses_size() > 0 )
-                    {
-                        first_address = block_info.addresses( 0 );
-                    }
-
-                    global_block_handler_( block_info.cid(), block_info.peer_id(), first_address );
+                    set_ref.insert( b.cid() );
+                    has_valid_cid = true;
                 }
             }
-            else
+
+            // even if no cids, we keep the key entry in block_responses_
+            // to signal "a response was received but empty"
+        }
+
+        if ( !has_valid_cid && resp.blocks_size() == 0 )
+        {
+            logger_->trace( "[{}] Received empty BlockResponse from {}, marking as 'empty response received'",
+                            address_.substr( 0, 8 ),
+                            resp.responder_address().substr( 0, 8 ) );
+            return; // do not trigger global handler
+        }
+
+        // ------------------------------------------------------------
+        // Notify global handler only for valid CIDs
+        // ------------------------------------------------------------
+        std::lock_guard lock( global_handler_mutex_ );
+        if ( global_block_handler_ )
+        {
+            for ( const auto &block_info : resp.blocks() )
             {
-                logger_->debug( "[{}] No global block response handler registered", address_.substr( 0, 8 ) );
+                if ( block_info.cid().empty() )
+                {
+                    continue;
+                }
+
+                std::string first_address;
+                if ( block_info.addresses_size() > 0 )
+                {
+                    first_address = block_info.addresses( 0 );
+                }
+
+                global_block_handler_( block_info.cid(), block_info.peer_id(), first_address );
             }
         }
     }
@@ -513,7 +548,7 @@ namespace sgns
     outcome::result<void> AccountMessenger::RequestAccountCreation( uint64_t                           timeout_ms,
                                                                     std::function<void( std::string )> callback )
     {
-        // create request id similarly to GetLatestNonce / RequestGenesis
+        // Create request id
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
 
@@ -536,22 +571,26 @@ namespace sgns
             block_first_response_time_.erase( req_id );
         }
 
-        // request block index 1 (account creation block)
+        // Request block index 1 (account creation block)
         OUTCOME_TRY( RequestBlock( req_id, 1 ) );
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( 150 ); // same silent window as GetLatestNonce
+        const auto silent_time  = std::chrono::milliseconds( 150 );
 
         bool first_seen = false;
 
+        // ------------------------------------------------------------
+        // Wait until responses stabilize (same logic as before)
+        // ------------------------------------------------------------
         while ( true )
         {
             {
                 std::lock_guard lock( block_responses_mutex_ );
                 auto            it = block_responses_.find( req_id );
-                if ( it != block_responses_.end() && !it->second.empty() )
+                if ( it != block_responses_.end() )
                 {
+                    // At least one peer responded (even if empty)
                     if ( !first_seen )
                     {
                         first_seen                         = true;
@@ -562,7 +601,7 @@ namespace sgns
                         auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
                         if ( elapsed >= silent_time )
                         {
-                            break; // silent window passed
+                            break;
                         }
                     }
                 }
@@ -570,30 +609,62 @@ namespace sgns
 
             if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
-                break; // total timeout reached
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-
-        std::set<std::string> cids;
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            auto            it = block_responses_.find( req_id );
-            if ( it == block_responses_.end() || it->second.empty() )
-            {
-                block_responses_.erase( req_id );
-                block_first_response_time_.erase( req_id );
-                logger_->debug( "[{}] No block response received within timeout for req_id {}",
+                logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
                                 address_.substr( 0, 8 ),
                                 req_id );
                 return outcome::failure( Error::GENESIS_REQUEST_ERROR );
             }
-            cids = it->second;
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        // ------------------------------------------------------------
+        // Evaluate collected responses
+        // ------------------------------------------------------------
+        std::set<std::string> cids;
+        bool                  any_response = false;
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto            it = block_responses_.find( req_id );
+            if ( it != block_responses_.end() )
+            {
+                any_response = true;
+                cids         = it->second;
+            }
             block_responses_.erase( req_id );
             block_first_response_time_.erase( req_id );
         }
 
-        // invoke callback for each collected CID
+        if ( !any_response )
+        {
+            // This should not normally happen because we break only after receiving at least one response
+            logger_->warn( "[{}] No responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
+            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+        }
+
+        // ------------------------------------------------------------
+        // If we received responses but no CIDs
+        // ------------------------------------------------------------
+        if ( cids.empty() )
+        {
+            logger_->debug(
+                "[{}] All peers responded but no CIDs provided (req_id {}), invoking callback with empty string",
+                address_.substr( 0, 8 ),
+                req_id );
+            try
+            {
+                callback( "" );
+            }
+            catch ( const std::exception &e )
+            {
+                logger_->error( "Callback threw exception: {}", e.what() );
+            }
+            return outcome::success();
+        }
+
+        // ------------------------------------------------------------
+        // Valid CIDs received — call callback once per CID
+        // ------------------------------------------------------------
         for ( const auto &cid : cids )
         {
             try
