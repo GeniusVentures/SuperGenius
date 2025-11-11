@@ -451,7 +451,7 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, common::Buffer buffer )
     {
-        logger_->trace( "Block received: cid={}, extensions={}", cid.toString().value(), buffer.toHex() );
+        logger_->trace( "Block received: cid={}", cid.toString().value() );
         auto hb = HasBlock( cid );
 
         if ( hb.has_failure() )
