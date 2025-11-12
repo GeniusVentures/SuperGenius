@@ -520,9 +520,6 @@ namespace sgns::crdt
             return;
         }
 
-        std::vector<CID> heads_to_process_cids;
-        heads_to_process_cids.reserve( decodeResult.value().size() );
-
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
             auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
@@ -540,19 +537,28 @@ namespace sgns::crdt
 
             if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
             {
-                //If the CID request was already triggered but node didn't finish processing
+                // If the CID request was already triggered but node didn't finish processing
                 logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
                 continue;
             }
-            logger_->debug( "{}: Starting processing block {}", __func__, bCastHeadCID.toString().value() );
-            dagSyncer_->InitCIDBlock( bCastHeadCID );
 
-            heads_to_process_cids.emplace_back( bCastHeadCID );
-        }
-        for ( const auto &bCastHeadCID : heads_to_process_cids )
-        {
-            EnqueueRootCID( bCastHeadCID );
-            dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
+            if ( IsRootCIDPendingOrActive( bCastHeadCID ) )
+            {
+                logger_->trace( "{}: Root CID {} already pending/active", __func__, bCastHeadCID.toString().value() );
+                continue;
+            }
+
+            if ( EnqueueRootCID( bCastHeadCID ) )
+            {
+                logger_->debug( "{}: Queueing processing for block {}", __func__, bCastHeadCID.toString().value() );
+                dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
+            }
+            else
+            {
+                logger_->trace( "{}: Root CID {} could not be enqueued (already pending)",
+                                __func__,
+                                bCastHeadCID.toString().value() );
+            }
         }
     }
 
@@ -569,6 +575,7 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::RootCIDJob> CrdtDatastore::CreateRootJob( const CID &aRootCID )
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
+        dagSyncer_->InitCIDBlock( aRootCID );
         OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
 
         logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
@@ -1420,10 +1427,42 @@ namespace sgns::crdt
         rebroadcastCv_.notify_one();
     }
 
-    void CrdtDatastore::EnqueueRootCID( const CID &cid )
+    bool CrdtDatastore::IsRootCIDPendingOrActive( const CID &cid )
+    {
+        std::lock_guard lk( dagWorkerMutex_ );
+        return IsRootCIDPendingOrActiveLocked( cid );
+    }
+
+    bool CrdtDatastore::IsRootCIDPendingOrActiveLocked( const CID &cid ) const
+    {
+        if ( activeRootCID_.has_value() && activeRootCID_.value() == cid )
+        {
+            return true;
+        }
+
+        auto queue_copy = pendingRootQueue_;
+        while ( !queue_copy.empty() )
+        {
+            if ( queue_copy.front() == cid )
+            {
+                return true;
+            }
+            queue_copy.pop();
+        }
+
+        return false;
+    }
+
+    bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
+        if ( IsRootCIDPendingOrActiveLocked( cid ) )
+        {
+            return false;
+        }
+
         pendingRootQueue_.push( cid );
+        return true;
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()

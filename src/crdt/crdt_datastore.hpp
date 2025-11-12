@@ -355,7 +355,7 @@ namespace sgns::crdt
         void DeleteElementsCallback( const std::string &key );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
-        void EnqueueRootCID( const CID &cid );
+        bool EnqueueRootCID( const CID &cid );
 
         outcome::result<CID> WaitForJob( const CID &cid );
 
@@ -372,6 +372,8 @@ namespace sgns::crdt
         bool ProcessSelfCreatedJobs();
         bool ProcessExternalJobs();
         bool SeedNextExternalRoot();
+        bool IsRootCIDPendingOrActive( const CID &cid );
+        bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
         void CleanupFailedJob( const RootCIDJob &job );
