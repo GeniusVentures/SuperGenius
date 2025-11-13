@@ -18,7 +18,6 @@ namespace sgns
 {
 
     std::shared_ptr<MigrationManager> MigrationManager::New(
-        std::shared_ptr<crdt::GlobalDB>                                 newDb,
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
@@ -35,8 +34,7 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key ) );
-        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( newDb,
-                                                                         ioContext,
+        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,
                                                                          scheduler,

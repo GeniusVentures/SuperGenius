@@ -37,7 +37,6 @@ namespace sgns
     public:
         /**
          * @brief   Factory function to create a MigrationManager and register all known steps.
-         * @param   newDb         Shared pointer to the target GlobalDB.
          * @param   ioContext     Shared io_context for both legacy and new DB.
          * @param   pubSub        Shared GossipPubSub instance.
          * @param   graphsync     Shared GraphSync network object.
@@ -48,7 +47,6 @@ namespace sgns
          * @return  std::shared_ptr<MigrationManager> to the created instance.
          */
         static std::shared_ptr<MigrationManager> New(
-            std::shared_ptr<crdt::GlobalDB>                                 newDb,
             std::shared_ptr<boost::asio::io_context>                        ioContext,
             std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
