@@ -51,7 +51,11 @@ namespace sgns
     outcome::result<void> Migration0_2_0To1_0_0::Init()
     {
         OUTCOME_TRY( auto &&target_db, InitTargetDb() );
-        newDb_ = std::move( target_db );
+        db_1_0_0_ = std::move( target_db );
+        OUTCOME_TRY( auto &&outDb, InitLegacyDb( "out" ) );
+        db_0_0_2_out_ = std::move( outDb );
+        OUTCOME_TRY( auto &&inDb, InitLegacyDb( "in" ) );
+        db_0_0_2_in_ = std::move( inDb );
         return outcome::success();
     }
 
@@ -59,12 +63,14 @@ namespace sgns
     {
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-        auto version_ret = newDb_->GetDataStore()->get( version_key );
+        auto version_ret = db_1_0_0_->GetDataStore()->get( version_key );
 
         if ( version_ret.has_error() )
         {
+            m_logger->debug( "Can't find version on db {}, {}", ToVersion(), MigrationManager::VERSION_INFO_KEY );
             return true;
         }
+
         auto version = version_ret.value();
 
         if ( !IsVersionLessThan( std::string( version.toString() ), ToVersion() ) )
@@ -81,7 +87,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitTargetDb()
     {
-        static constexpr auto DATABASE_1_0_0_PREFIX = "/SuperGNUSNode.TestNet.2a.01.%1%";
+        static constexpr auto DATABASE_1_0_0_PREFIX = "SuperGNUSNode.TestNet.2a.01.%1%";
 
         const auto legacyNetworkFullPath = ( boost::format( DATABASE_1_0_0_PREFIX ) % base58key_ ).str();
         const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
@@ -99,17 +105,17 @@ namespace sgns
         if ( !maybe_db_1_0_0.has_value() )
         {
             m_logger->error( "1.0.0 database not created on {}", fullPath );
+            return outcome::failure( boost::system::error_code{} );
         }
-        else
-        {
-            m_logger->debug( "Started DB at path {}", fullPath );
-        }
+
+        m_logger->debug( "Started DB at path {}", fullPath );
+
         return std::move( maybe_db_1_0_0.value() );
     }
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
+        static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.00.%1%";
 
         const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
@@ -286,7 +292,7 @@ namespace sgns
             if ( migrated_count >= BATCH_SIZE )
             {
                 OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
+                crdt_transaction_ = db_1_0_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
                 topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -303,16 +309,13 @@ namespace sgns
     {
         m_logger->debug( "Starting Apply step of Migration0_2_0To1_0_0" );
 
-        OUTCOME_TRY( auto outDb, InitLegacyDb( "out" ) );
-        OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
-
-        crdt_transaction_ = newDb_->BeginTransaction();
+        crdt_transaction_ = db_1_0_0_->BeginTransaction();
         topics_.clear();
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
-        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
+        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
 
         if ( remainder_outdb > 0 )
         {
@@ -321,14 +324,14 @@ namespace sgns
                 m_logger->debug( "Commiting migrating to topics {}", topic );
             }
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-            crdt_transaction_ = newDb_->BeginTransaction();
+            crdt_transaction_ = db_1_0_0_->BeginTransaction();
             topics_.clear();
             topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
             m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
         }
 
         m_logger->debug( "Migrating input DB into new DB" );
-        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( inDb, newDb_ ) );
+        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
 
         if ( remainder_indb > 0 )
         {
@@ -343,7 +346,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( newDb_->GetDataStore()->put( version_key, version_buffer ) );
+        OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
 
@@ -352,9 +355,10 @@ namespace sgns
 
     outcome::result<void> Migration0_2_0To1_0_0::ShutDown()
     {
-        m_logger->debug( "Deleting 1.0.0 DB with previous count {}", newDb_.use_count() );
+        db_0_0_2_in_.reset();
+        db_0_0_2_out_.reset();
         crdt_transaction_.reset();
-        newDb_.reset();
+        db_1_0_0_.reset();
         return outcome::success();
     }
 
