@@ -246,6 +246,7 @@ namespace sgns
                     bool                is_full_node );
         void                  InitOpenSSL();
         bool                  InitLoggers( const std::string &base_path );
+        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
         bool                  InitNetwork( uint16_t base_port, bool is_full_node );
         bool                  InitDatabase();
         bool                  InitProcessingModules();

@@ -24,6 +24,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
             return "Nonce request already in progress";
         case AccountCommError::NONCE_GET_ERROR:
             return "Nonce couldn't be fetched";
+        case AccountCommError::NO_RESPONSE_RECEIVED:
+            return "No response received from network";
+        case AccountCommError::RESPONSE_WITHOUT_NONCE:
+            return "Response received but without nonce data";
         case AccountCommError::GENESIS_REQUEST_ERROR:
             return "Genesis request failed";
     }
@@ -196,7 +200,6 @@ namespace sgns
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms )
     {
         // Generate a random value
-
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
 
@@ -220,6 +223,7 @@ namespace sgns
         {
             std::lock_guard lock( nonce_responses_mutex_ );
             nonce_responses_.erase( req_id );
+            no_nonce_responses_.erase( req_id );
             first_response_time_.erase( req_id );
         }
 
@@ -235,8 +239,14 @@ namespace sgns
         {
             {
                 std::lock_guard lock( nonce_responses_mutex_ );
-                auto            it = nonce_responses_.find( req_id );
-                if ( it != nonce_responses_.end() && !it->second.empty() )
+                auto            nonce_it = nonce_responses_.find( req_id );
+                auto            no_nonce_it = no_nonce_responses_.find( req_id );
+                
+                // Check if we have any responses (either with nonce or without)
+                bool has_nonce_responses = (nonce_it != nonce_responses_.end() && !nonce_it->second.empty());
+                bool has_no_nonce_responses = (no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty());
+                
+                if ( has_nonce_responses || has_no_nonce_responses )
                 {
                     if ( !first_seen )
                     {
@@ -262,21 +272,48 @@ namespace sgns
         }
 
         uint64_t max_nonce = 0;
+        bool has_any_nonce = false;
+        bool has_any_response = false;
+        
         {
             std::lock_guard lock( nonce_responses_mutex_ );
-            auto            it = nonce_responses_.find( req_id );
-            if ( it == nonce_responses_.end() || it->second.empty() )
+            auto            nonce_it = nonce_responses_.find( req_id );
+            auto            no_nonce_it = no_nonce_responses_.find( req_id );
+            
+            // Check if we have nonce responses
+            if ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() )
             {
-                nonce_responses_.erase( req_id );
-                first_response_time_.erase( req_id );
-                logger_->debug( "[{}] No nonce received within timeout for the req_rw {}",
-                                address_.substr( 0, 8 ),
-                                req_id );
-                return outcome::failure( Error::NONCE_GET_ERROR );
+                has_any_nonce = true;
+                has_any_response = true;
+                max_nonce = *nonce_it->second.rbegin();
             }
-            max_nonce = *it->second.rbegin();
+            
+            // Check if we have "no nonce" responses
+            if ( no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty() )
+            {
+                has_any_response = true;
+            }
+            
+            // Clean up
             nonce_responses_.erase( req_id );
+            no_nonce_responses_.erase( req_id );
             first_response_time_.erase( req_id );
+        }
+
+        if ( !has_any_response )
+        {
+            logger_->debug( "[{}] No response received within timeout for req_id {}",
+                            address_.substr( 0, 8 ),
+                            req_id );
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
+        
+        if ( !has_any_nonce )
+        {
+            logger_->debug( "[{}] Response received but without nonce data for req_id {}",
+                            address_.substr( 0, 8 ),
+                            req_id );
+            return outcome::failure( Error::RESPONSE_WITHOUT_NONCE );
         }
 
         logger_->debug( "[{}] Returning highest collected nonce for req_id {}: {}",
@@ -724,25 +761,35 @@ namespace sgns
 
         auto local_nonce_result = methods_.get_local_nonce_( req.requester_address() );
 
-        if ( local_nonce_result.has_error() )
-        {
-            logger_->debug( "[{}] I don't have the nonce for the address {}",
-                            address_.substr( 0, 8 ),
-                            req.requester_address() );
-
-            return;
-        }
-        uint64_t local_nonce = local_nonce_result.value();
-
         accountComm::NonceResponse resp;
-
         resp.set_responder_address( address_ );
         resp.set_requester_address( req.requester_address() );
         resp.set_request_id( req.request_id() );
-        resp.set_known_nonce( local_nonce );
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+
+        if ( local_nonce_result.has_error() )
+        {
+            logger_->debug( "[{}] I don't have the nonce for the address {}, responding with has_nonce=false",
+                            address_.substr( 0, 8 ),
+                            req.requester_address() );
+            
+            resp.set_has_nonce( false );
+            resp.set_known_nonce( 0 ); // Set to 0 when no nonce available
+        }
+        else
+        {
+            uint64_t local_nonce = local_nonce_result.value();
+            resp.set_has_nonce( true );
+            resp.set_known_nonce( local_nonce );
+            
+            logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
+                            address_.substr( 0, 8 ),
+                            local_nonce,
+                            req.requester_address().substr( 0, 8 ),
+                            resp.request_id() );
+        }
 
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
@@ -771,12 +818,6 @@ namespace sgns
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
 
-        logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
-                        address_.substr( 0, 8 ),
-                        local_nonce,
-                        req.requester_address().substr( 0, 8 ),
-                        resp.request_id() );
-
         if ( send_ret.has_error() )
         {
             logger_->error( "Failed to send NonceResponse" );
@@ -787,9 +828,10 @@ namespace sgns
     {
         const auto &resp = signed_resp.data();
 
-        logger_->debug( "[{}] Received a Nonce response from {} (nonce={}) and req_id {}",
+        logger_->debug( "[{}] Received a Nonce response from {} (has_nonce={}, nonce={}) and req_id {}",
                         address_.substr( 0, 8 ),
                         resp.responder_address(),
+                        resp.has_nonce(),
                         resp.known_nonce(),
                         resp.request_id() );
 
@@ -816,10 +858,19 @@ namespace sgns
             return;
         }
 
-        // Store in set
+        std::lock_guard lock( nonce_responses_mutex_ );
+        
+        if ( resp.has_nonce() )
         {
-            std::lock_guard lock( nonce_responses_mutex_ );
             nonce_responses_[resp.request_id()].insert( resp.known_nonce() );
+        }
+        else
+        {
+            logger_->debug( "[{}] Responder {} has no nonce for our address",
+                            address_.substr( 0, 8 ),
+                            resp.responder_address().substr( 0, 8 ) );
+            // Track addresses that responded with no nonce
+            no_nonce_responses_[resp.request_id()].insert( resp.responder_address() );
         }
     }
 

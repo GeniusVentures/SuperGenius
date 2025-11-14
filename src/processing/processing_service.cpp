@@ -26,7 +26,6 @@ namespace sgns::processing
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
 
     {
-        m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
     }
 
     ProcessingServiceImpl::ProcessingServiceImpl(
@@ -56,7 +55,6 @@ namespace sgns::processing
         m_nodeCreationTimer( *m_context ),
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
     {
-        m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
     }
 
     ProcessingServiceImpl::~ProcessingServiceImpl()
@@ -73,6 +71,10 @@ namespace sgns::processing
         }
 
         m_isStopped = false;
+
+        // Reset the io_context and create the work object
+        m_context->reset();
+        m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
 
         io_thread = std::thread( [this] { m_context->run(); } );
 

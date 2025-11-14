@@ -26,6 +26,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <thread>
+#include <mutex>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
@@ -87,8 +88,7 @@ namespace sgns
 {
     base::Logger GeniusNodeLogger()
     {
-        static base::Logger static_logger = base::createLogger( "GeniusNode" );
-        return static_logger;
+        return base::createLogger( "GeniusNode" );
     }
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
@@ -197,7 +197,6 @@ namespace sgns
             throw std::runtime_error( "Network initialization error" );
         }
 
-        
         if ( !InitDatabase() )
         {
             throw std::runtime_error( "GlobalDB initialization error" );
@@ -239,6 +238,7 @@ namespace sgns
         auto result     = logging_system_->configure();
         if ( result.has_error )
         {
+            std::cout << "Logger Error" << std::endl;
             return false;
         }
 
@@ -249,82 +249,65 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = base_path + "/sgnslog2.log";
 #endif
-        node_logger_                   = base::createLogger( "SuperGeniusNode", logdir );
-        auto loggerGlobalDB            = base::createLogger( "GlobalDB", logdir );
-        auto loggerDAGSyncer           = base::createLogger( "GraphsyncDAGSyncer", logdir );
-        auto loggerGraphsync           = base::createLogger( "graphsync", logdir );
-        auto loggerBroadcaster         = base::createLogger( "PubSubBroadcasterExt", logdir );
-        auto loggerDataStore           = base::createLogger( "CrdtDatastore", logdir );
-        auto loggerCRDTHeads           = base::createLogger( "CrdtHeads", logdir );
-        auto loggerTransactions        = base::createLogger( "TransactionManager", logdir );
-        auto loggerMigration           = base::createLogger( "MigrationManager", logdir );
-        auto loggerMigrationStep       = base::createLogger( "MigrationStep", logdir );
-        auto loggerQueue               = base::createLogger( "ProcessingTaskQueueImpl", logdir );
-        auto loggerRocksDB             = base::createLogger( "rocksdb", logdir );
-        auto logkad                    = base::createLogger( "Kademlia", logdir );
-        auto logNoise                  = base::createLogger( "Noise", logdir );
-        auto logProcessingEngine       = base::createLogger( "ProcessingEngine", logdir );
-        auto loggerSubQueue            = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
-        auto loggerProcServ            = base::createLogger( "ProcessingService", logdir );
-        auto loggerProcqm              = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
-        auto loggerUPNP                = base::createLogger( "UPNP", logdir );
-        auto loggerProcessingNode      = base::createLogger( "ProcessingNode", logdir );
-        auto loggerGossipPubsub        = base::createLogger( "GossipPubSub", logdir );
-        auto loggerAccountMessenger    = base::createLogger( "AccountMessenger", logdir );
-        auto loggerGeniusAccount       = base::createLogger( "GeniusAccount", logdir );
-        auto loggerBlockchain          = base::createLogger( "Blockchain", logdir );
-        auto loggerCRDTCallbackManager = base::createLogger( "CRDTCallbackManager", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger_->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::debug );
-        loggerDataStore->set_level( spdlog::level::trace );
-        loggerCRDTHeads->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::debug );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerAccountMessenger->set_level( spdlog::level::trace );
-        loggerGeniusAccount->set_level( spdlog::level::debug );
-        loggerBlockchain->set_level( spdlog::level::trace );
-        loggerCRDTCallbackManager->set_level( spdlog::level::err );
+        // Debug mode
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
+        auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
+        auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
+        auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
+        auto logProcessingEngine  = ConfigureLogger( "ProcessingEngine", logdir, spdlog::level::err );
+        auto loggerSubQueue       = ConfigureLogger( "ProcessingSubTaskQueueAccessorImpl", logdir, spdlog::level::err );
+        auto loggerProcServ       = ConfigureLogger( "ProcessingService", logdir, spdlog::level::err );
+        auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
+        auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
+        auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
 #else
-        node_logger_->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerCRDTHeads->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerBlockchain->set_level( spdlog::level::err );
-        loggerCRDTCallbackManager->set_level( spdlog::level::err );
+        // Release mode
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::err );
+        auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
+        auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
+        auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
+        auto logProcessingEngine  = ConfigureLogger( "ProcessingEngine", logdir, spdlog::level::err );
+        auto loggerSubQueue       = ConfigureLogger( "ProcessingSubTaskQueueAccessorImpl", logdir, spdlog::level::err );
+        auto loggerProcServ       = ConfigureLogger( "ProcessingService", logdir, spdlog::level::err );
+        auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
+        auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
+        auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
 #endif
+
+        // Logger initialization complete
+        node_logger_->info( "Logger initialized successfully" );
+
         return true;
     }
 
@@ -413,6 +396,7 @@ namespace sgns
                 crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
             auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
             pubs.wait();
+            node_logger_->info( "PubSub started at address: {}", pubsub_->GetLocalAddress() );
             if ( !is_full_node )
             {
                 pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
@@ -489,6 +473,19 @@ namespace sgns
             ret = true;
         }
         return ret;
+    }
+
+    base::Logger GeniusNode::ConfigureLogger( const std::string        &tag,
+                                              const std::string        &logdir,
+                                              spdlog::level::level_enum level )
+    {
+        auto logger = base::createLogger( tag, logdir );
+        logger->set_level( level );
+        if ( level != spdlog::level::off )
+        {
+            logger->flush_on( level );
+        }
+        return logger;
     }
 
     GeniusNode::~GeniusNode()

@@ -59,8 +59,14 @@ uint16_t sgns::version::GetNetworkID()
 
 std::string sgns::version::GetNetAndVersionAppendix()
 {
-    return ( boost::format( std::string( sgns::version::SGNS_VERSION_APPENDIX ) ) % sgns::version::SuperGeniusVersionMajor() %
-             sgns::version::SuperGeniusVersionMinor() )
+    return GetNetAndVersionAppendix( sgns::version::SuperGeniusVersionMajor(),
+                                     sgns::version::SuperGeniusVersionMinor(),
+                                     sgns::version::GetNetworkID() );
+}
+
+std::string sgns::version::GetNetAndVersionAppendix( uint32_t version_major, uint32_t version_minor, uint16_t net_id )
+{
+    return ( boost::format( std::string( sgns::version::SGNS_VERSION_APPENDIX ) ) % version_major % version_minor )
                .str() +
-           ( boost::format( std::string( sgns::version::NET_ID_APPENDIX ) ) % sgns::version::GetNetworkID() ).str();
+           ( boost::format( std::string( sgns::version::NET_ID_APPENDIX ) ) % net_id ).str();
 }

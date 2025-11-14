@@ -105,8 +105,10 @@ namespace sgns
         outcome::result<uint32_t> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
                                              const std::shared_ptr<crdt::GlobalDB> &newDb );
 
-        std::shared_ptr<crdt::GlobalDB>                                 newDb_;     ///< Target GlobalDB.
-        std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
+        std::shared_ptr<crdt::GlobalDB>                                 db_1_0_0_;     ///< Target GlobalDB.
+        std::shared_ptr<crdt::GlobalDB>                                 db_0_0_2_out_; ///< Target GlobalDB.
+        std::shared_ptr<crdt::GlobalDB>                                 db_0_0_2_in_;  ///< Target GlobalDB.
+        std::shared_ptr<boost::asio::io_context>                        ioContext_;    ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
         std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.

@@ -229,6 +229,11 @@ namespace sgns
          */
         void IncProposedNonce();
 
+        /**
+         * @brief       Decrement the proposed nonce
+         */
+        void DecProposedNonce();
+
         outcome::result<void> RequestGenesis() const;
         outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
                                                       std::function<void( std::string )> callback ) const;
@@ -256,8 +261,6 @@ namespace sgns
         std::mutex                                      get_cids_mutex_;   ///< Mutex for the genesis method
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
-        /// Logger instance
-        base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
 
         /**
          * @brief       Private constructor a new Genius Account object

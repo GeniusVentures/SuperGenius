@@ -95,8 +95,8 @@ namespace sgns
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = TIMESTAMP_TOLERANCE,
-            std::chrono::milliseconds                mutability_window   = MUTABILITY_WINDOW );
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();
 
@@ -143,6 +143,8 @@ namespace sgns
         State             GetState() const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
+
+        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction( IGeniusTransactions &element );
 
         /**
          * @brief      Stops the TransactionManager processing
@@ -192,10 +194,11 @@ namespace sgns
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
             const std::shared_ptr<IGeniusTransactions> & );
 
-        void                     Update();
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<bool>    SendTransaction();
-        outcome::result<void>    ConfirmTransactions();
+        void                                Update();
+        SGTransaction::DAGStruct            FillDAGStruct( std::string transaction_hash = "" ) const;
+        outcome::result<std::set<uint64_t>> SendTransactionItem( TransactionItem &item );
+        outcome::result<void>               ConfirmTransactions();
+        outcome::result<void>               RollbackTransactions( TransactionItem &item_to_rollback );
 
         static std::string           GetTransactionBasePath( const std::string &address );
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
@@ -222,7 +225,8 @@ namespace sgns
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
-        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce ) const;
+        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce, const std::string &address ) const;
+        std::shared_ptr<IGeniusTransactions> GetInTransaction( uint64_t nonce, const std::string &address ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
@@ -238,7 +242,7 @@ namespace sgns
         std::mutex                               state_change_callback_mutex_;
         StateChangeCallback                      state_change_callback_;
 
-        // for the SendTransaction thread support
+        // for the SendTransactionItem thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 

@@ -23,8 +23,7 @@ namespace sgns
     class Migration1_0_0To3_4_0 : public IMigrationStep
     {
     public:
-        Migration1_0_0To3_4_0( std::shared_ptr<crdt::GlobalDB>                                 db,
-                               std::shared_ptr<boost::asio::io_context>                        ioContext,
+        Migration1_0_0To3_4_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
@@ -67,6 +66,7 @@ namespace sgns
          * @return  opened DB or error.
          */
         outcome::result<std::shared_ptr<crdt::GlobalDB>>                InitLegacyDb();
+        outcome::result<std::shared_ptr<crdt::GlobalDB>>                InitTargetDb();
         std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
@@ -75,8 +75,8 @@ namespace sgns
         std::string                     writeBasePath_;                             ///< Base path for writing DB files.
         std::string                     base58key_;                                 ///< Key to build legacy paths.
         base::Logger                    logger_ = base::createLogger( "MigrationStep" ); ///< Logger for this step.
-        std::shared_ptr<crdt::GlobalDB> db_;                                             ///< Target GlobalDB.
-        std::shared_ptr<crdt::GlobalDB> db_1_0_0_;
+        std::shared_ptr<crdt::GlobalDB> db_3_4_0_;                                       ///< Target GlobalDB.
+        std::shared_ptr<crdt::GlobalDB> db_1_0_0_;                                       ///< Legacy GlobalDB.
     };
 
 }
