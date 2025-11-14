@@ -457,8 +457,7 @@ namespace sgns
     bool GeniusNode::MigrateDatabase()
     {
         bool ret              = false;
-        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,      // newDb
-                                                             io_,               // ioContext
+        auto migrationManager = sgns::MigrationManager::New( io_,               // ioContext
                                                              pubsub_,           // pubSub
                                                              graphsyncnetwork_, // graphsync
                                                              scheduler_,        // scheduler

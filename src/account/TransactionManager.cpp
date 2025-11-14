@@ -25,6 +25,7 @@
 #include "EscrowReleaseTransaction.hpp"
 #include "UTXOTxParameters.hpp"
 #include "account/TokenAmount.hpp"
+#include "account/AccountMessenger.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"

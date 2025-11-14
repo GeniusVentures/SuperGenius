@@ -587,7 +587,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        logger_->debug( "Requesting Genesis block from the network" );
+        genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
         messenger_->RequestGenesis();
 
@@ -601,7 +601,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        logger_->debug( "Requesting Genesis block from the network" );
+        genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
         messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
 
