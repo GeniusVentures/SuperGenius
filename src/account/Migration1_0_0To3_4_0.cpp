@@ -10,7 +10,6 @@ namespace sgns
 {
 
     Migration1_0_0To3_4_0::Migration1_0_0To3_4_0(
-        std::shared_ptr<crdt::GlobalDB>                                 db,
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
@@ -18,7 +17,6 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
-        db_( std::move( db ) ),
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -45,7 +43,7 @@ namespace sgns
     {
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-        auto version_ret = db_->GetDataStore()->get( version_key );
+        auto version_ret = db_3_4_0_->GetDataStore()->get( version_key );
 
         if ( version_ret.has_error() )
         {
@@ -67,7 +65,7 @@ namespace sgns
         version_buffer.clear();
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_->GetDataStore()->put( version_key, version_buffer ) );
+        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
 
         logger_->info( "GlobalDB at version {}, but updated already no migration to {} is required",
                        FromVersion(),
@@ -79,13 +77,15 @@ namespace sgns
     {
         OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
         db_1_0_0_ = std::move( legacy_db );
+        OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+        db_3_4_0_ = std::move( new_db );
         return outcome::success();
     }
 
     outcome::result<void> Migration1_0_0To3_4_0::Apply()
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
-        auto                  crdt_transaction_ = db_->BeginTransaction();
+        auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
         std::set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -159,7 +159,7 @@ namespace sgns
             if ( migrated_count >= BATCH_SIZE )
             {
                 OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                crdt_transaction_ = db_->BeginTransaction(); // start fresh
+                crdt_transaction_ = db_3_4_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
                 topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -178,7 +178,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_->GetDataStore()->put( version_key, version_buffer ) );
+        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();
@@ -186,7 +186,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration1_0_0To3_4_0::InitLegacyDb()
     {
-        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.01.%1%";
+        static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.01.%1%";
 
         const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
@@ -211,9 +211,37 @@ namespace sgns
         return std::move( maybe_db_1_0_0.value() );
     }
 
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration1_0_0To3_4_0::InitTargetDb()
+    {
+        static constexpr std::string_view GNUS_NETWORK_PATH_3_4_0 = "SuperGNUSNode.Node";
+
+        auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_4_0 ) +
+                         version::GetNetAndVersionAppendix( 3, 4, version::GetNetworkID() ) + base58key_;
+
+        logger_->debug( "Initializing target {} DB at path {}", ToVersion(), full_path );
+
+        auto maybe_db_3_4_0 = crdt::GlobalDB::New( ioContext_,
+                                                   full_path,
+                                                   pubSub_,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync_,
+                                                   scheduler_,
+                                                   generator_ );
+
+        if ( !maybe_db_3_4_0.has_value() )
+        {
+            logger_->error( "Target {} DB error at path {}", ToVersion(), full_path );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        logger_->debug( "Started target {} DB at path {}", ToVersion(), full_path );
+        return std::move( maybe_db_3_4_0.value() );
+    }
+
     outcome::result<void> Migration1_0_0To3_4_0::ShutDown()
     {
         db_1_0_0_.reset();
+        db_3_4_0_.reset();
         return outcome::success();
     }
 }
