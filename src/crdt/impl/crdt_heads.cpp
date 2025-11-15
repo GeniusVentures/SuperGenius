@@ -105,9 +105,25 @@ namespace sgns::crdt
         return aDataStore->remove( keyBuffer );
     }
 
+    outcome::result<void> CrdtHeads::Remove( const CID &aCid, const std::string &topic )
+    {
+        logger_->debug( "{}: Removing {} as head for topic {}", __func__, aCid.toString().value(), topic );
+        OUTCOME_TRY( auto &&head_key, GetKey( topic, aCid ) );
+        Buffer keyBuffer;
+        keyBuffer.put( head_key.GetKey() );
+        OUTCOME_TRY( dataStore_->remove( keyBuffer ) );
+
+        logger_->debug( "{}: Removed {} as head for topic {}", __func__, aCid.toString().value(), topic );
+
+        std::unique_lock lock( mutex_ );
+        this->cache_[topic].erase( aCid );
+
+        return outcome::success();
+    }
+
     bool CrdtHeads::IsHead( const CID &aCid, const std::string &topic ) const
     {
-        std::shared_lock lock(mutex_);
+        std::shared_lock lock( mutex_ );
         if ( topic.empty() )
         {
             for ( const auto &[_, map] : cache_ )
@@ -135,7 +151,7 @@ namespace sgns::crdt
         {
             return 0;
         }
-        std::shared_lock lock(mutex_);
+        std::shared_lock lock( mutex_ );
         if ( topic.empty() )
         {
             for ( auto &[_, cid_map] : cache_ )
@@ -158,7 +174,7 @@ namespace sgns::crdt
 
     outcome::result<size_t> CrdtHeads::GetLength( const std::string &topic ) const
     {
-        std::shared_lock lock(mutex_);
+        std::shared_lock lock( mutex_ );
         if ( topic.empty() )
         {
             size_t total = 0;
@@ -193,7 +209,7 @@ namespace sgns::crdt
 
         logger_->debug( "Add: Inserting {} with topic {} as head", aCid.toString().value(), topic );
 
-        std::unique_lock lock(mutex_);
+        std::unique_lock lock( mutex_ );
         this->cache_[topic][aCid] = aHeight;
 
         return outcome::success();
@@ -233,7 +249,7 @@ namespace sgns::crdt
                         aNewHeadCid.toString().value(),
                         topic );
 
-        std::unique_lock lock(mutex_);
+        std::unique_lock lock( mutex_ );
         cache_[topic].erase( aCidHead );
         cache_[topic][aNewHeadCid] = aHeight;
 
@@ -245,7 +261,7 @@ namespace sgns::crdt
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;
         logger_->trace( "GetList: Getting list of CIDs" );
-        std::shared_lock lock(mutex_);
+        std::shared_lock lock( mutex_ );
         for ( const auto &[current_topic, cid_map] : cache_ )
         {
             if ( !topics.empty() && topics.find( current_topic ) == topics.end() )

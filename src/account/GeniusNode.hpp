@@ -109,6 +109,8 @@ namespace sgns
         void     RefreshUPNP( uint16_t pubsubport );
         uint64_t GetBalance();
         uint64_t GetBalance( const TokenID token_id );
+        uint64_t GetBalance( const std::string &address );
+        uint64_t GetBalance( const TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -244,6 +246,7 @@ namespace sgns
                     uint16_t            base_port,
                     bool                is_full_node );
         bool                  InitLoggers( const std::string &base_path );
+        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
         void                  DHTInit();
 
@@ -281,20 +284,17 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
+        void TransactionStateChanged( TransactionManager::State old_state,
+                                      TransactionManager::State new_state );
+
         static constexpr std::string_view db_path_        = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
         static constexpr std::uint16_t    TEST_NET        = 963;
         static constexpr std::size_t      MAX_NODES_COUNT = 1;
 
-#ifdef DEV_NET
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d.dev";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d.dev";
-        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s.dev";
-#else
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
-        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
-#endif
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.Channel";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.Processing.Channel";
+        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.Node";
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {

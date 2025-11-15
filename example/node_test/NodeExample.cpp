@@ -127,6 +127,17 @@ void PrintAccountInfo( const std::vector<std::string> &args, std::shared_ptr<sgn
     std::cout << "Balance: " << genius_node->GetBalance() << std::endl;
 }
 
+void PrintNodeBalance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
+{
+    if ( args.size() != 2 )
+    {
+        std::cerr << "Invalid balance command format.\n";
+        return;
+    }
+    std::cout << "Balance: " << genius_node->GetBalance(std::string( args[1] ) ) << std::endl;
+
+}
+
 void PrintDataStore( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     if ( args.size() != 1 )
@@ -363,6 +374,10 @@ void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
             else if ( arguments[0] == "info" )
             {
                 PrintAccountInfo( arguments, genius_node );
+            }
+            else if ( arguments[0] == "balance" )
+            {
+                PrintNodeBalance( arguments, genius_node );
             }
             else if ( arguments[0] == "ds" )
             {

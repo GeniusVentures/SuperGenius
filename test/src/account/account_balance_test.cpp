@@ -25,7 +25,7 @@ TEST( GeniusAccount, InitialUTXOCount )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, sgns::TokenID::FromBytes( { 0x04 } ) ) ) );
     // Duplicate should be ignored
     EXPECT_FALSE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
-    EXPECT_EQ( account->utxos.size(), 4u );
+    EXPECT_EQ( account->GetUTXOs().size(), 4u );
 }
 
 TEST( GeniusAccount, TotalBalance )
@@ -36,7 +36,7 @@ TEST( GeniusAccount, TotalBalance )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
-    EXPECT_EQ( account->GetBalance<uint64_t>(), 140ull );
+    EXPECT_EQ( account->GetBalance(), 140ull );
 }
 
 TEST( GeniusAccount, BalanceByToken )
@@ -69,8 +69,8 @@ TEST( GeniusAccount, StringTemplateBalance )
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    std::string s = account->GetBalance<std::string>();
-    EXPECT_EQ( s, std::to_string( account->GetBalance<uint64_t>() ) );
+    std::string s = std::to_string(account->GetBalance());
+    EXPECT_EQ( s, std::to_string( account->GetBalance() ) );
 }
 
 TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
@@ -79,9 +79,9 @@ TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    size_t before = account->utxos.size();
+    size_t before = account->GetUTXOs().size();
     account->ConsumeUTXOs( {} );
-    EXPECT_EQ( account->utxos.size(), before );
+    EXPECT_EQ( account->GetUTXOs().size(), before );
 }
 
 TEST( GeniusAccount, RefreshPartialUTXOsRemovesOnlySpecified )
@@ -106,7 +106,7 @@ TEST( GeniusAccount, RefreshAllUTXOsRemovesAll )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     std::vector<InputUTXOInfo> infos;
-    for ( const auto &utxo : account->utxos )
+    for ( const auto &utxo : account->GetUTXOs() )
     {
         InputUTXOInfo i;
         i.txid_hash_  = utxo.GetTxID();
@@ -114,8 +114,8 @@ TEST( GeniusAccount, RefreshAllUTXOsRemovesAll )
         infos.push_back( i );
     }
     account->ConsumeUTXOs( infos );
-    EXPECT_TRUE( account->utxos.empty() );
-    EXPECT_EQ( account->GetBalance<uint64_t>(), 0ull );
+    EXPECT_TRUE( account->GetUTXOs().empty() );
+    EXPECT_EQ( account->GetBalance(), 0ull );
 }
 
 TEST( GeniusUTXO, PropertyAccessors )

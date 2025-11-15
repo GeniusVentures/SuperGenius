@@ -1,7 +1,7 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <thread>
 #include <base/util.hpp>
-
+#include "base/sgns_version.hpp"
 
 namespace sgns::processing
 {
@@ -11,7 +11,8 @@ namespace sgns::processing
         m_gossipPubSub( std::move( gossipPubSub ) )
     {
         using GossipPubSubTopic  = sgns::ipfs_pubsub::GossipPubSubTopic;
-        m_processingQueueChannel = std::make_shared<GossipPubSubTopic>( m_gossipPubSub, processingQueueChannelId );
+        auto processing_queue_topic = processingQueueChannelId + sgns::version::GetNetAndVersionAppendix();
+        m_processingQueueChannel = std::make_shared<GossipPubSubTopic>( m_gossipPubSub, processing_queue_topic );
     }
 
     ProcessingSubTaskQueueChannelPubSub::~ProcessingSubTaskQueueChannelPubSub()

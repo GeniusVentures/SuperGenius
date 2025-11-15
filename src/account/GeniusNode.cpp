@@ -25,6 +25,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <thread>
+#include <mutex>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
@@ -87,8 +88,7 @@ namespace sgns
 {
     base::Logger GeniusNodeLogger()
     {
-        static base::Logger static_logger = base::createLogger( "GeniusNode" );
-        return static_logger;
+        return base::createLogger( "GeniusNode" );
     }
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
@@ -126,11 +126,16 @@ namespace sgns
             instance->account_->GetAddress() );
         instance->processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
+        instance->transaction_manager_->RegisterStateChangeCallback(
+            [wptr( std::weak_ptr<GeniusNode>( instance ) )]( TransactionManager::State old_state,
+                                                             TransactionManager::State new_state )
+            {
+                if ( auto strong = wptr.lock() )
+                {
+                    strong->TransactionStateChanged( old_state, new_state );
+                }
+            } );
         instance->transaction_manager_->Start();
-        if ( instance->isprocessor_ )
-        {
-            instance->processing_service_->StartProcessing( instance->processing_grid_chanel_topic_ );
-        }
 
         if ( instance->autodht_ )
         {
@@ -148,17 +153,14 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
+        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config ),
-        processing_channel_topic_(
-            ( boost::format( std::string( PROCESSING_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
-        processing_grid_chanel_topic_(
-            ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
-                .str() ),
+        processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
+        processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
 
@@ -251,18 +253,17 @@ namespace sgns
         }
         std::string base58key = maybe_base58.value();
 
-        gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                    version::SuperGeniusVersionMajor() % base58key )
-                                      .str();
+        gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key;
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
-        account_->InitMessenger( pubsub_, is_full_node );
+        account_->InitMessenger( pubsub_ );
         pubs.wait();
 
+        node_logger_->info( "PubSub started at address: {}", pubsub_->GetLocalAddress() );
         if ( !is_full_node )
         {
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
@@ -272,6 +273,22 @@ namespace sgns
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
         std::cout << "Pubsub address: " << pubsub_->GetLocalAddress() << std::endl;
+        auto migrationManager = sgns::MigrationManager::New( io_,              // ioContext
+                                                             pubsub_,          // pubSub
+                                                             graphsyncnetwork, // graphsync
+                                                             scheduler,        // scheduler
+                                                             generator,        // generator
+                                                             write_base_path_, // writeBasePath
+                                                             base58key         // base58key
+        );
+
+        auto migrationResult = migrationManager->Migrate();
+        if ( migrationResult.has_error() )
+        {
+            throw std::runtime_error( std::string( "Database migration failed: " ) +
+                                      migrationResult.error().message() );
+        }
+
         auto global_db_ret = crdt::GlobalDB::New( io_,
                                                   write_base_path_ + gnus_network_full_path_,
                                                   pubsub_,
@@ -298,28 +315,24 @@ namespace sgns
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
 
-        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
-                                                             io_,              // ioContext
-                                                             pubsub_,          // pubSub
-                                                             graphsyncnetwork, // graphsync
-                                                             scheduler,        // scheduler
-                                                             generator,        // generator
-                                                             write_base_path_, // writeBasePath
-                                                             base58key         // base58key
-        );
-
-        auto migrationResult = migrationManager->Migrate();
-        if ( migrationResult.has_error() )
-        {
-            throw std::runtime_error( std::string( "Database migration failed: " ) +
-                                      migrationResult.error().message() );
-        }
-
         transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                         io_,
                                                         account_,
                                                         std::make_shared<crypto::HasherImpl>(),
                                                         is_full_node );
+    }
+
+    base::Logger GeniusNode::ConfigureLogger( const std::string        &tag,
+                                              const std::string        &logdir,
+                                              spdlog::level::level_enum level )
+    {
+        auto logger = base::createLogger( tag, logdir );
+        logger->set_level( level );
+        if ( level != spdlog::level::off )
+        {
+            logger->flush_on( level );
+        }
+        return logger;
     }
 
     bool GeniusNode::InitLoggers( const std::string &base_path )
@@ -332,6 +345,7 @@ namespace sgns
         auto result     = logging_system_->configure();
         if ( result.has_error )
         {
+            std::cout << "Logger Error" << std::endl;
             return false;
         }
 
@@ -342,76 +356,65 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = base_path + "/sgnslog2.log";
 #endif
-        node_logger_                = base::createLogger( "SuperGeniusNode", logdir );
-        auto loggerGlobalDB         = base::createLogger( "GlobalDB", logdir );
-        auto loggerDAGSyncer        = base::createLogger( "GraphsyncDAGSyncer", logdir );
-        auto loggerGraphsync        = base::createLogger( "graphsync", logdir );
-        auto loggerBroadcaster      = base::createLogger( "PubSubBroadcasterExt", logdir );
-        auto loggerDataStore        = base::createLogger( "CrdtDatastore", logdir );
-        auto loggerCRDTHeads        = base::createLogger( "CrdtHeads", logdir );
-        auto loggerTransactions     = base::createLogger( "TransactionManager", logdir );
-        auto loggerMigration        = base::createLogger( "MigrationManager", logdir );
-        auto loggerMigrationStep    = base::createLogger( "MigrationStep", logdir );
-        auto loggerQueue            = base::createLogger( "ProcessingTaskQueueImpl", logdir );
-        auto loggerRocksDB          = base::createLogger( "rocksdb", logdir );
-        auto logkad                 = base::createLogger( "Kademlia", logdir );
-        auto logNoise               = base::createLogger( "Noise", logdir );
-        auto logProcessingEngine    = base::createLogger( "ProcessingEngine", logdir );
-        auto loggerSubQueue         = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
-        auto loggerProcServ         = base::createLogger( "ProcessingService", logdir );
-        auto loggerProcqm           = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
-        auto loggerUPNP             = base::createLogger( "UPNP", logdir );
-        auto loggerProcessingNode   = base::createLogger( "ProcessingNode", logdir );
-        auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
-        auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
-        auto loggerGeniusAccount    = base::createLogger( "GeniusAccount", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger_->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
-        loggerCRDTHeads->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::debug );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerAccountMessenger->set_level( spdlog::level::err );
-        loggerGeniusAccount->set_level( spdlog::level::err );
+        // Debug mode
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
+        auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
+        auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
+        auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
+        auto logProcessingEngine  = ConfigureLogger( "ProcessingEngine", logdir, spdlog::level::err );
+        auto loggerSubQueue       = ConfigureLogger( "ProcessingSubTaskQueueAccessorImpl", logdir, spdlog::level::err );
+        auto loggerProcServ       = ConfigureLogger( "ProcessingService", logdir, spdlog::level::err );
+        auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
+        auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
+        auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
 #else
-        node_logger_->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerCRDTHeads->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
-        loggerRocksDB->set_level( spdlog::level::err );
-        logkad->set_level( spdlog::level::err );
-        logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
-        loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
-        loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
-        loggerGossipPubsub->set_level( spdlog::level::err );
+        // Release mode
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::err );
+        auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
+        auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
+        auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
+        auto logProcessingEngine  = ConfigureLogger( "ProcessingEngine", logdir, spdlog::level::err );
+        auto loggerSubQueue       = ConfigureLogger( "ProcessingSubTaskQueueAccessorImpl", logdir, spdlog::level::err );
+        auto loggerProcServ       = ConfigureLogger( "ProcessingService", logdir, spdlog::level::err );
+        auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
+        auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
+        auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
 #endif
+
+        // Logger initialization complete
+        node_logger_->info( "Logger initialized successfully" );
+
         return true;
     }
 
@@ -509,7 +512,7 @@ namespace sgns
     void GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes
-        std::string                temp = processing_grid_chanel_topic_;
+        std::string                temp = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
         std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
 
         // Compute the SHA-256 hash of the input bytes
@@ -697,7 +700,7 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            node_logger_->error( "{}: Transaction manager not ready",__func__);
+            node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
@@ -811,6 +814,16 @@ namespace sgns
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
         return account_->GetBalance( token_id );
+    }
+
+    uint64_t GeniusNode::GetBalance( const std::string &address )
+    {
+        return account_->GetBalance( address );
+    }
+
+    uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
+    {
+        return account_->GetBalance( token_id, address );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
@@ -1089,5 +1102,32 @@ namespace sgns
             retval = transaction_manager_->GetIncomingStatusByTxId( txId );
         }
         return retval;
+    }
+
+    void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
+    {
+        node_logger_->info( "Transaction Manager State changed from {} to {}",
+                            TransactionManager::StateToString( old_state ),
+                            TransactionManager::StateToString( new_state ) );
+
+        switch ( new_state )
+        {
+            case TransactionManager::State::READY:
+                if ( isprocessor_ )
+                {
+                    StartProcessing();
+                }
+                break;
+            case TransactionManager::State::INITIALIZING:
+            case TransactionManager::State::SYNCHING:
+                if ( isprocessor_ )
+                {
+                    StopProcessing();
+                }
+                break;
+            case TransactionManager::State::CREATING:
+            default:
+                break;
+        }
     }
 }

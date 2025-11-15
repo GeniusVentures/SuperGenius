@@ -34,4 +34,5 @@ message NonceResponse {
   uint64 request_id = 3;
   uint64 known_nonce = 4;
   uint64 timestamp = 5;
+  bool has_nonce = 6;          // true if known_nonce is valid, false if no nonce available
 }

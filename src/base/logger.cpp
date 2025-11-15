@@ -31,6 +31,7 @@ namespace
         if (basepath.size() > 0)
         {
             logger = spdlog::basic_logger_mt(tag, basepath);
+            // Note: flush_on level will be set per-logger in InitLoggers based on the actual log level used
         }
         else {
             logger = spdlog::stdout_color_mt(tag); 
@@ -56,6 +57,17 @@ namespace sgns::base
         static std::mutex           mutex;
         std::lock_guard<std::mutex> lock( mutex );
         auto                        logger = spdlog::get( tag );
+        if (logger != nullptr && !basepath.empty())
+        {
+            // Drop any existing logger with this name to force recreation with file sink
+            logger = nullptr;
+            spdlog::drop( tag );
+            logger = ::createLogger( tag, false, basepath );
+            return logger;
+        }
+        
+        // For console loggers, use existing if available
+        
         if ( logger == nullptr )
         {
             logger = ::createLogger( tag, false, basepath );

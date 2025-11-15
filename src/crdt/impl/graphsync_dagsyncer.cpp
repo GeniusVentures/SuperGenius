@@ -35,7 +35,7 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
-        logger_->debug( "GraphSyncer created{} ", reinterpret_cast<size_t>( this ) );
+        logger_->debug( "GraphSyncer created {} ", reinterpret_cast<size_t>( this ) );
     }
 
     GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId             &peer,
@@ -154,9 +154,15 @@ namespace sgns::crdt
         std::lock_guard lock( dagMutex_ );
         auto            cid = node->getCID();
         auto            ret = dagService_.addNode( std::move( node ) );
+
         if ( !ret.has_error() )
         {
+            logger_->debug( "{}: Added node {} on dagService ", __func__, cid.toString().value() );
             EraseRoute( cid );
+        }
+        else
+        {
+            logger_->error( "{}: ERROR Adding node {} on dagService ", __func__, cid.toString().value() );
         }
         return ret;
     }
@@ -267,7 +273,8 @@ namespace sgns::crdt
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
-                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}",
+                                    cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:
@@ -283,7 +290,7 @@ namespace sgns::crdt
                 case Graphsync::RequestState::IN_PROGRESS:
                 {
                     // Still in progress, keep waiting
-                    logger_->debug( "Request for CID {} from peer {} - In Progress",
+                    logger_->trace( "Request for CID {} from peer {} - In Progress",
                                     cid.toString().value(),
                                     peerID.toBase58() );
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
@@ -444,7 +451,7 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, common::Buffer buffer )
     {
-        logger_->trace( "Block received: cid={}, extensions={}", cid.toString().value(), buffer.toHex() );
+        logger_->trace( "Block received: cid={}", cid.toString().value() );
         auto hb = HasBlock( cid );
 
         if ( hb.has_failure() )
@@ -1025,6 +1032,7 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
+        graphsync_->stop();
     }
 
 }

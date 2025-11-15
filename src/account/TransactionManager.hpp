@@ -43,11 +43,8 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.";
-
-        using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
-        using TransactionBatch = std::vector<TransactionPair>;
-        using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
 
         /**
          * @brief       State of the Transaction Manager
@@ -59,6 +56,11 @@ namespace sgns
             SYNCHING,     ///< Synching the transactions
             READY,        ///< Ready to process transactions
         };
+
+        using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
+        using TransactionBatch = std::vector<TransactionPair>;
+        using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
+        using StateChangeCallback = std::function<void( const State &previous, const State &current )>;
 
         /**
          * @brief       Status of a transaction
@@ -93,8 +95,8 @@ namespace sgns
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = TIMESTAMP_TOLERANCE,
-            std::chrono::milliseconds                mutability_window   = MUTABILITY_WINDOW );
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();
 
@@ -142,8 +144,32 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
-        // Stop the periodic Update() loop and prevent re-posting.
+        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction( IGeniusTransactions &element );
+
+        /**
+         * @brief      Stops the TransactionManager processing
+         */
         void Stop();
+
+        void RegisterStateChangeCallback( StateChangeCallback callback );
+        void UnregisterStateChangeCallback();
+
+        static std::string StateToString( State state )
+        {
+            switch ( state )
+            {
+                case State::CREATING:
+                    return "CREATING";
+                case State::INITIALIZING:
+                    return "INITIALIZING";
+                case State::SYNCHING:
+                    return "SYNCHING";
+                case State::READY:
+                    return "READY";
+                default:
+                    return "UNKNOWN";
+            }
+        }
 
     protected:
         friend class GeniusNode;
@@ -168,13 +194,16 @@ namespace sgns
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
             const std::shared_ptr<IGeniusTransactions> & );
 
-        void                     Update();
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<bool>    SendTransaction();
-        outcome::result<void>    ConfirmTransactions();
+        void                                Update();
+        SGTransaction::DAGStruct            FillDAGStruct( std::string transaction_hash = "" ) const;
+        outcome::result<std::set<uint64_t>> SendTransactionItem( TransactionItem &item );
+        outcome::result<void>               ConfirmTransactions();
+        outcome::result<void>               RollbackTransactions( TransactionItem &item_to_rollback );
 
-        static std::string GetTransactionBasePath( const std::string &address );
-        static std::string GetBlockChainBase();
+        static std::string           GetTransactionBasePath( const std::string &address );
+        static std::vector<uint16_t> GetMonitoredNetworkIDs();
+        static std::string           GetBlockChainBase( uint16_t network_id );
+        static std::string           GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
@@ -196,7 +225,8 @@ namespace sgns
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
-        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce ) const;
+        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce, const std::string &address ) const;
+        std::shared_ptr<IGeniusTransactions> GetInTransaction( uint64_t nonce, const std::string &address ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
@@ -209,8 +239,10 @@ namespace sgns
         std::string                              full_node_topic_m; ///< formatted full-node topic
         void                                     TickOnce();
         State                                    state_m;
+        std::mutex                               state_change_callback_mutex_;
+        StateChangeCallback                      state_change_callback_;
 
-        // for the SendTransaction thread support
+        // for the SendTransactionItem thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
@@ -290,6 +322,8 @@ namespace sgns
 
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
         void DeleteElementCallback( std::string deleted_key );
+
+        void ChangeState( State new_state );
     };
 }
 

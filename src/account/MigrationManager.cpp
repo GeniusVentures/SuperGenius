@@ -8,6 +8,7 @@
 
 #include "account/MigrationManager.hpp"
 #include "account/Migration0_2_0To1_0_0.hpp"
+#include "account/Migration1_0_0To3_4_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
@@ -17,7 +18,6 @@ namespace sgns
 {
 
     std::shared_ptr<MigrationManager> MigrationManager::New(
-        std::shared_ptr<crdt::GlobalDB>                                 newDb,
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
@@ -27,14 +27,20 @@ namespace sgns
         std::string                                                     base58key )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
-        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( std::move( newDb ),
-                                                                         std::move( ioContext ),
-                                                                         std::move( pubSub ),
-                                                                         std::move( graphsync ),
-                                                                         std::move( scheduler ),
-                                                                         std::move( generator ),
-                                                                         std::move( writeBasePath ),
-                                                                         std::move( base58key ) ) );
+        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key ) );
+        instance->RegisterStep( std::make_unique<Migration1_0_0To3_4_0>( ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key ) );
         return instance;
     }
 
@@ -54,8 +60,10 @@ namespace sgns
         {
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
+            OUTCOME_TRY( step->Init() );
+            
             OUTCOME_TRY( bool is_req, step->IsRequired() );
-
+            
             if ( is_req )
             {
                 OUTCOME_TRY( step->Apply() );
@@ -65,6 +73,8 @@ namespace sgns
             {
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
+            OUTCOME_TRY( step->ShutDown() );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 
         const auto currentVersion = ( boost::format( "%d.%d.%d" ) % version::SuperGeniusVersionMajor() %

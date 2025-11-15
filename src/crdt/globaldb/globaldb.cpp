@@ -65,7 +65,6 @@ namespace sgns::crdt
     using IpfsRocksDb        = ipfs_lite::rocksdb;
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
-    using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
     outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
         std::shared_ptr<boost::asio::io_context>                              context,
@@ -137,7 +136,7 @@ namespace sgns::crdt
                 if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
                      dataStoreResult.has_value() )
                 {
-                    dataStore = dataStoreResult.value();
+                    dataStore = std::move(dataStoreResult.value());
                 }
                 else
                 {
@@ -269,12 +268,6 @@ namespace sgns::crdt
                                                                      const std::string &middle_part,
                                                                      const std::string &remainder_prefix )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "GlobalDB Not Started" );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
-
         return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
     }
 
@@ -352,4 +345,23 @@ namespace sgns::crdt
         return m_datastore;
     }
 
+    outcome::result<GlobalDB::CRDTHeadListResult> GlobalDB::GetCRDTHeadList()
+    {
+        return m_crdtDatastore->GetHeadList();
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->GetHeadHeight( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadRemove( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->RemoveHead( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority )
+    {
+        return m_crdtDatastore->AddHead( aCid, topic, priority );
+    }
 }

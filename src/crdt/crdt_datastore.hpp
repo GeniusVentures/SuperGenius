@@ -213,6 +213,11 @@ namespace sgns::crdt
             isFullNode = std::move( full_node );
         }
 
+        outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
+        outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
+        outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
+        outcome::result<void> AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+
     protected:
         struct RootCIDJob
         {
@@ -350,7 +355,9 @@ namespace sgns::crdt
         void DeleteElementsCallback( const std::string &key );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
-        void EnqueueRootCID( const CID &cid );
+        bool EnqueueRootCID( const CID &cid );
+
+        outcome::result<CID> WaitForJob( const CID &cid );
 
     private:
         CrdtDatastore() = default;
@@ -360,6 +367,16 @@ namespace sgns::crdt
                        std::shared_ptr<DAGSyncer>   aDagSyncer,
                        std::shared_ptr<Broadcaster> aBroadcaster,
                        std::shared_ptr<CrdtOptions> aOptions );
+
+        bool ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker );
+        bool ProcessSelfCreatedJobs();
+        bool ProcessExternalJobs();
+        bool SeedNextExternalRoot();
+        bool IsRootCIDPendingOrActive( const CID &cid );
+        bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
+        void HandleJobProcessingFailure( const RootCIDJob &job );
+        void HandleJobProcessingSuccess( const RootCIDJob &job );
+        void CleanupFailedJob( const RootCIDJob &job );
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -390,7 +407,8 @@ namespace sgns::crdt
         std::mutex              dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
 
-        std::queue<RootCIDJob>                               rootCIDJobList_;
+        std::queue<RootCIDJob>                               rootCIDJobList_;     // External jobs
+        std::queue<RootCIDJob>                               selfCreatedJobList_; // Self-created jobs (high priority)
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
         std::mutex                                           pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
@@ -406,6 +424,15 @@ namespace sgns::crdt
         bool                    isFullNode = false;
 
         CRDTCallbackManager crdt_cb_manager_;
+
+        enum class JobStatus
+        {
+            PENDING,
+            COMPLETED,
+            FAILED
+        };
+
+        std::map<CID, JobStatus> pending_jobs_;
     };
 
 }

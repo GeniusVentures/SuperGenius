@@ -36,6 +36,8 @@ namespace sgns
             PROTO_SERIALIZATION,       ///< Error in protobuf data serialization
             NONCE_REQUEST_IN_PROGRESS, ///< Nonce request already in progress
             NONCE_GET_ERROR,           ///< Nonce couldn't be fetched
+            NO_RESPONSE_RECEIVED,      ///< No response received from network
+            RESPONSE_WITHOUT_NONCE,    ///< Response received but without nonce data
         };
 
         /**
@@ -78,9 +80,9 @@ namespace sgns
 
     private:
         /// Basis of the account receiving topic
-        static constexpr std::string_view ACCOUNT_COMM = ".comm.%02d";
+        static constexpr std::string_view ACCOUNT_COMM = ".comm";
         /// Basis of the global requests topic
-        static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm.%02d";
+        static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm";
 
         const std::string                          address_;            ///< Own address
         const std::string                          account_comm_topic_; ///< Account receiving topic
@@ -93,6 +95,7 @@ namespace sgns
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> subs_requests_future_;
 
         std::unordered_map<uint64_t, std::set<uint64_t>> nonce_responses_; ///< All current nonce responses
+        std::unordered_map<uint64_t, std::set<std::string>> no_nonce_responses_; ///< Addresses that responded with no nonce
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
                          first_response_time_;   ///< Timestamp of the first response
         std::mutex       nonce_responses_mutex_; ///< Mutex of the nonce_responses_

@@ -113,6 +113,7 @@ namespace sgns::storage
         WriteOptions             wo_;
         base::Logger             logger_;
         std::shared_ptr<Options> options_;
+        std::string              path_;
     };
 
 } // namespace sgns::storage

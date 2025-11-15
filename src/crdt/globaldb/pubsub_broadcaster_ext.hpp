@@ -27,7 +27,6 @@ namespace sgns::crdt
     {
     public:
         using GossipPubSub      = sgns::ipfs_pubsub::GossipPubSub;
-        using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
         ~PubSubBroadcasterExt();
 
         /**
@@ -61,7 +60,7 @@ namespace sgns::crdt
         void Start();
 
         /**
-         * @brief Adds a new topic by name, creating the GossipPubSubTopic internally and subscribing to it.
+         * @brief Adds a new topic by name
          * @param topicName Name of the topic to add.
          * @return outcome::success() on success (or if topic already existed), outcome::failure() on error.
          */
@@ -69,7 +68,7 @@ namespace sgns::crdt
 
         /**
          * @brief  Subscribe to a given topic and store its future.
-         * @param  topic  Shared pointer to the GossipPubSubTopic to subscribe.
+         * @param  topic  Name of the topic to listen to.
          */
         void AddListenTopic( const std::string &topic );
 
