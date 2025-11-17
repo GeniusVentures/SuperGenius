@@ -178,7 +178,9 @@ namespace sgns
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
-        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
+        scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() )
 
     {
         // Rotate log files before initializing logging system
@@ -196,7 +198,7 @@ namespace sgns
         {
             throw std::runtime_error( "Network initialization error" );
         }
-
+        graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
         if ( !MigrateDatabase() )
         {
             throw std::runtime_error( "Database migration error" );
@@ -259,8 +261,8 @@ namespace sgns
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::debug );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::debug );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -410,10 +412,6 @@ namespace sgns
         bool ret = false;
         do
         {
-            scheduler_ = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
-            generator_ = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
-
             auto global_db_ret = crdt::GlobalDB::New( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_,
@@ -462,9 +460,8 @@ namespace sgns
                                                              scheduler_,        // scheduler
                                                              generator_,        // generator
                                                              write_base_path_,  // writeBasePath
-                                                             base58key_,         // base58key
-                                                             account_
-        );
+                                                             base58key_,        // base58key
+                                                             account_ );
 
         auto migrationResult = migrationManager->Migrate();
         if ( !migrationResult.has_error() )
