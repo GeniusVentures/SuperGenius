@@ -73,10 +73,6 @@ namespace sgns
 
         } while ( 0 );
 
-        if ( ret )
-        {
-        }
-
         return ret;
     }
 
@@ -114,7 +110,7 @@ namespace sgns
                     }
                 } );
         }
-        auto timeout_duration     = std::chrono::minutes( 2 );
+        auto timeout_duration     = std::chrono::minutes( 4 );
         auto start_time           = std::chrono::steady_clock::now();
         auto last_log_time        = start_time;
         bool blockchain_succeeded = false;
@@ -147,7 +143,10 @@ namespace sgns
         }
         if ( !blockchain_succeeded )
         {
-            logger_->error( "{}: Blockchain errored out", __func__ );
+            auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() -
+                                                                                     start_time )
+                                       .count();
+            logger_->error( "{}: Blockchain errored out (elasped {}s)", __func__, elapsed_seconds );
 
             return outcome::failure( boost::system::error_code{} );
         }
@@ -187,13 +186,6 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_3_4_0_->Get( { BASE + tx->GetProofFullPath() } );
-
-            if ( !maybe_proof.has_value() )
-            {
-                logger_->error( "Can't find the proof data for {}", transaction_key );
-                continue;
-            }
 
             topics_.emplace( tx->GetSrcAddress() );
             if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
@@ -212,14 +204,6 @@ namespace sgns
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
-
-            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
-            sgns::crdt::GlobalDB::Buffer proof_transaction;
-            proof_transaction.put( maybe_proof.value() );
-            BOOST_OUTCOME_TRYV2(
-                auto &&,
-                crdt_transaction_->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
-            logger_->trace( "Proof recorded for transaction {}", transaction_key );
 
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
@@ -252,39 +236,12 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_4_0To3_5_0::InitLegacyDb()
     {
-        static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.01.%1%";
-
-        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
-        const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
-
-        logger_->debug( "Initializing legacy DB at path {}", fullPath );
-
-        auto maybe_db_1_0_0 = crdt::GlobalDB::New( ioContext_,
-                                                   fullPath,
-                                                   pubSub_,
-                                                   crdt::CrdtOptions::DefaultOptions(),
-                                                   graphsync_,
-                                                   scheduler_,
-                                                   generator_ );
-
-        if ( !maybe_db_1_0_0.has_value() )
-        {
-            logger_->error( "Legacy DB error at path {}", fullPath );
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        logger_->debug( "Started legacy DB at path {}", fullPath );
-        return std::move( maybe_db_1_0_0.value() );
-    }
-
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_4_0To3_5_0::InitTargetDb()
-    {
         static constexpr std::string_view GNUS_NETWORK_PATH_3_4_0 = "SuperGNUSNode.Node";
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_4_0 ) +
                          version::GetNetAndVersionAppendix( 3, 4, version::GetNetworkID() ) + base58key_;
 
-        logger_->debug( "Initializing target {} DB at path {}", ToVersion(), full_path );
+        logger_->debug( "Initializing legacy {} DB at path {}", ToVersion(), full_path );
 
         auto maybe_db_3_4_0 = crdt::GlobalDB::New( ioContext_,
                                                    full_path,
@@ -296,12 +253,39 @@ namespace sgns
 
         if ( !maybe_db_3_4_0.has_value() )
         {
+            logger_->error( "Legacy {} DB error at path {}", ToVersion(), full_path );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        logger_->debug( "Started legacy {} DB at path {}", ToVersion(), full_path );
+        return std::move( maybe_db_3_4_0.value() );
+    }
+
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_4_0To3_5_0::InitTargetDb()
+    {
+        static constexpr std::string_view GNUS_NETWORK_PATH_3_5_0 = "SuperGNUSNode.Node";
+
+        auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_5_0 ) +
+                         version::GetNetAndVersionAppendix( 3, 5, version::GetNetworkID() ) + base58key_;
+
+        logger_->debug( "Initializing target {} DB at path {}", ToVersion(), full_path );
+
+        auto maybe_db_3_5_0 = crdt::GlobalDB::New( ioContext_,
+                                                   full_path,
+                                                   pubSub_,
+                                                   crdt::CrdtOptions::DefaultOptions(),
+                                                   graphsync_,
+                                                   scheduler_,
+                                                   generator_ );
+
+        if ( !maybe_db_3_5_0.has_value() )
+        {
             logger_->error( "Target {} DB error at path {}", ToVersion(), full_path );
             return outcome::failure( boost::system::error_code{} );
         }
 
         logger_->debug( "Started target {} DB at path {}", ToVersion(), full_path );
-        return std::move( maybe_db_3_4_0.value() );
+        return std::move( maybe_db_3_5_0.value() );
     }
 
     outcome::result<void> Migration3_4_0To3_5_0::ShutDown()
