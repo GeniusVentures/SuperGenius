@@ -242,6 +242,7 @@ namespace sgns
         friend class Blockchain;
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
+        void ClearGetBlockChainCIDMethod();
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes

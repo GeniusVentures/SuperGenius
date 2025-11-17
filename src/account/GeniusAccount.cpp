@@ -614,4 +614,10 @@ namespace sgns
         std::lock_guard lock( get_cids_mutex_ );
         get_cids_method_ = method;
     }
+
+    void GeniusAccount::ClearGetBlockChainCIDMethod( void )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_cids_method_ = nullptr;
+    }
 }

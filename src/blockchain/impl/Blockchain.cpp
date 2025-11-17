@@ -123,6 +123,7 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
+        account_->ClearGetBlockChainCIDMethod();
     }
 
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
