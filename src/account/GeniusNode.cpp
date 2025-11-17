@@ -197,6 +197,10 @@ namespace sgns
             throw std::runtime_error( "Network initialization error" );
         }
 
+        if ( !MigrateDatabase() )
+        {
+            throw std::runtime_error( "Database migration error" );
+        }
         if ( !InitDatabase() )
         {
             throw std::runtime_error( "GlobalDB initialization error" );
@@ -207,11 +211,6 @@ namespace sgns
         if ( !InitProcessingModules() )
         {
             throw std::runtime_error( "Processing modules initialization error" );
-        }
-
-        if ( !MigrateDatabase() )
-        {
-            throw std::runtime_error( "Database migration error" );
         }
 
         transaction_manager_ = TransactionManager::New( tx_globaldb_,
