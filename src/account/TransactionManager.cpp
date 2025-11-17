@@ -70,6 +70,7 @@ namespace sgns
                     return std::nullopt;
                 } );
 
+#ifdef _PROOF_ENABLED
             bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
                 "^/?" + blockchain_base + "[^/]*/proof/[^/]*/[0-9]+",
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
@@ -81,7 +82,7 @@ namespace sgns
                     }
                     return std::nullopt;
                 } );
-
+#endif
             (void)instance->globaldb_m->RegisterNewElementCallback(
                 "^/?" + blockchain_base + "[^/]*/tx/[^/]*/[0-9]+",
                 [weak_ptr( std::weak_ptr<TransactionManager>(
@@ -802,12 +803,30 @@ namespace sgns
             expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
         }
         else if ( ( !nonce_result.has_value() ) &&
-                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) )
+                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( !full_node_m ) )
         {
             m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+        }
+        else if ( ( !nonce_result.has_value() ) &&
+                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( full_node_m ) )
+        {
+            m_logger->warn( "[{} - full: {}] Could not fetch nonce, but proceeding since full node",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            auto local_confirmed = account_m->GetLocalConfirmedNonce();
+            if ( local_confirmed.has_value() )
+            {
+                confirmed_nonce = static_cast<int64_t>( local_confirmed.value() );
+
+                m_logger->debug( "[{} - full: {}] Using local confirmed nonce {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 local_confirmed.value() );
+                expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
+            }
         }
 
         auto [transaction_batch, _dontcare] = item_to_rollback;
@@ -2167,6 +2186,7 @@ namespace sgns
 
         } while ( 0 );
 
+#ifdef _PROOF_ENABLED
         if ( should_delete )
         {
             std::vector<crdt::pb::Element> additional_elements_to_delete;
@@ -2180,6 +2200,7 @@ namespace sgns
 
             maybe_tombstones = additional_elements_to_delete;
         }
+#endif
 
         return maybe_tombstones;
     }
