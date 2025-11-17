@@ -57,20 +57,14 @@ namespace sgns
         auto version_buffer = version_ret.value();
 
         if ( !IsVersionLessThan( std::string( version_buffer.toString() ), ToVersion() ) )
-
         {
             logger_->info( "GlobalDB already at target version {}, skipping migration", ToVersion() );
             return false; // Already at target version
         }
-        version_buffer.clear();
-        version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
-
-        logger_->info( "GlobalDB at version {}, but updated already no migration to {} is required",
-                       FromVersion(),
+        logger_->info( "GlobalDB at version {}, ",
                        ToVersion() );
-        return false; // Migration is not required, 1_0_0 is already fixed
+        return true; // Migration is not required, 1_0_0 is already fixed
     }
 
     outcome::result<void> Migration1_0_0To3_4_0::Init()
