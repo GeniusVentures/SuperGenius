@@ -8,7 +8,7 @@
 
 #include <string>
 #include <memory>
-
+#include <atomic>
 #include "IMigrationStep.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -23,7 +23,7 @@ namespace sgns
      * @brief      Migration step for version 1.0.0 to 3.4.0.
      *             Changes the full node topic from CRDT heads 
      */
-    class Migration3_4_0To3_5_0 : public IMigrationStep
+    class Migration3_4_0To3_5_0 : public IMigrationStep, std::enable_shared_from_this<Migration3_4_0To3_5_0>
     {
     public:
         Migration3_4_0To3_5_0( std::shared_ptr<boost::asio::io_context>                        ioContext,

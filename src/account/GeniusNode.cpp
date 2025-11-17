@@ -462,7 +462,8 @@ namespace sgns
                                                              scheduler_,        // scheduler
                                                              generator_,        // generator
                                                              write_base_path_,  // writeBasePath
-                                                             base58key_         // base58key
+                                                             base58key_,         // base58key
+                                                             account_
         );
 
         auto migrationResult = migrationManager->Migrate();

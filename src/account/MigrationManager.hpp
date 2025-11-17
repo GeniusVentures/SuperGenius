@@ -29,6 +29,8 @@
 
 namespace sgns
 {
+    class GeniusAccount;
+
     /**
      * @brief   Executes a sequence of migration steps to update a CRDT store.
      */
@@ -53,13 +55,14 @@ namespace sgns
             std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::string                                                     writeBasePath,
-            std::string                                                     base58key );
+            std::string                                                     base58key,
+            std::shared_ptr<GeniusAccount>                                  account );
 
         /**
          * @brief   Register a migration step.
          * @param   step  IMigrationStep to add.
          */
-        void RegisterStep( std::unique_ptr<IMigrationStep> step );
+        void RegisterStep( std::shared_ptr<IMigrationStep> step );
 
         /**
          * @brief Perform all registered migration steps in sequence.
@@ -75,7 +78,7 @@ namespace sgns
          */
         MigrationManager();
 
-        std::deque<std::unique_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
+        std::deque<std::shared_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
     };
 } // namespace sgns

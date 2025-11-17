@@ -75,24 +75,6 @@ namespace sgns
 
         if ( ret )
         {
-            //init blockchain
-            blockchain_ = Blockchain::New(
-                db_3_5_0_,
-                account_,
-                [wptr( weak_from_this() )]( outcome::result<void> result )
-                {
-                    if ( auto strong = wptr.lock() )
-                    {
-                        if ( result.has_error() )
-                        {
-                            strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
-                            strong->blockchain_status_.store( Status::ERROR, std::memory_order_release );
-                            return;
-                        }
-                        strong->logger_->debug( "Blockchain started successfully, starting transaction manager" );
-                        strong->blockchain_status_.store( Status::SUCCESS, std::memory_order_release );
-                    }
-                } );
         }
 
         return ret;
@@ -107,10 +89,31 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> Migration1_0_0To3_4_0::Apply()
+    outcome::result<void> Migration3_4_0To3_5_0::Apply()
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
+        //init blockchain
+        if ( !blockchain_ )
+        {
+            blockchain_ = Blockchain::New(
+                db_3_5_0_,
+                account_,
+                [wptr( weak_from_this() )]( outcome::result<void> result )
+                {
+                    if ( auto strong = wptr.lock() )
+                    {
+                        if ( result.has_error() )
+                        {
+                            strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
+                            strong->blockchain_status_.store( Status::ERROR );
+                            return;
+                        }
+                        strong->logger_->debug( "Blockchain started successfully, starting transaction manager" );
+                        strong->blockchain_status_.store( Status::SUCCESS );
+                    }
+                } );
+        }
         auto timeout_duration     = std::chrono::minutes( 2 );
         auto start_time           = std::chrono::steady_clock::now();
         auto last_log_time        = start_time;
@@ -118,17 +121,19 @@ namespace sgns
 
         while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
         {
+            auto current_time = std::chrono::steady_clock::now();
             if ( blockchain_status_.load( std::memory_order_acquire ) != Status::INIT )
             {
                 // spin or sleep
                 if ( blockchain_status_.load( std::memory_order_acquire ) == Status::SUCCESS )
                 {
+                    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
+                                               .count();
                     blockchain_succeeded = true;
                     logger_->debug( "{}: Blockchain succeeded (elapsed: {}s)", __func__, elapsed_seconds );
                 }
                 break;
             }
-            auto current_time = std::chrono::steady_clock::now();
             if ( current_time - last_log_time >= std::chrono::seconds( 30 ) )
             {
                 auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
@@ -142,7 +147,7 @@ namespace sgns
         }
         if ( !blockchain_succeeded )
         {
-            logger_->error( "{}: Blockchain errored out (elapsed: {}s)", __func__, elapsed_seconds );
+            logger_->error( "{}: Blockchain errored out", __func__ );
 
             return outcome::failure( boost::system::error_code{} );
         }
@@ -182,7 +187,7 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_1_0_0_->Get( { BASE + tx->GetProofFullPath() } );
+            auto maybe_proof = db_3_4_0_->Get( { BASE + tx->GetProofFullPath() } );
 
             if ( !maybe_proof.has_value() )
             {
@@ -220,7 +225,7 @@ namespace sgns
             if ( migrated_count >= BATCH_SIZE )
             {
                 OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                crdt_transaction_ = db_3_4_0_->BeginTransaction(); // start fresh
+                crdt_transaction_ = db_3_5_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
                 topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -245,7 +250,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration1_0_0To3_4_0::InitLegacyDb()
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_4_0To3_5_0::InitLegacyDb()
     {
         static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.01.%1%";
 
@@ -272,7 +277,7 @@ namespace sgns
         return std::move( maybe_db_1_0_0.value() );
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration1_0_0To3_4_0::InitTargetDb()
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_4_0To3_5_0::InitTargetDb()
     {
         static constexpr std::string_view GNUS_NETWORK_PATH_3_4_0 = "SuperGNUSNode.Node";
 
@@ -299,10 +304,10 @@ namespace sgns
         return std::move( maybe_db_3_4_0.value() );
     }
 
-    outcome::result<void> Migration1_0_0To3_4_0::ShutDown()
+    outcome::result<void> Migration3_4_0To3_5_0::ShutDown()
     {
-        db_1_0_0_.reset();
         db_3_4_0_.reset();
+        db_3_5_0_.reset();
         return outcome::success();
     }
 }
