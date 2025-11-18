@@ -62,6 +62,7 @@ namespace sgns::crdt
             GET_NODE,
             INVALID_JOB,
         };
+
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -368,9 +369,7 @@ namespace sgns::crdt
                        std::shared_ptr<Broadcaster> aBroadcaster,
                        std::shared_ptr<CrdtOptions> aOptions );
 
-        bool ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker );
-        bool ProcessSelfCreatedJobs();
-        bool ProcessExternalJobs();
+        bool ShouldContinueWorkerThread( DagWorker &dagWorker );
         bool SeedNextExternalRoot();
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
@@ -399,7 +398,7 @@ namespace sgns::crdt
         std::future<void> rebroadcastFuture_;
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
-        std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
+        std::vector<std::unique_ptr<DagWorker>> dagWorkers_;
 
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;

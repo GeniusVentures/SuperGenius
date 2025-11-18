@@ -80,17 +80,18 @@ namespace sgns::crdt
         crdtInstance->dagWorkers_.reserve( crdtInstance->numberOfDagWorkers );
         for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
-            auto dagWorker                     = std::make_shared<DagWorker>();
+            auto &dagWorker = crdtInstance->dagWorkers_.emplace_back( std::make_unique<DagWorker>() );
+
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), dagWorker]
+                [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), &dagWorker]
                 {
                     auto dagThreadRunning = true;
                     while ( dagThreadRunning )
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            if ( !self->ShouldContinueWorkerThread( dagWorker ) )
+                            if ( !self->ShouldContinueWorkerThread( *dagWorker ) )
                             {
                                 dagThreadRunning = false;
                                 continue;
@@ -121,19 +122,19 @@ namespace sgns::crdt
         return crdtInstance;
     }
 
-    bool CrdtDatastore::ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker )
+    bool CrdtDatastore::ShouldContinueWorkerThread( DagWorker &dagWorker )
     {
         std::unique_lock lk( dagWorkerMutex_ );
         dagWorkerCv_.wait_for( lk,
                                threadSleepTimeInMilliseconds_,
                                [&]
                                {
-                                   return !dagWorker->dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
+                                   return !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
                                           !rootCIDJobList_.empty() ||
                                           ( !activeRootCID_.has_value() && !pendingRootQueue_.empty() );
                                } );
 
-        return dagWorker->dagWorkerThreadRunning_;
+        return dagWorker.dagWorkerThreadRunning_;
     }
 
     bool CrdtDatastore::ProcessSelfCreatedJobs()
@@ -310,7 +311,7 @@ namespace sgns::crdt
         {
             return;
         }
-        //heads_->PrimeCache();
+        
         handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         handleNextFuture_ = std::async(
@@ -451,21 +452,13 @@ namespace sgns::crdt
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
-            if ( handleNextFuture_.valid() )
-            {
-                handleNextFuture_.wait();
-            }
-        }
+                    }
 
         if ( rebroadcastThreadRunning_ )
         {
             rebroadcastThreadRunning_ = false;
             rebroadcastCv_.notify_all();
-            if ( rebroadcastFuture_.valid() )
-            {
-                rebroadcastFuture_.wait();
-            }
-        }
+                    }
 
         if ( dagWorkerJobListThreadRunning_ )
         {
@@ -479,8 +472,7 @@ namespace sgns::crdt
                     dagWorker->dagWorkerFuture_.wait();
                 }
             }
-            dagWorkers_.clear();
-
+            
             // Clear both job queues
             {
                 std::lock_guard        lock( dagWorkerMutex_ );
@@ -489,6 +481,16 @@ namespace sgns::crdt
                 std::swap( selfCreatedJobList_, empty2 );
                 pending_jobs_.clear();
             }
+        }
+
+        if ( handleNextFuture_.valid() )
+        {
+            handleNextFuture_.wait();
+        }
+
+        if ( rebroadcastFuture_.valid() )
+        {
+            rebroadcastFuture_.wait();
         }
     }
 
