@@ -54,8 +54,7 @@ namespace sgns
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                 std::shared_ptr<GeniusAccount>  account,
-                                                BlockchainCallback              callback,
-                                                const std::string              &authorized_node = "" );
+                                                BlockchainCallback              callback );
 
         ~Blockchain();
 
@@ -82,20 +81,19 @@ namespace sgns
          * @brief Set the authorized full node public address (for testing purposes)
          * @param pub_address The public address that is authorized to create genesis blocks
          */
-        void SetAuthorizedFullNodeAddress( const std::string &pub_address );
+        static void SetAuthorizedFullNodeAddress( const std::string &pub_address );
 
         /**
          * @brief Get the current authorized full node public address
          * @return The authorized full node public address
          */
-        const std::string &GetAuthorizedFullNodeAddress() const;
+        static const std::string &GetAuthorizedFullNodeAddress();
 
     private:
         /// Make constructor private to force use of factory method
         Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
                     std::shared_ptr<GeniusAccount>  account,
-                    BlockchainCallback              callback,
-                    const std::string              &authorized_node );
+                    BlockchainCallback              callback );
 
         outcome::result<void> InitGenesisCID();
         outcome::result<void> InitAccountCreationCID();
@@ -161,7 +159,7 @@ namespace sgns
 
         BlockchainCIDs cids_;
 
-        std::string authorized_full_node_address_; ///< Configurable authorized full node address
+        static std::string &AuthorizedFullNodeAddressStorage();
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 

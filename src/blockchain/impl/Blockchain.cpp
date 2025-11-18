@@ -37,17 +37,22 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 namespace sgns
 {
 
+    std::string &Blockchain::AuthorizedFullNodeAddressStorage()
+    {
+        static std::string address( DEFAULT_FULL_NODE_PUB_ADDRESS );
+        return address;
+    }
+
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                  std::shared_ptr<GeniusAccount>  account,
-                                                 BlockchainCallback              callback,
-                                                 const std::string              &authorized_node )
+                                                 BlockchainCallback              callback )
     {
         auto instance = std::shared_ptr<Blockchain>(
-            new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ), authorized_node ) );
+            new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
-                                 instance->authorized_full_node_address_.substr( 0, 8 ) );
+                                 GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
         (void)instance->db_->RegisterNewElementCallback(
             "/?" + std::string( GENESIS_KEY ),
@@ -112,12 +117,10 @@ namespace sgns
     // Private constructor
     Blockchain::Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
                             std::shared_ptr<GeniusAccount>  account,
-                            BlockchainCallback              callback,
-                            const std::string              &authorized_node ) :
-        db_( std::move( global_db ) ),                                                                           //
-        account_( std::move( account ) ),                                                                        //
-        blockchain_processed_callback_( std::move( callback ) ),                                                 //
-        authorized_full_node_address_( authorized_node == "" ? DEFAULT_FULL_NODE_PUB_ADDRESS : authorized_node ) //
+                            BlockchainCallback              callback ) :
+        db_( std::move( global_db ) ),                          //
+        account_( std::move( account ) ),                       //
+        blockchain_processed_callback_( std::move( callback ) ) //
     {
         logger_->debug( "[{}] Blockchain constructor called", account_->GetAddress().substr( 0, 8 ) );
     }
@@ -130,23 +133,24 @@ namespace sgns
 
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
     {
-        logger_->info( "[{}] Setting authorized full node address from {} to {}",
-                       account_->GetAddress().substr( 0, 8 ),
-                       authorized_full_node_address_.substr( 0, 8 ),
-                       pub_address.substr( 0, 8 ) );
-        authorized_full_node_address_ = pub_address;
+        auto  logger  = base::createLogger( "Blockchain" );
+        auto &address = AuthorizedFullNodeAddressStorage();
+        logger->info( "Setting authorized full node address from {} to {}",
+                      address.substr( 0, 8 ),
+                      pub_address.substr( 0, 8 ) );
+        address = pub_address;
     }
 
-    const std::string &Blockchain::GetAuthorizedFullNodeAddress() const
+    const std::string &Blockchain::GetAuthorizedFullNodeAddress()
     {
-        return authorized_full_node_address_;
+        return AuthorizedFullNodeAddressStorage();
     }
 
     outcome::result<void> Blockchain::Start()
     {
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
-                       authorized_full_node_address_.substr( 0, 8 ) );
+                       GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
         //TODO - Uncomment when a node wants to grab other node's account creation block (full node probably)
         //db_->AddTopicName( std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
 
@@ -208,7 +212,7 @@ namespace sgns
                 logger_->info( "[{}] Genesis block not found locally, proceeding to creation/request",
                                account_->GetAddress().substr( 0, 8 ) );
                 // Genesis block not found locally
-                if ( account_->GetAddress() == authorized_full_node_address_ )
+                if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
                 {
                     logger_->info( "[{}] Full node detected, creating genesis block",
                                    account_->GetAddress().substr( 0, 8 ) );
@@ -414,7 +418,7 @@ namespace sgns
     {
         logger_->info( "[{}] Creating genesis block with authorized creator: {}",
                        account_->GetAddress().substr( 0, 8 ),
-                       authorized_full_node_address_.substr( 0, 8 ) );
+                       GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
         sgns::blockchain::GenesisBlock g;
         auto                           timestamp = std::chrono::system_clock::now();
@@ -434,7 +438,7 @@ namespace sgns
         g.set_hash( std::string{} );
 
         // creator public key - store authorized creator pub (as bytes)
-        g.set_creator_public_key( authorized_full_node_address_ );
+        g.set_creator_public_key( GetAuthorizedFullNodeAddress() );
 
         logger_->debug( "[{}] Computing signature for genesis block", account_->GetAddress().substr( 0, 8 ) );
 
@@ -498,7 +502,7 @@ namespace sgns
     {
         logger_->debug( "[{}] Verifying genesis block against authorized creator: {}",
                         account_->GetAddress().substr( 0, 8 ),
-                        authorized_full_node_address_.substr( 0, 8 ) );
+                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
         sgns::blockchain::GenesisBlock g;
 
@@ -515,12 +519,12 @@ namespace sgns
         logger_->debug( "[{}] Checking genesis block creator authorization", account_->GetAddress().substr( 0, 8 ) );
 
         // check authorized creator (compare as raw bytes)
-        if ( g.creator_public_key() != authorized_full_node_address_ )
+        if ( g.creator_public_key() != GetAuthorizedFullNodeAddress() )
         {
             logger_->error( "[{}] Genesis block created by unauthorized key: {} (expected: {})",
                             account_->GetAddress().substr( 0, 8 ),
                             g.creator_public_key().substr( 0, 8 ),
-                            authorized_full_node_address_.substr( 0, 8 ) );
+                            GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
             return outcome::failure( Error::GENESIS_BLOCK_UNAUTHORIZED_CREATOR );
         }
 
