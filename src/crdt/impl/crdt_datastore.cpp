@@ -98,11 +98,11 @@ namespace sgns::crdt
                             }
 
                             // Process jobs in priority order
-                            if ( self->ProcessSelfCreatedJobs() )
+                            if ( self->ProcessJobs( self->selfCreatedJobList_ ) )
                             {
                                 continue;
                             }
-                            if ( self->ProcessExternalJobs() )
+                            if ( self->ProcessJobs( self->rootCIDJobList_ ) )
                             {
                                 continue;
                             }
@@ -117,7 +117,6 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            crdtInstance->dagWorkers_.push_back( dagWorker );
         }
         return crdtInstance;
     }
@@ -137,47 +136,19 @@ namespace sgns::crdt
         return dagWorker.dagWorkerThreadRunning_;
     }
 
-    bool CrdtDatastore::ProcessSelfCreatedJobs()
+    bool CrdtDatastore::ProcessJobs( std::queue<RootCIDJob> &jobs )
     {
         std::unique_lock lk( dagWorkerMutex_ );
-        if ( selfCreatedJobList_.empty() )
+        if ( jobs.empty() )
         {
             return false;
         }
 
-        RootCIDJob job_to_process = selfCreatedJobList_.front();
-        selfCreatedJobList_.pop();
+        RootCIDJob job_to_process = jobs.front();
+        jobs.pop();
         lk.unlock();
 
-        logger_->debug( "Processing HIGH-PRIORITY self-created job for CID {}",
-                        job_to_process.root_node_->getCID().toString().value() );
-
-        auto process_res = ProcessJobIteration( job_to_process );
-        if ( process_res.has_failure() )
-        {
-            HandleJobProcessingFailure( job_to_process );
-        }
-        else
-        {
-            HandleJobProcessingSuccess( job_to_process );
-        }
-
-        return true; // Processed a job
-    }
-
-    bool CrdtDatastore::ProcessExternalJobs()
-    {
-        std::unique_lock lk( dagWorkerMutex_ );
-        if ( rootCIDJobList_.empty() )
-        {
-            return false;
-        }
-
-        RootCIDJob job_to_process = rootCIDJobList_.front();
-        rootCIDJobList_.pop();
-        lk.unlock();
-
-        logger_->debug( "Processing external job for CID {}", job_to_process.root_node_->getCID().toString().value() );
+        logger_->debug( "Processing job for CID {}", job_to_process.root_node_->getCID().toString().value() );
 
         auto process_res = ProcessJobIteration( job_to_process );
         if ( process_res.has_failure() )
@@ -229,7 +200,7 @@ namespace sgns::crdt
             }
         }
 
-        const std::string jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
+        const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
         logger_->error( "{} JOB PROCESSING ERROR: Failed to process CID {}",
                         jobType,
                         job.root_node_->getCID().toString().value() );
@@ -311,7 +282,7 @@ namespace sgns::crdt
         {
             return;
         }
-        
+
         handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         handleNextFuture_ = std::async(
@@ -452,13 +423,13 @@ namespace sgns::crdt
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
-                    }
+        }
 
         if ( rebroadcastThreadRunning_ )
         {
             rebroadcastThreadRunning_ = false;
             rebroadcastCv_.notify_all();
-                    }
+        }
 
         if ( dagWorkerJobListThreadRunning_ )
         {
@@ -472,7 +443,7 @@ namespace sgns::crdt
                     dagWorker->dagWorkerFuture_.wait();
                 }
             }
-            
+
             // Clear both job queues
             {
                 std::lock_guard        lock( dagWorkerMutex_ );

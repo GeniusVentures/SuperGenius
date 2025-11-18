@@ -370,6 +370,7 @@ namespace sgns::crdt
                        std::shared_ptr<CrdtOptions> aOptions );
 
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
+        bool ProcessJobs(std::queue<RootCIDJob>& jobs);
         bool SeedNextExternalRoot();
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
