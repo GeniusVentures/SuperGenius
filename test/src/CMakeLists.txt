@@ -1,7 +1,6 @@
 add_subdirectory(account)
 add_subdirectory(authorship)
 add_subdirectory(base)
-add_subdirectory(blockchain)
 add_subdirectory(scale)
 add_subdirectory(primitives)
 add_subdirectory(crypto)
