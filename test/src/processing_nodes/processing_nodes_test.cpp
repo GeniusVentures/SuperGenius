@@ -260,7 +260,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     bin_path += "../";
 #endif
     std::string json_data = R"(
