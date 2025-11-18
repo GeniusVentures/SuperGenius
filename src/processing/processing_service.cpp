@@ -5,12 +5,12 @@
 
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                                  size_t                                           maximalNodesCount,
-                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
-                                                  std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
-                                                  std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                                                  std::shared_ptr<ProcessingCore>                  processingCore ) :
+    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
+                                                  size_t                                     maximalNodesCount,
+                                                  std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
+                                                  std::shared_ptr<SubTaskStateStorage>       subTaskStateStorage,
+                                                  std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+                                                  std::shared_ptr<ProcessingCore>            processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
@@ -62,6 +62,7 @@ namespace sgns::processing
         m_logger->debug( "~ProcessingServiceImpl CALLED" );
         StopProcessing();
     }
+
     void ProcessingServiceImpl::StartProcessing( const std::string &processingGridChannelId )
     {
         if ( !m_isStopped )
@@ -119,14 +120,13 @@ namespace sgns::processing
         m_logger->debug( "[{}] [SERVICE_STOPPED]", node_address_ );
     }
 
-
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
-        auto processing_topic = processingGridChannelId + sgns::version::GetNetAndVersionAppendix();
+        auto processing_topic   = processingGridChannelId + version::GetNetAndVersionAppendix();
         m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processing_topic );
         m_gridChannel->Subscribe(
-            [weakSelf = weak_from_this()]( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+            [weakSelf = weak_from_this()]( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
             {
                 if ( auto self = weakSelf.lock() ) // Check if object still exists
                 {
@@ -137,11 +137,11 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::SendChannelListRequest()
     {
-        if ( m_waitingCHannelRequest )
+        if ( m_waitingChannelRequest )
         {
             return;
         }
-        m_waitingCHannelRequest = true;
+        m_waitingChannelRequest = true;
         SGProcessing::GridChannelMessage gridMessage;
         auto                             channelRequest = gridMessage.mutable_processing_channel_request();
         channelRequest->set_environment( "any" );
@@ -154,7 +154,7 @@ namespace sgns::processing
             { instance->HandleRequestTimeout(); } );
     }
 
-    void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+    void ProcessingServiceImpl::OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         m_logger->trace( "[{}] On Message.", node_address_ );
         if ( message )
@@ -213,10 +213,12 @@ namespace sgns::processing
 
         // Add this channel to blacklist to prevent repeated processing attempts
         {
-            std::lock_guard<std::mutex> lockBlacklist( m_mutexBlacklist );
+            std::lock_guard lockBlacklist( m_mutexBlacklist );
             m_blacklistedChannels.insert( subTaskQueueId );
-            m_logger->info( "[{}] Blacklisted channel {} due to processing error (total blacklisted: {})", 
-                           node_address_, subTaskQueueId, m_blacklistedChannels.size() );
+            m_logger->info( "[{}] Blacklisted channel {} due to processing error (total blacklisted: {})",
+                            node_address_,
+                            subTaskQueueId,
+                            m_blacklistedChannels.size() );
         }
 
         if ( userCallbackError_ )
@@ -228,8 +230,6 @@ namespace sgns::processing
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( subTaskQueueId );
         }
-
-        // @todo Stop processing?
 
         if ( !m_isStopped )
         {
@@ -252,7 +252,7 @@ namespace sgns::processing
         }
     }
 
-    void ProcessingServiceImpl::AcceptProcessingChannel( const std::string &processingQueuelId )
+    void ProcessingServiceImpl::AcceptProcessingChannel( const std::string &channelId )
     {
         if ( m_isStopped )
         {
@@ -261,19 +261,19 @@ namespace sgns::processing
 
         // Check if this channel is blacklisted
         {
-            std::lock_guard<std::mutex> lockBlacklist( m_mutexBlacklist );
-            if ( m_blacklistedChannels.find( processingQueuelId ) != m_blacklistedChannels.end() )
+            std::lock_guard lockBlacklist( m_mutexBlacklist );
+            if ( m_blacklistedChannels.find( channelId ) != m_blacklistedChannels.end() )
             {
-                m_logger->debug( "[{}] Not accepting blacklisted channel {}", node_address_, processingQueuelId );
+                m_logger->debug( "[{}] Not accepting blacklisted channel {}", node_address_, channelId );
                 return;
             }
         }
 
-        m_logger->debug( "[{}] AcceptProcessingChannel for queue {}", node_address_, processingQueuelId );
+        m_logger->debug( "[{}] AcceptProcessingChannel for queue {}", node_address_, channelId );
 
         // Check if we're currently in the process of creating any node
         {
-            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            std::lock_guard lockCreation( m_mutexPendingCreation );
 
             // Check if our pending creation is stale
             if ( !m_pendingSubTaskQueueId.empty() && IsPendingCreationStale() )
@@ -292,7 +292,7 @@ namespace sgns::processing
             {
                 m_logger->debug( "[{}] Not accepting channel {} as we're negotiating for queue {}",
                                  node_address_,
-                                 processingQueuelId,
+                                 channelId,
                                  m_pendingSubTaskQueueId );
                 return;
             }
@@ -301,22 +301,22 @@ namespace sgns::processing
             // This helps prevent race conditions where we immediately try to join a queue
             // that another peer is just in the process of creating
             // In practice, this is rare since the winning peer will have already created the node
-            if ( m_pendingSubTaskQueueId == processingQueuelId )
+            if ( m_pendingSubTaskQueueId == channelId )
             {
                 m_logger->debug( "[{}] Not accepting channel {} as we just lost negotiation for it",
                                  node_address_,
-                                 processingQueuelId );
+                                 channelId );
                 return;
             }
         }
 
         // Also check if we already have this queue
         std::scoped_lock lock( m_mutexNodes );
-        if ( m_processingNodes.find( processingQueuelId ) != m_processingNodes.end() )
+        if ( m_processingNodes.find( channelId ) != m_processingNodes.end() )
         {
             m_logger->debug( "[{}] Not accepting channel {} as we already have a node for it",
                              node_address_,
-                             processingQueuelId );
+                             channelId );
             return;
         }
 
@@ -327,7 +327,7 @@ namespace sgns::processing
 
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
-            m_logger->debug( "[{}] Accept Channel: Creating Node for queue {}", node_address_, processingQueuelId );
+            m_logger->debug( "[{}] Accept Channel: Creating Node for queue {}", node_address_, channelId );
 
             auto weakSelf = weak_from_this();
 
@@ -336,33 +336,33 @@ namespace sgns::processing
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,
                 m_processingCore,
-                [weakSelf, processingQueuelId]( const SGProcessing::TaskResult &result )
+                [weakSelf, channelId]( const SGProcessing::TaskResult &result )
                 {
                     if ( auto self = weakSelf.lock() )
                     {
-                        self->OnQueueProcessingCompleted( processingQueuelId, result );
+                        self->OnQueueProcessingCompleted( channelId, result );
                     }
                 },
-                [weakSelf, processingQueuelId]( const std::string &error )
+                [weakSelf, channelId]( const std::string &error )
                 {
                     if ( auto self = weakSelf.lock() )
                     {
-                        self->OnProcessingError( processingQueuelId, error );
+                        self->OnProcessingError( channelId, error );
                     }
                 },
-                [weakSelf, processingQueuelId]()
+                [weakSelf, channelId]()
                 {
                     if ( auto self = weakSelf.lock() )
                     {
-                        self->OnProcessingDone( processingQueuelId );
+                        self->OnProcessingDone( channelId );
                     }
                 },
                 node_address_,
-                processingQueuelId );
+                channelId );
 
             if ( node != nullptr )
             {
-                m_processingNodes[processingQueuelId] = node;
+                m_processingNodes[channelId] = node;
             }
         }
 
@@ -410,7 +410,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::HandleRequestTimeout()
     {
-        m_waitingCHannelRequest = false;
+        m_waitingChannelRequest = false;
         m_logger->debug( "QUEUE_REQUEST_TIMEOUT" );
         m_timerChannelListRequestTimeout.expires_at( boost::posix_time::pos_infin );
 
@@ -421,7 +421,7 @@ namespace sgns::processing
 
         // Check if we're already waiting for a node creation to resolve
         {
-            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            std::lock_guard lockCreation( m_mutexPendingCreation );
 
             // Check if our pending creation is stale and should be cleared
             if ( !m_pendingSubTaskQueueId.empty() )
@@ -504,7 +504,7 @@ namespace sgns::processing
 
         // Add ourselves to competing peers
         {
-            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            std::lock_guard lockCreation( m_mutexPendingCreation );
             m_competingPeers.insert( node_address_ );
             m_pendingCreationTimestamp = std::chrono::steady_clock::now();
         }
@@ -542,7 +542,7 @@ namespace sgns::processing
         std::string lowestPeer;
 
         {
-            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            std::lock_guard lockCreation( m_mutexPendingCreation );
 
             // Only process if this is for our pending queue
             if ( m_pendingSubTaskQueueId == subTaskQueueId )
@@ -649,7 +649,7 @@ namespace sgns::processing
                              subTaskQueueId );
 
             // Check if we can still add more nodes
-            std::unique_lock<std::recursive_mutex> lock( m_mutexNodes );
+            std::unique_lock lock( m_mutexNodes );
 
             // Check if we already have this node (could have been created passively)
             if ( m_processingNodes.find( subTaskQueueId ) != m_processingNodes.end() )
