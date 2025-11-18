@@ -39,10 +39,11 @@ namespace sgns
 
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                  std::shared_ptr<GeniusAccount>  account,
-                                                 BlockchainCallback              callback )
+                                                 BlockchainCallback              callback,
+                                                 const std::string              &authorized_node )
     {
         auto instance = std::shared_ptr<Blockchain>(
-            new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
+            new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ), authorized_node ) );
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
@@ -111,11 +112,12 @@ namespace sgns
     // Private constructor
     Blockchain::Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
                             std::shared_ptr<GeniusAccount>  account,
-                            BlockchainCallback              callback ) :
-        db_( std::move( global_db ) ),                                 //
-        account_( std::move( account ) ),                              //
-        blockchain_processed_callback_( std::move( callback ) ),       //
-        authorized_full_node_address_( DEFAULT_FULL_NODE_PUB_ADDRESS ) //
+                            BlockchainCallback              callback,
+                            const std::string              &authorized_node ) :
+        db_( std::move( global_db ) ),                                                                           //
+        account_( std::move( account ) ),                                                                        //
+        blockchain_processed_callback_( std::move( callback ) ),                                                 //
+        authorized_full_node_address_( authorized_node == "" ? DEFAULT_FULL_NODE_PUB_ADDRESS : authorized_node ) //
     {
         logger_->debug( "[{}] Blockchain constructor called", account_->GetAddress().substr( 0, 8 ) );
     }

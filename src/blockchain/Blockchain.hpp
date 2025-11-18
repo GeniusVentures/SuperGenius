@@ -54,7 +54,8 @@ namespace sgns
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                 std::shared_ptr<GeniusAccount>  account,
-                                                BlockchainCallback              callback );
+                                                BlockchainCallback              callback,
+                                                const std::string              &authorized_node = "" );
 
         ~Blockchain();
 
@@ -93,7 +94,8 @@ namespace sgns
         /// Make constructor private to force use of factory method
         Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
                     std::shared_ptr<GeniusAccount>  account,
-                    BlockchainCallback              callback );
+                    BlockchainCallback              callback,
+                    const std::string              &authorized_node );
 
         outcome::result<void> InitGenesisCID();
         outcome::result<void> InitAccountCreationCID();
