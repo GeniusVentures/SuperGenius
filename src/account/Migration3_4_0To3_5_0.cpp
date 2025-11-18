@@ -109,6 +109,7 @@ namespace sgns
                         strong->blockchain_status_.store( Status::SUCCESS );
                     }
                 } );
+            blockchain_->Start();
         }
         auto timeout_duration     = std::chrono::minutes( 4 );
         auto start_time           = std::chrono::steady_clock::now();
