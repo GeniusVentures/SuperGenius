@@ -638,9 +638,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
-
-        return outcome::success();
+        return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
     }
 
     void GeniusAccount::SetGetBlockChainCIDMethod(
