@@ -662,7 +662,7 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->GetConfirmedNonce( 5000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
         uint64_t expected_next_nonce = 0;
         int64_t  confirmed_nonce     = -1;
 
@@ -678,7 +678,8 @@ namespace sgns
         else if ( ( !nonce_result.has_value() ) &&
                   ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( !full_node_m ) )
         {
-            m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
+            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
+                             __func__,
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
@@ -787,7 +788,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RollbackTransactions( TransactionItem &item_to_rollback )
     {
-        auto     nonce_result        = account_m->GetConfirmedNonce( 5000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
         uint64_t expected_next_nonce = 0;
         int64_t  confirmed_nonce     = -1;
 
@@ -803,7 +804,8 @@ namespace sgns
         else if ( ( !nonce_result.has_value() ) &&
                   ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) )
         {
-            m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
+            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
+                             __func__,
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
