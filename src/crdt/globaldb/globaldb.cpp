@@ -219,7 +219,7 @@ namespace sgns::crdt
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
@@ -230,7 +230,7 @@ namespace sgns::crdt
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
         AtomicTransaction batch( m_crdtDatastore );
@@ -252,7 +252,7 @@ namespace sgns::crdt
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 

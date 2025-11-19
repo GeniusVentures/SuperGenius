@@ -38,11 +38,13 @@ protected:
         ""                                    // BaseWritePath
     };
 
-    static constexpr char     DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.01.";
-    static constexpr int      STARTUP_DELAY_MS   = 1000;
-    static constexpr char     FULL_NODE_SUBDIR[] = "migration_full_node";
-    static constexpr char     FULL_NODE_ADDR[]   = "0xcafe";
-    static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
+    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.01.";
+    static constexpr int  STARTUP_DELAY_MS   = 1000;
+    static constexpr char FULL_NODE_SUBDIR[] = "migration_full_node";
+    static constexpr char FULL_NODE_ADDR[]   = "0xcafe";
+    static constexpr char FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
+    static constexpr char FULL_NODE_PUB_ADDRESS[] =
+        "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
     static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 
     static void RemovePrefixedSubdirs( const fs::path &baseDir )
@@ -106,7 +108,7 @@ protected:
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance    = sgns::GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true, "batata" );
+        auto     instance    = sgns::GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         std::cout << "Full node created" << std::endl;
         return instance;
@@ -115,14 +117,15 @@ protected:
 
 TEST_P( MigrationParamTest, BalanceAfterMigration )
 {
-    auto params          = GetParam();
-    auto full_node       = CreateFullNodeInstance();
+    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
+    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+    auto params    = GetParam();
+    auto full_node = CreateFullNodeInstance();
+    EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
     auto binaryParent    = boost::dll::program_location().parent_path().string();
     auto node            = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
     auto authorized_addr = full_node->GetAddress();
 
-    full_node->SetAuthorizedFullNodeAddress( authorized_addr );
-    node->SetAuthorizedFullNodeAddress( authorized_addr );
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";

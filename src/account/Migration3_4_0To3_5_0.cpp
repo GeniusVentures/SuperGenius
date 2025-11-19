@@ -89,6 +89,7 @@ namespace sgns
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
+        db_3_5_0_->Start();
         //init blockchain
         if ( !blockchain_ )
         {
