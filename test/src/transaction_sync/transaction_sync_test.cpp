@@ -118,12 +118,11 @@ namespace sgns
 
             SGTransaction::DAGStruct dag;
             dag.set_previous_hash( "" );
-            dag.set_nonce( account->GetProposedNonce() );
+            dag.set_nonce( account->ReserveNextNonce() );
             dag.set_source_addr( account->GetAddress() );
             dag.set_timestamp( timestamp.time_since_epoch().count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
-            account->IncProposedNonce();
 
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
                 sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );

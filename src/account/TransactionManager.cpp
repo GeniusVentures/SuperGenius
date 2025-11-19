@@ -638,14 +638,12 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( account_m->GetProposedNonce() );
+        dag.set_nonce( account_m->ReserveNextNonce() );
         dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled by transaction class
-
-        account_m->IncProposedNonce();
 
         return dag;
     }
@@ -837,7 +835,7 @@ namespace sgns
                 t.status = TransactionStatus::FAILED;
             }
             RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
-            account_m->DecProposedNonce();
+            account_m->ReleaseNonce( transaction->dag_st.nonce() );
         }
         return outcome::success();
     }
