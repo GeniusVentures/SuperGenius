@@ -143,9 +143,7 @@ namespace sgns
     }
 
     GeniusAccount::GeniusAccount( TokenID token_id, bool full_node ) :
-        token( token_id ),    //
-        proposed_nonce_( 0 ), //
-        is_full_node_( std::move( full_node ) )
+        token( token_id ), is_full_node_( std::move( full_node ) )
     {
     }
 
@@ -465,14 +463,9 @@ namespace sgns
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
-        genius_account_logger()->debug( "Setting local confirmed nonce to {} from {}", nonce, proposed_nonce_ );
+        genius_account_logger()->debug( "Setting local confirmed nonce to {}", nonce );
         SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
         std::lock_guard lock( nonce_mutex_ );
-        nonce++;
-        genius_account_logger()->debug( "Setting the max value between {} and {} as a proposed (next) nonce",
-                                        proposed_nonce_,
-                                        nonce );
-        proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )
@@ -483,52 +476,94 @@ namespace sgns
                                         current_confirmed_nonce,
                                         nonce,
                                         address.substr( 0, 8 ) );
-        confirmed_nonces_[address] = std::max( nonce, current_confirmed_nonce );
+        auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
+        confirmed_nonces_[address] = updated_nonce;
+
+        if ( address == eth_keypair->GetEntirePubValue() )
+        {
+            if ( !local_confirmed_nonce_ || updated_nonce > local_confirmed_nonce_.value() )
+            {
+                local_confirmed_nonce_ = updated_nonce;
+            }
+            auto it = pending_nonces_.begin();
+            while ( it != pending_nonces_.end() &&
+                    ( !local_confirmed_nonce_ || *it <= local_confirmed_nonce_.value() ) )
+            {
+                it = pending_nonces_.erase( it );
+            }
+        }
     }
 
     void GeniusAccount::RollBackPeerConfirmedNonce( uint64_t nonce, std::string address )
     {
         std::lock_guard lock( nonce_mutex_ );
-        auto            current_confirmed_nonce = confirmed_nonces_[address];
-        genius_account_logger()->debug( "Setting the min value between {} and {} as a confirmed nonce for address {}",
-                                        current_confirmed_nonce,
-                                        nonce,
-                                        address.substr( 0, 8 ) );
-        if ( nonce == current_confirmed_nonce )
+        auto            it                      = confirmed_nonces_.find( address );
+        uint64_t        current_confirmed_nonce = 0;
+        if ( it != confirmed_nonces_.end() )
         {
-            if ( current_confirmed_nonce )
+            current_confirmed_nonce = it->second;
+        }
+        genius_account_logger()->debug( "Rolling back nonce {} for address {} (current confirmed {})",
+                                        nonce,
+                                        address.substr( 0, 8 ),
+                                        current_confirmed_nonce );
+        if ( it != confirmed_nonces_.end() && nonce == current_confirmed_nonce )
+        {
+            if ( current_confirmed_nonce > 0 )
             {
-                current_confirmed_nonce--;
-                confirmed_nonces_[address] = current_confirmed_nonce;
-                current_confirmed_nonce++;
+                it->second = current_confirmed_nonce - 1;
             }
             else
             {
-                confirmed_nonces_.erase( address );
-            }
-            if ( address == eth_keypair->GetEntirePubValue() )
-            {
-                genius_account_logger()->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
-                                                proposed_nonce_,
-                                                current_confirmed_nonce );
-                proposed_nonce_ = current_confirmed_nonce;
+                confirmed_nonces_.erase( it );
             }
         }
+
+        if ( address == eth_keypair->GetEntirePubValue() )
+        {
+            if ( local_confirmed_nonce_.has_value() && ( nonce == local_confirmed_nonce_.value() ) )
+            {
+                if ( local_confirmed_nonce_.value() > 0 )
+                {
+                    local_confirmed_nonce_ = local_confirmed_nonce_.value() - 1;
+                }
+                else
+                {
+                    local_confirmed_nonce_.reset();
+                }
+            }
+            pending_nonces_.erase( nonce );
+        }
+    }
+
+    uint64_t GeniusAccount::GetNextNonceLocked() const
+    {
+        uint64_t next = local_confirmed_nonce_.has_value() ? local_confirmed_nonce_.value() + 1 : 0;
+        while ( pending_nonces_.count( next ) )
+        {
+            ++next;
+        }
+        return next;
     }
 
     uint64_t GeniusAccount::GetProposedNonce() const
     {
-        return proposed_nonce_;
+        std::shared_lock lock( nonce_mutex_ );
+        return GetNextNonceLocked();
     }
 
-    void GeniusAccount::IncProposedNonce()
+    uint64_t GeniusAccount::ReserveNextNonce()
     {
-        proposed_nonce_++;
+        std::lock_guard lock( nonce_mutex_ );
+        auto            nonce = GetNextNonceLocked();
+        pending_nonces_.insert( nonce );
+        return nonce;
     }
 
-    void GeniusAccount::DecProposedNonce()
+    void GeniusAccount::ReleaseNonce( uint64_t nonce )
     {
-        proposed_nonce_--;
+        std::lock_guard lock( nonce_mutex_ );
+        pending_nonces_.erase( nonce );
     }
 
     outcome::result<uint64_t> GeniusAccount::GetPeerNonce( std::string address ) const

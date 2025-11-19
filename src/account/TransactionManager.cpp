@@ -638,14 +638,12 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( account_m->GetProposedNonce() );
+        dag.set_nonce( account_m->ReserveNextNonce() );
         dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled by transaction class
-
-        account_m->IncProposedNonce();
 
         return dag;
     }
@@ -664,7 +662,7 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->GetConfirmedNonce( 5000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
         uint64_t expected_next_nonce = 0;
         int64_t  confirmed_nonce     = -1;
 
@@ -680,7 +678,8 @@ namespace sgns
         else if ( ( !nonce_result.has_value() ) &&
                   ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( !full_node_m ) )
         {
-            m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
+            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
+                             __func__,
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
@@ -789,7 +788,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RollbackTransactions( TransactionItem &item_to_rollback )
     {
-        auto     nonce_result        = account_m->GetConfirmedNonce( 5000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
         uint64_t expected_next_nonce = 0;
         int64_t  confirmed_nonce     = -1;
 
@@ -805,7 +804,8 @@ namespace sgns
         else if ( ( !nonce_result.has_value() ) &&
                   ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( !full_node_m ) )
         {
-            m_logger->error( "[{} - full: {}] Network unreachable when fetching nonce",
+            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
+                             __func__,
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
@@ -855,7 +855,7 @@ namespace sgns
                 t.status = TransactionStatus::FAILED;
             }
             RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
-            account_m->DecProposedNonce();
+            account_m->ReleaseNonce( transaction->dag_st.nonce() );
         }
         return outcome::success();
     }

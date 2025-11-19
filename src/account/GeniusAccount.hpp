@@ -14,6 +14,8 @@
 #include <shared_mutex>
 #include <tuple>
 #include <functional>
+#include <optional>
+#include <set>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -219,20 +221,22 @@ namespace sgns
         outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
 
         /**
-         * @brief       Get the proposed nonce
-         * @return      The proposed nonce
+         * @brief       Get the next available nonce without reserving it
+         * @return      The nonce that would be assigned to the next transaction
          */
         uint64_t GetProposedNonce() const;
 
         /**
-         * @brief       Increment the proposed nonce
+         * @brief       Reserve the next available nonce
+         * @return      The reserved nonce value
          */
-        void IncProposedNonce();
+        uint64_t ReserveNextNonce();
 
         /**
-         * @brief       Decrement the proposed nonce
+         * @brief       Release a previously reserved nonce
+         * @param[in]   nonce The nonce to release
          */
-        void DecProposedNonce();
+        void ReleaseNonce( uint64_t nonce );
 
         outcome::result<void> RequestGenesis() const;
         outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
@@ -255,13 +259,16 @@ namespace sgns
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
-        std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
-        mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
-        uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
-        std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
+        std::unordered_map<std::string, uint64_t>       confirmed_nonces_;      ///< Map of the confirmed nonces from peers
+        mutable std::shared_mutex                       nonce_mutex_;           ///< Mutex for the nonce map
+        std::set<uint64_t>                              pending_nonces_;        ///< Reserved but not confirmed nonces
+        std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
+        std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
         std::mutex                                      get_cids_mutex_;   ///< Mutex for the genesis method
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
+
+        uint64_t GetNextNonceLocked() const;
 
         /**
          * @brief       Private constructor a new Genius Account object

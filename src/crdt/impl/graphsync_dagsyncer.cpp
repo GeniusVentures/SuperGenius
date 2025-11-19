@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <thread>
+#include <deque>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 {
@@ -524,6 +525,16 @@ namespace sgns::crdt
     {
         LinkInfoSet links_to_fetch;
 
+        // Use iterative approach with a work queue to avoid stack overflow
+        // Each work item contains the node to process
+        struct WorkItem
+        {
+            std::shared_ptr<ipfs_lite::ipld::IPLDNode> node;
+        };
+
+        std::deque<WorkItem> work_queue;
+        
+        // Start with the root node
         const CID &root_cid = node.getCID();
 
         auto tree_resolved_res = isResolved( root_cid );
@@ -547,56 +558,71 @@ namespace sgns::crdt
                        root_cid.toString().value(),
                        link_name );
 
-        for ( const auto &link : node.getLinks() )
+        // Add the root node to the work queue
+        // Create a shared_ptr from the reference - note this assumes the node is already managed
+        work_queue.push_back( WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
+
+        // Process the queue iteratively
+        while ( !work_queue.empty() )
         {
-            const CID         &child = link.get().getCID();
-            const std::string &name  = link.get().getName();
-            LinkInfoPair       pair{ child, name };
+            WorkItem current_item = std::move( work_queue.front() );
+            work_queue.pop_front();
 
-            logger_->trace( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
-            if ( !link_name.empty() && name != link_name )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
-                continue;
-            }
+            auto &current_node = *current_item.node;
+            const CID &current_cid = current_node.getCID();
 
-            if ( !visited.insert( pair ).second )
+            logger_->trace( "TraverseCIDsLinks: Processing node {}", current_cid.toString().value() );
+
+            // Process all links in the current node
+            for ( const auto &link : current_node.getLinks() )
             {
-                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                const CID         &child = link.get().getCID();
+                const std::string &name  = link.get().getName();
+                LinkInfoPair       pair{ child, name };
+
+                logger_->trace( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
+                if ( !link_name.empty() && name != link_name )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
+                    continue;
+                }
+
+                if ( !visited.insert( pair ).second )
+                {
+                    logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                                   child.toString().value(),
+                                   name );
+                    continue;
+                }
+
+                logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
                                child.toString().value(),
-                               name );
-                continue;
+                               name,
+                               link.get().getSize() );
+
+                auto get_child_result = GetNodeWithoutRequest( child );
+                if ( get_child_result.has_failure() )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
+                                    child.toString().value() );
+                    links_to_fetch.insert( pair );
+                    continue;
+                }
+
+                // Add the child node to the front of the work queue for depth-first processing
+                // This ensures children are resolved before their parents, maintaining the original
+                // recursive behavior where we don't mark a CID as complete until all its children are processed
+                work_queue.push_front( WorkItem{ get_child_result.value() } );
+                
+                logger_->trace( "TraverseCIDsLinks: Added child {} to work queue (queue size: {})",
+                                child.toString().value(),
+                                work_queue.size() );
             }
-
-            logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                           child.toString().value(),
-                           name,
-                           link.get().getSize() );
-
-            auto get_child_result = GetNodeWithoutRequest( child );
-            if ( get_child_result.has_failure() )
-            {
-                logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
-                                child.toString().value() );
-                links_to_fetch.insert( pair );
-                continue;
-            }
-
-            //if ( max_depth == 0 )
-            //{
-            //    logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
-            //                    child.toString().value(),
-            //                    name );
-            //    continue;
-            //}
-
-            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(), link_name, visited );
-
-            links_to_fetch.merge( child_links );
-            visited.merge( child_visited );
-
-            logger_->info( "TraverseCIDsLinks: Merging data" );
         }
+
+        logger_->info( "TraverseCIDsLinks: Completed traversal. Links to fetch: {}, Visited: {}",
+                       links_to_fetch.size(),
+                       visited.size() );
 
         return { std::move( links_to_fetch ), std::move( visited ) };
     }
