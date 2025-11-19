@@ -2,6 +2,7 @@
 #define _GENIUS_NODE_HPP_
 #include <memory>
 #include <cstdint>
+#include <functional>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -51,6 +52,18 @@ namespace sgns
 
         ~GeniusNode() override;
 
+        enum class NodeState
+        {
+            CREATING = 0,
+            MIGRATING_DATABASE,
+            INITIALIZING_DATABASE,
+            INITIALIZING_PROCESSING,
+            INITIALIZING_BLOCKCHAIN,
+            INITIALIZING_TRANSACTIONS,
+            INITIALIZING_DHT,
+            READY,
+        };
+
         /**
          * @brief      GeniusNode Error class
          */
@@ -66,8 +79,9 @@ namespace sgns
             PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
             INVALID_JSON             = 9,  ///< JSON cannot be parsed>
             INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///< No processor for this type>
-            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
+            NO_PROCESSOR             = 11, ///< No processor for this type
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus
+            TRANSACTIONS_NOT_READY   = 13, ///< Transactions aren't ready
         };
 
 #ifdef SGNS_DEBUG
@@ -114,12 +128,22 @@ namespace sgns
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
-            return transaction_manager_->GetInTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetInTransactions();
         }
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
         {
-            return transaction_manager_->GetOutTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetOutTransactions();
         }
 
         std::string GetAddress() const
@@ -208,6 +232,11 @@ namespace sgns
          */
         const std::string &GetAuthorizedFullNodeAddress() const;
 
+        NodeState GetState() const
+        {
+            return state_.load();
+        }
+
     protected:
         friend class TransactionSyncTest;
 
@@ -230,6 +259,7 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        bool                                                  is_full_node_;
         base::Logger                                          node_logger_;
         DevConfig_st                                          dev_config_;
         std::string                                           gnus_network_full_path_;
@@ -244,14 +274,19 @@ namespace sgns
                     bool                isprocessor,
                     uint16_t            base_port,
                     bool                is_full_node );
-        void                  InitOpenSSL();
-        bool                  InitLoggers( const std::string &base_path );
-        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
-        bool                  InitNetwork( uint16_t base_port, bool is_full_node );
-        bool                  InitDatabase();
-        bool                  InitProcessingModules();
-        bool                  MigrateDatabase();
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        void         InitOpenSSL();
+        bool         InitLoggers( const std::string &base_path );
+        base::Logger ConfigureLogger( const std::string        &tag,
+                                      const std::string        &logdir,
+                                      spdlog::level::level_enum level );
+        bool         InitNetwork( uint16_t base_port, bool is_full_node );
+        bool         InitDatabase();
+        bool         InitProcessingModules();
+        void         BeginDBInitialization();
+        void         StateTransition( NodeState next_state );
+        void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
+        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+        outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
 
         void DHTInit();
 
@@ -275,6 +310,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_;
 
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
+
+        std::atomic<NodeState> state_{ NodeState::CREATING };
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,
