@@ -7,6 +7,7 @@
 
 #include "Migration3_4_0To3_5_0.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/TransactionManager.hpp"
 
 namespace sgns
 {
@@ -159,66 +160,72 @@ namespace sgns
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
-        const std::string BASE = "/bc-";
-        OUTCOME_TRY( auto &&entries, db_3_4_0_->QueryKeyValues( BASE, "*", "/tx" ) );
-        logger_->debug( "Found {} transaction keys to migrate", entries.size() );
-        size_t migrated_count = 0;
-        size_t BATCH_SIZE     = 50;
-        for ( const auto &entry : entries )
-        {
-            auto keyOpt = db_3_4_0_->KeyToString( entry.first );
-            if ( !keyOpt.has_value() )
-            {
-                logger_->error( "Failed to convert key buffer to string" );
-                continue;
-            }
-            std::string transaction_key   = keyOpt.value();
-            auto        maybe_transaction = TransactionManager::FetchTransaction( db_3_4_0_, transaction_key );
-            if ( !maybe_transaction.has_value() )
-            {
-                logger_->error( "Can't fetch transaction for key {}", transaction_key );
-                continue;
-            }
-            auto tx = maybe_transaction.value();
-            logger_->trace( "Fetched transaction {}", transaction_key );
+        std::vector<uint16_t> monitored_networks{ version::DEV_NET_ID, version::TEST_NET_ID, version::MAIN_NET_ID };
+        size_t                migrated_count = 0;
+        size_t                BATCH_SIZE     = 50;
 
-            if ( !tx->CheckSignature() )
+        for ( const auto network_id : monitored_networks )
+        {
+            auto        blockchain_base = TransactionManager::GetBlockChainBase( network_id );
+            OUTCOME_TRY( auto &&entries, db_3_4_0_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
+            logger_->debug( "Found {} transaction keys to migrate for network {}", entries.size(), network_id );
+
+            for ( const auto &entry : entries )
             {
-                if ( !tx->CheckDAGSignatureLegacy() )
+                auto keyOpt = db_3_4_0_->KeyToString( entry.first );
+                if ( !keyOpt.has_value() )
                 {
-                    logger_->error( "Could not validate signature of transaction {}", transaction_key );
+                    logger_->error( "Failed to convert key buffer to string" );
                     continue;
                 }
-            }
-
-            topics_.emplace( tx->GetSrcAddress() );
-            if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
-            {
-                for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                std::string transaction_key   = keyOpt.value();
+                auto        maybe_transaction = TransactionManager::FetchTransaction( db_3_4_0_, transaction_key );
+                if ( !maybe_transaction.has_value() )
                 {
-                    topics_.emplace( dest_info.dest_address );
+                    logger_->error( "Can't fetch transaction for key {}", transaction_key );
+                    continue;
                 }
-            }
-            if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-            {
-                topics_.emplace( escrow_tx->GetSrcAddress() );
-                topics_.emplace( escrow_tx->GetEscrowSource() );
-            }
+                auto tx = maybe_transaction.value();
+                logger_->trace( "Fetched transaction {}", transaction_key );
 
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
+                if ( !tx->CheckSignature() )
+                {
+                    if ( !tx->CheckDAGSignatureLegacy() )
+                    {
+                        logger_->error( "Could not validate signature of transaction {}", transaction_key );
+                        continue;
+                    }
+                }
 
-            ++migrated_count;
-            if ( migrated_count >= BATCH_SIZE )
-            {
-                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                crdt_transaction_ = db_3_5_0_->BeginTransaction(); // start fresh
-                topics_.clear();
+                topics_.emplace( tx->GetSrcAddress() );
+                if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+                {
+                    for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                    {
+                        topics_.emplace( dest_info.dest_address );
+                    }
+                }
+                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
+                {
+                    topics_.emplace( escrow_tx->GetSrcAddress() );
+                    topics_.emplace( escrow_tx->GetEscrowSource() );
+                }
 
-                topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
-                migrated_count = 0;
-                logger_->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( tx->SerializeByteVector() );
+                BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
+
+                ++migrated_count;
+                if ( migrated_count >= BATCH_SIZE )
+                {
+                    OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                    crdt_transaction_ = db_3_5_0_->BeginTransaction(); // start fresh
+                    topics_.clear();
+
+                    topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+                    migrated_count = 0;
+                    logger_->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+                }
             }
         }
         if ( migrated_count )
