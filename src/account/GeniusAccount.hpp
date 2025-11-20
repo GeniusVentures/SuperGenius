@@ -64,8 +64,14 @@ namespace sgns
          * @param[in]   full_node parameter to indicate if the account is a full node
          * @return      true if succeeds, false otherwise
          */
-        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub,
-                            std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster );
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
+
+        /**
+         * @brief       Configures the block response handler
+         * @param[in]   broadcaster: the pubsub broadcaster which adds the block CID to be fetched
+         * @return      true if successfully configured, false otherwise
+         */
+        bool ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -259,12 +265,12 @@ namespace sgns
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
-        std::unordered_map<std::string, uint64_t>       confirmed_nonces_;      ///< Map of the confirmed nonces from peers
-        mutable std::shared_mutex                       nonce_mutex_;           ///< Mutex for the nonce map
-        std::set<uint64_t>                              pending_nonces_;        ///< Reserved but not confirmed nonces
+        std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
+        mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
+        std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
-        std::mutex                                      get_cids_mutex_;   ///< Mutex for the genesis method
+        std::mutex                                      get_cids_mutex_;        ///< Mutex for the genesis method
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
 

@@ -107,6 +107,12 @@ namespace sgns
         global_block_handler_ = std::move( handler );
     }
 
+    void AccountMessenger::ClearBlockResponseHandler()
+    {
+        std::lock_guard lock( global_handler_mutex_ );
+        global_block_handler_ = nullptr;
+    }
+
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         if ( message )
@@ -239,13 +245,14 @@ namespace sgns
         {
             {
                 std::lock_guard lock( nonce_responses_mutex_ );
-                auto            nonce_it = nonce_responses_.find( req_id );
+                auto            nonce_it    = nonce_responses_.find( req_id );
                 auto            no_nonce_it = no_nonce_responses_.find( req_id );
-                
+
                 // Check if we have any responses (either with nonce or without)
-                bool has_nonce_responses = (nonce_it != nonce_responses_.end() && !nonce_it->second.empty());
-                bool has_no_nonce_responses = (no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty());
-                
+                bool has_nonce_responses    = ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() );
+                bool has_no_nonce_responses = ( no_nonce_it != no_nonce_responses_.end() &&
+                                                !no_nonce_it->second.empty() );
+
                 if ( has_nonce_responses || has_no_nonce_responses )
                 {
                     if ( !first_seen )
@@ -271,29 +278,29 @@ namespace sgns
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
         }
 
-        uint64_t max_nonce = 0;
-        bool has_any_nonce = false;
-        bool has_any_response = false;
-        
+        uint64_t max_nonce        = 0;
+        bool     has_any_nonce    = false;
+        bool     has_any_response = false;
+
         {
             std::lock_guard lock( nonce_responses_mutex_ );
-            auto            nonce_it = nonce_responses_.find( req_id );
+            auto            nonce_it    = nonce_responses_.find( req_id );
             auto            no_nonce_it = no_nonce_responses_.find( req_id );
-            
+
             // Check if we have nonce responses
             if ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() )
             {
-                has_any_nonce = true;
+                has_any_nonce    = true;
                 has_any_response = true;
-                max_nonce = *nonce_it->second.rbegin();
+                max_nonce        = *nonce_it->second.rbegin();
             }
-            
+
             // Check if we have "no nonce" responses
             if ( no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty() )
             {
                 has_any_response = true;
             }
-            
+
             // Clean up
             nonce_responses_.erase( req_id );
             no_nonce_responses_.erase( req_id );
@@ -302,12 +309,10 @@ namespace sgns
 
         if ( !has_any_response )
         {
-            logger_->debug( "[{}] No response received within timeout for req_id {}",
-                            address_.substr( 0, 8 ),
-                            req_id );
+            logger_->debug( "[{}] No response received within timeout for req_id {}", address_.substr( 0, 8 ), req_id );
             return outcome::failure( Error::NO_RESPONSE_RECEIVED );
         }
-        
+
         if ( !has_any_nonce )
         {
             logger_->debug( "[{}] Response received but without nonce data for req_id {}",
@@ -774,7 +779,7 @@ namespace sgns
             logger_->debug( "[{}] I don't have the nonce for the address {}, responding with has_nonce=false",
                             address_.substr( 0, 8 ),
                             req.requester_address() );
-            
+
             resp.set_has_nonce( false );
             resp.set_known_nonce( 0 ); // Set to 0 when no nonce available
         }
@@ -783,7 +788,7 @@ namespace sgns
             uint64_t local_nonce = local_nonce_result.value();
             resp.set_has_nonce( true );
             resp.set_known_nonce( local_nonce );
-            
+
             logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
                             address_.substr( 0, 8 ),
                             local_nonce,
@@ -859,7 +864,7 @@ namespace sgns
         }
 
         std::lock_guard lock( nonce_responses_mutex_ );
-        
+
         if ( resp.has_nonce() )
         {
             nonce_responses_[resp.request_id()].insert( resp.known_nonce() );

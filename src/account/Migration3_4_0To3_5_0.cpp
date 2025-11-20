@@ -89,6 +89,8 @@ namespace sgns
     {
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
+        account_->ConfigureBlockResponseHandler( db_3_5_0_->GetBroadcaster() );
+
         db_3_5_0_->Start();
         //init blockchain
         if ( !blockchain_ )
@@ -294,6 +296,7 @@ namespace sgns
     {
         db_3_4_0_.reset();
         db_3_5_0_.reset();
+        blockchain_.reset();
         return outcome::success();
     }
 }

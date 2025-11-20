@@ -87,7 +87,7 @@ namespace sgns
 
         globaldb_ = std::move( globaldc_ret.value() );
 
-        account_->InitMessenger( pubsub_, globaldb_->GetBroadcaster() );
+        account_->InitMessenger( pubsub_ );
 
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );

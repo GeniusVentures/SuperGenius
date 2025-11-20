@@ -185,6 +185,7 @@ namespace sgns
         {
             case NodeState::MIGRATING_DATABASE:
             {
+                account_->InitMessenger( pubsub_ );
                 MigrateDatabase(
                     [weak_self( weak_from_this() )]( outcome::result<void> result )
                     {
@@ -207,7 +208,7 @@ namespace sgns
                     node_logger_->error( "GlobalDB initialization error" );
                     return;
                 }
-                account_->InitMessenger( pubsub_, tx_globaldb_->GetBroadcaster() );
+                account_->ConfigureBlockResponseHandler( tx_globaldb_->GetBroadcaster() );
                 tx_globaldb_->AddListenTopic( processing_channel_topic_ );
                 StateTransition( NodeState::INITIALIZING_PROCESSING );
                 break;

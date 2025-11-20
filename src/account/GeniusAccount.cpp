@@ -58,8 +58,7 @@ namespace sgns
         return instance;
     }
 
-    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub,
-                                       std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster )
+    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
     {
         bool                               ret = false;
         AccountMessenger::InterfaceMethods methods;
@@ -124,19 +123,31 @@ namespace sgns
                                             std::move( pubsub ),
                                             std::move( methods ) );
 
-        messenger_->RegisterBlockResponseHandler(
-            [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>(
-                broadcaster ) }]( const std::string &cid, const std::string &peer_id, const std::string &address )
-            {
-                if ( auto strong = weakptr.lock() )
-                {
-                    return strong->AddSingleCIDInfo( cid, peer_id, address );
-                }
-                return false;
-            } );
         if ( messenger_ )
         {
             genius_account_logger()->debug( "Created AccountMessenger" );
+            ret = true;
+        }
+        return ret;
+    }
+
+    bool GeniusAccount::ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster )
+    {
+        bool ret = false;
+        if ( messenger_ )
+        {
+            //messenger_->ClearBlockResponseHandler();
+            messenger_->RegisterBlockResponseHandler(
+                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>(
+                    broadcaster ) }]( const std::string &cid, const std::string &peer_id, const std::string &address )
+                {
+                    if ( auto strong = weakptr.lock() )
+                    {
+                        return strong->AddSingleCIDInfo( cid, peer_id, address );
+                    }
+                    return false;
+                } );
+            genius_account_logger()->debug( "Registered block response handler" );
             ret = true;
         }
         return ret;
