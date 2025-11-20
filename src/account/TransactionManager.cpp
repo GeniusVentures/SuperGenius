@@ -271,6 +271,9 @@ namespace sgns
                 auto send_result = SendTransactionItem( tx_queue_m.front() );
                 if ( send_result.has_error() )
                 {
+                    // Immediately switch to SYNCHING so no new transactions are created while we roll back.
+                    ChangeState( State::SYNCHING );
+
                     m_logger->error( "[{} - full: {}] Error in SendTransactionItem: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      send_result.error().message(),
@@ -285,7 +288,6 @@ namespace sgns
                         break;
                     }
                     tx_queue_m.pop_front();
-                    ChangeState( State::SYNCHING );
                     break;
                 }
                 auto nonces_sent = send_result.value();
