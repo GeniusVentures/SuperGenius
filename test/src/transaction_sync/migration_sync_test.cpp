@@ -122,11 +122,16 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
     EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
-    auto binaryParent    = boost::dll::program_location().parent_path().string();
-    auto node            = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
-    auto authorized_addr = full_node->GetAddress();
-
+    sgns::test::assertWaitForCondition(
+        [full_node]()
+        { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "Full node not synched" );
+    auto binaryParent = boost::dll::program_location().parent_path().string();
+    auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
+    
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+
 
     const std::string readiness_message = params.subdir + " node not ready";
     sgns::test::assertWaitForCondition(
