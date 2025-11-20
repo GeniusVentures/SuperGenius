@@ -401,13 +401,19 @@ namespace sgns
                                 s->InformAccountCreationResponse( creation_cid );
                             }
                         } );
-
                     if ( result.has_error() )
                     {
-                        self->logger_->error( "[{}] Account creation request failed asynchronously: {}",
-                                              self->account_->GetAddress().substr( 0, 8 ),
-                                              result.error().message() );
-                        self->InformBlockchainResult( result );
+                        self->logger_->error(
+                            "[{}] Account creation request failed asynchronously: {}. Creating account...",
+                            self->account_->GetAddress().substr( 0, 8 ),
+                            result.error().message() );
+                        self->InformAccountCreationResponse( "" );
+                        //self->InformBlockchainResult( result );
+                    }
+                    else
+                    {
+                        self->logger_->info( "[{}] Returned success (async)",
+                                             self->account_->GetAddress().substr( 0, 8 ) );
                     }
                 }
             } )
