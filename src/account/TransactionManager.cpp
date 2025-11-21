@@ -1733,7 +1733,7 @@ namespace sgns
                              full_node_m,
                              network_confirmed_nonce );
             bool synched = true;
-            for ( uint64_t i = 0; i <= network_confirmed_nonce; ++i )
+            for ( uint64_t i = 1; i <= network_confirmed_nonce; ++i )
             {
                 auto tx = GetOutTransaction( i, account_m->GetAddress() );
                 if ( !tx )
