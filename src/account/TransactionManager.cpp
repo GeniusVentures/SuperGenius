@@ -802,12 +802,11 @@ namespace sgns
         }
         else
         {
-            m_logger->warn( "[{} - full: {}] {}: Could not fetch confirmed nonce ({}). Attempting rollback with "
-                            "local state",
+            m_logger->warn( "[{} - full: {}] {}: Could not fetch confirmed nonce ({}). Attempting rollback with local state",
                             __func__,
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
-                            nonce_result.error() );
+                            nonce_result.error().message() );
             auto local_nonce_result = account_m->GetLocalConfirmedNonce();
             if ( local_nonce_result.has_value() )
             {
