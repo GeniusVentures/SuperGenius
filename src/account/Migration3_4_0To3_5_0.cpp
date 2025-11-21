@@ -9,6 +9,10 @@
 #include "account/GeniusAccount.hpp"
 #include "account/TransactionManager.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <vector>
+
 namespace sgns
 {
     Migration3_4_0To3_5_0::Migration3_4_0To3_5_0(
@@ -164,11 +168,55 @@ namespace sgns
         size_t                migrated_count = 0;
         size_t                BATCH_SIZE     = 50;
 
+        struct TransactionRecord
+        {
+            std::shared_ptr<IGeniusTransactions> tx;
+            std::string                          key;
+        };
+
         for ( const auto network_id : monitored_networks )
         {
-            auto        blockchain_base = TransactionManager::GetBlockChainBase( network_id );
+            auto blockchain_base = TransactionManager::GetBlockChainBase( network_id );
             OUTCOME_TRY( auto &&entries, db_3_4_0_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
-            logger_->debug( "Found {} transaction keys to migrate for network {}", entries.size(), network_id );
+            logger_->debug( "Found {} transaction keys to migrate on network {}", entries.size(), network_id );
+
+            std::vector<TransactionRecord> owned_transactions;
+            owned_transactions.reserve( entries.size() );
+            std::vector<TransactionRecord> other_transactions;
+            other_transactions.reserve( entries.size() );
+
+            auto persist_record = [&]( const TransactionRecord &record ) -> outcome::result<void>
+            {
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( record.tx->SerializeByteVector() );
+                BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( record.key, std::move( data_transaction ) ) );
+
+                topics_.emplace( record.tx->GetSrcAddress() );
+                if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( record.tx ) )
+                {
+                    for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                    {
+                        topics_.emplace( dest_info.dest_address );
+                    }
+                }
+                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( record.tx ) )
+                {
+                    topics_.emplace( escrow_tx->GetSrcAddress() );
+                    topics_.emplace( escrow_tx->GetEscrowSource() );
+                }
+
+                ++migrated_count;
+                if ( migrated_count >= BATCH_SIZE )
+                {
+                    OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                    crdt_transaction_ = db_3_5_0_->BeginTransaction();
+                    topics_.clear();
+                    topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+                    migrated_count = 0;
+                    logger_->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+                }
+                return outcome::success();
+            };
 
             for ( const auto &entry : entries )
             {
@@ -197,35 +245,87 @@ namespace sgns
                     }
                 }
 
-                topics_.emplace( tx->GetSrcAddress() );
-                if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+                bool              is_owned = ( tx->GetSrcAddress() == account_->GetAddress() );
+                TransactionRecord record{ tx, std::move( transaction_key ) };
+
+                if ( is_owned )
                 {
-                    for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                    owned_transactions.push_back( std::move( record ) );
+                }
+                else
+                {
+                    other_transactions.push_back( std::move( record ) );
+                }
+            }
+
+            std::sort( owned_transactions.begin(),
+                       owned_transactions.end(),
+                       []( const TransactionRecord &lhs, const TransactionRecord &rhs )
+                       {
+                           if ( lhs.tx->dag_st.nonce() == rhs.tx->dag_st.nonce() )
+                           {
+                               return lhs.key < rhs.key;
+                           }
+                           return lhs.tx->dag_st.nonce() < rhs.tx->dag_st.nonce();
+                       } );
+
+            if ( !owned_transactions.empty() )
+            {
+                uint64_t expected_nonce = 0;
+                uint64_t last_timestamp = 0;
+
+                auto create_zero_value_mint = [&]( uint64_t nonce ) -> TransactionRecord
+                {
+                    SGTransaction::DAGStruct dag;
+                    dag.set_previous_hash( "" );
+                    dag.set_nonce( nonce );
+                    dag.set_source_addr( account_->GetAddress() );
+                    auto current_timestamp = static_cast<uint64_t>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch() )
+                            .count() );
+                    if ( last_timestamp != 0 && current_timestamp <= last_timestamp )
                     {
-                        topics_.emplace( dest_info.dest_address );
+                        current_timestamp = last_timestamp + 1;
                     }
-                }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
+                    dag.set_timestamp( current_timestamp );
+                    dag.set_uncle_hash( "" );
+                    dag.set_data_hash( "" );
+
+                    TokenID token_id;
+                    auto    mint_tx = std::make_shared<MintTransaction>(
+                        MintTransaction::New( 0, std::to_string( network_id ), token_id, std::move( dag ) ) );
+                    mint_tx->MakeSignature( *account_ );
+
+                    logger_->info( "Synthesizing zero-value mint for missing nonce {} on network {}",
+                                   nonce,
+                                   network_id );
+                    auto tx_path = blockchain_base + mint_tx->GetTransactionFullPath();
+                    return TransactionRecord{ std::move( mint_tx ), std::move( tx_path ) };
+                };
+
+                for ( auto &record : owned_transactions )
                 {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
+                    while ( expected_nonce < record.tx->dag_st.nonce() )
+                    {
+                        auto filler_record = create_zero_value_mint( expected_nonce );
+                        logger_->info( "Synthesized zero-value mint for missing nonce {} on network {}",
+                                       expected_nonce,
+                                       network_id );
+                        OUTCOME_TRY( persist_record( filler_record ) );
+                        last_timestamp = filler_record.tx->GetTimestamp();
+                        ++expected_nonce;
+                    }
+
+                    OUTCOME_TRY( persist_record( record ) );
+                    last_timestamp = record.tx->GetTimestamp();
+                    expected_nonce = record.tx->dag_st.nonce() + 1;
                 }
+            }
 
-                sgns::crdt::GlobalDB::Buffer data_transaction;
-                data_transaction.put( tx->SerializeByteVector() );
-                BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
-
-                ++migrated_count;
-                if ( migrated_count >= BATCH_SIZE )
-                {
-                    OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                    crdt_transaction_ = db_3_5_0_->BeginTransaction(); // start fresh
-                    topics_.clear();
-
-                    topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
-                    migrated_count = 0;
-                    logger_->debug( "Committed a batch of {} transactions", BATCH_SIZE );
-                }
+            for ( const auto &record : other_transactions )
+            {
+                OUTCOME_TRY( persist_record( record ) );
             }
         }
         if ( migrated_count )
