@@ -945,41 +945,65 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}",
-                                                strong->account_->GetAddress(),
+                    strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
+                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                __func__,
                                                 task_id );
                     do
                     {
                         if ( strong->task_queue_->IsTaskCompleted( task_id ) )
                         {
-                            strong->node_logger_->info( "Task Already completed!" );
+                            strong->node_logger_->info( "[{}]{}: Task Already completed!",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
                             break;
                         }
                         if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
                         {
+                            strong->node_logger_->info( "[{}]{}: Transactions are not ready",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
                             break;
                         }
-
+                        strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__ );
                         auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
                         if ( maybe_escrow_path.has_failure() )
                         {
-                            strong->node_logger_->info( "No associated Escrow with the task id: {} ", task_id );
+                            strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__,
+                                                        task_id );
                             break;
                         }
                         auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
                         if ( complete_task_result.has_failure() )
                         {
-                            strong->node_logger_->error( "Unable to complete task: {} ", task_id );
+                            strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
+                                                         strong->account_->GetAddress().substr( 0, 8 ),
+                                                         __func__,
+                                                         task_id );
                             break;
                         }
+                        strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__ );
                         auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
                                                              taskresult,
                                                              std::move( complete_task_result.value() ) );
                         if ( pay_result.has_failure() )
                         {
-                            strong->node_logger_->error( "Invalid results for task: {} ", task_id );
+                            strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
+                                                         strong->account_->GetAddress().substr( 0, 8 ),
+                                                         __func__,
+                                                         task_id );
                             break;
                         }
+                        strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__,
+                                                    task_id );
 
                     } while ( 0 );
                 }
@@ -994,7 +1018,7 @@ namespace sgns
                                if ( auto strong = weak_self.lock() )
                                {
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
-                                                                strong->account_->GetAddress(),
+                                                                strong->account_->GetAddress().substr( 0, 8 ),
                                                                 task_id );
                                }
                            } );

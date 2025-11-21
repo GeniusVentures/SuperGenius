@@ -790,27 +790,40 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RollbackTransactions( TransactionItem &item_to_rollback )
     {
-        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
-        uint64_t expected_next_nonce = 0;
-        int64_t  confirmed_nonce     = -1;
+        int64_t confirmed_nonce = -1;
 
-        if ( nonce_result.has_value() )
+        if ( auto nonce_result = account_m->GetConfirmedNonce( 10000 ); nonce_result.has_value() )
         {
             confirmed_nonce = static_cast<int64_t>( nonce_result.value() );
             m_logger->debug( "[{} - full: {}] Set nonce to {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              confirmed_nonce );
-            expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
         }
-        else if ( ( !nonce_result.has_value() ) &&
-                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) )
+        else
         {
-            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
-                             __func__,
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+            m_logger->warn( "[{} - full: {}] {}: Could not fetch confirmed nonce ({}). Attempting rollback with "
+                            "local state",
+                            __func__,
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            nonce_result.error() );
+            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
+            if ( local_nonce_result.has_value() )
+            {
+                confirmed_nonce = static_cast<int64_t>( local_nonce_result.value() );
+                m_logger->debug( "[{} - full: {}] Falling back to local confirmed nonce {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 confirmed_nonce );
+            }
+            else
+            {
+                m_logger->warn( "[{} - full: {}] No local confirmed nonce available, rolling back assuming none",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m );
+                confirmed_nonce = -1;
+            }
         }
 
         auto [transaction_batch, _dontcare] = item_to_rollback;
