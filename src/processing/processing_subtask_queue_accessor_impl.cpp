@@ -20,6 +20,9 @@ namespace sgns::processing
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) )
     {
+        m_localContext = std::make_shared<boost::asio::io_context>();
+        m_localWorkGuard.emplace( m_localContext->get_executor() );
+        m_localThread = std::thread( [ctx = m_localContext]() { ctx->run(); } );
         // @todo replace hardcoded channel identified with an input value
         m_logger->debug( "[CREATED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
@@ -33,6 +36,26 @@ namespace sgns::processing
             boost::system::error_code ec;
             m_stateTimer->cancel( ec );
             m_stateTimer.reset();
+        }
+        if ( m_localContext )
+        {
+            m_localContext->stop();
+        }
+        if ( m_localWorkGuard )
+        {
+            m_localWorkGuard->reset();
+        }
+        if ( m_localThread.joinable() )
+        {
+            // Avoid joining from the same thread (would throw/terminate)
+            if ( std::this_thread::get_id() == m_localThread.get_id() )
+            {
+                m_localThread.detach();
+            }
+            else
+            {
+                m_localThread.join();
+            }
         }
         m_logger->debug( "[RELEASED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
@@ -128,8 +151,7 @@ namespace sgns::processing
     {
         // @todo Consider possibility to use the received subTaskIds instead of m_subTaskQueueManager->GetQueueSnapshot() call
         // Call it asynchronously to prevent multiple mutex locks
-        m_gossipPubSub->GetAsioContext()->post( [onSubTaskQueueConnectedEventSink]()
-                                                { onSubTaskQueueConnectedEventSink(); } );
+        m_localContext->post( [onSubTaskQueueConnectedEventSink]() { onSubTaskQueueConnectedEventSink(); } );
     }
 
     void SubTaskQueueAccessorImpl::GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback )
@@ -384,7 +406,7 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::StartPeriodicStateBroadcast()
     {
         // Every few seconds, if we have ownership and results, broadcast them
-        m_stateTimer = std::make_shared<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+        m_stateTimer = std::make_shared<boost::asio::steady_timer>( *m_localContext );
         ScheduleStateBroadcast();
     }
 

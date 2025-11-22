@@ -7,6 +7,9 @@
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 
 #include <chrono>
+#include <thread>
+#include <optional>
+#include <boost/asio.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
 #include "processing/processing_engine.hpp"
@@ -89,6 +92,11 @@ namespace sgns::processing
         std::chrono::seconds                                   m_ttl;
         std::unique_ptr<boost::asio::steady_timer>             m_ttlTimer;
         std::function<void( std::shared_ptr<ProcessingNode> )> m_selfDestructCallback;
+
+        std::shared_ptr<boost::asio::io_context> m_localContext;
+        using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        std::optional<WorkGuard>                 m_localWorkGuard;
+        std::thread                              m_localIoThread;
 
         base::Logger m_logger = base::createLogger( "ProcessingNode" );
     };

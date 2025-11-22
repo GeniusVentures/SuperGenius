@@ -14,6 +14,9 @@
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <list>
+#include <optional>
+#include <thread>
+#include <boost/asio.hpp>
 
 namespace sgns::processing
 {
@@ -27,9 +30,9 @@ namespace sgns::processing
     * @param gossipPubSub pubsub host which is used to create subscriptions to result channel
     * @param subTaskQueueManager - in-memory queue manager
     * @param subTaskStateStorage - storage of subtask states
-    * @param subTaskResultStorage - processing results storage
-    * @param taskResultProcessingSink - a callback which is called when a task processing is completed
-    */
+        * @param subTaskResultStorage - processing results storage
+        * @param taskResultProcessingSink - a callback which is called when a task processing is completed
+        */
         SubTaskQueueAccessorImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
                                   std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
@@ -80,6 +83,10 @@ namespace sgns::processing
         std::shared_ptr<SubTaskResultStorage>                   m_subTaskResultStorage;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
+        std::shared_ptr<boost::asio::io_context>                m_localContext;
+        using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        std::optional<WorkGuard>                                m_localWorkGuard;
+        std::thread                                             m_localThread;
         std::shared_ptr<boost::asio::steady_timer>              m_stateTimer;
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_resultChannel;

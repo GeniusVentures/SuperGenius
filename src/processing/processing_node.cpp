@@ -72,18 +72,33 @@ namespace sgns::processing
         m_processingErrorSink( std::move( processingErrorSink ) ),
         m_processingDoneSink( std::move( processingDoneSink ) ),
         m_creationTime( std::chrono::steady_clock::now() ),
-        m_ttl( ttl )
+        m_ttl( ttl ),
+        m_localContext( std::make_shared<boost::asio::io_context>() ),
+        m_localWorkGuard( m_localContext->get_executor() )
     {
         m_logger->debug( "[{}] Processing node CREATED", m_nodeId );
+        m_localIoThread = std::thread( [ctx = m_localContext]() { ctx->run(); } );
         if ( m_gossipPubSub )
         {
-            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_localContext );
         }
     }
 
     ProcessingNode::~ProcessingNode()
     {
         m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
+        if ( m_localContext )
+        {
+            m_localContext->stop();
+        }
+        if ( m_localWorkGuard )
+        {
+            m_localWorkGuard->reset();
+        }
+        if ( m_localIoThread.joinable() )
+        {
+            m_localIoThread.join();
+        }
     }
 
     void ProcessingNode::Initialize( const std::string &processingQueueChannelId, std::chrono::milliseconds msSubscriptionWaitingDuration )
@@ -93,7 +108,7 @@ namespace sgns::processing
                                                                                              processingQueueChannelId );
 
         m_subtaskQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( processingQueueChannel,
-                                                                                 m_gossipPubSub->GetAsioContext(),
+                                                                                 m_localContext,
                                                                                  m_nodeId,
                                                                                  m_processingErrorSink );
 
