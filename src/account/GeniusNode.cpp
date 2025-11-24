@@ -143,7 +143,17 @@ namespace sgns
         }
         instance->RefreshUPNP( instance->pubsubport_ );
 
-        instance->io_thread = std::thread( [ctx = instance->io_]() { ctx->run(); } );
+        instance->io_work_guard_.emplace( instance->io_->get_executor() );
+        unsigned desired_threads = instance->io_thread_count_;
+        if ( desired_threads == 0 )
+        {
+            desired_threads = GeniusNode::DEFAULT_IO_THREADS;
+        }
+        instance->io_threads_.reserve( desired_threads );
+        for ( unsigned i = 0; i < desired_threads; ++i )
+        {
+            instance->io_threads_.emplace_back( [ctx = instance->io_]() { ctx->run(); } );
+        }
         return instance;
     }
 
@@ -364,11 +374,11 @@ namespace sgns
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
-        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::trace );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
-        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
@@ -381,7 +391,7 @@ namespace sgns
         auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
-        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::trace );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
@@ -432,10 +442,18 @@ namespace sgns
         {
             io_->stop(); // Stop our io_context
         }
-        if ( io_thread.joinable() )
+        if ( io_work_guard_ )
         {
-            io_thread.join();
+            io_work_guard_->reset();
         }
+        for ( auto &t : io_threads_ )
+        {
+            if ( t.joinable() )
+            {
+                t.join();
+            }
+        }
+        io_threads_.clear();
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {

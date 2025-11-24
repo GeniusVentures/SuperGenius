@@ -97,7 +97,15 @@ namespace sgns::processing
         }
         if ( m_localIoThread.joinable() )
         {
-            m_localIoThread.join();
+            // Avoid joining from the same thread (would throw/terminate)
+            if ( std::this_thread::get_id() == m_localIoThread.get_id() )
+            {
+                m_localIoThread.detach();
+            }
+            else
+            {
+                m_localIoThread.join();
+            }
         }
     }
 

@@ -2,6 +2,9 @@
 #define _GENIUS_NODE_HPP_
 #include <memory>
 #include <cstdint>
+#include <vector>
+#include <thread>
+#include <optional>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -246,9 +249,13 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
-        std::thread       io_thread;
-        std::thread       upnp_thread;
-        std::atomic<bool> stop_upnp{ false };
+        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        static constexpr unsigned DEFAULT_IO_THREADS = 4;
+        unsigned                           io_thread_count_{ DEFAULT_IO_THREADS };
+        std::optional<IoWorkGuard>         io_work_guard_;
+        std::vector<std::thread>           io_threads_;
+        std::thread                        upnp_thread;
+        std::atomic<bool>                  stop_upnp{ false };
 
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
