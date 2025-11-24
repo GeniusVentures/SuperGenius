@@ -318,8 +318,6 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
                TransactionManager::TransactionStatus::CONFIRMED );
 
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
-
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
