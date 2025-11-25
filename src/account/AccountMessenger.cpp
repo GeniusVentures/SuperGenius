@@ -235,14 +235,18 @@ namespace sgns
 
         OUTCOME_TRY( RequestNonce( req_id ) );
 
-        const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
+        const auto start_time        = std::chrono::steady_clock::now();
+        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time       = std::chrono::milliseconds( silent_time_ms );
+        const auto resend_interval   = std::chrono::milliseconds( 500 );
+        auto       last_request_sent = start_time;
 
         bool first_seen = false;
 
         while ( true )
         {
+            const auto now = std::chrono::steady_clock::now();
+
             {
                 std::lock_guard lock( nonce_responses_mutex_ );
                 auto            nonce_it    = nonce_responses_.find( req_id );
@@ -271,7 +275,23 @@ namespace sgns
                 }
             }
 
-            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
+            {
+                auto resend_result = RequestNonce( req_id );
+                if ( resend_result.has_error() )
+                {
+                    logger_->warn( "[{}] Failed to resend nonce request for req_id {}",
+                                   address_.substr( 0, 8 ),
+                                   req_id );
+                }
+                else
+                {
+                    logger_->trace( "[{}] Resent nonce request for req_id {}", address_.substr( 0, 8 ), req_id );
+                    last_request_sent = now;
+                }
+            }
+
+            if ( now - start_time >= full_timeout )
             {
                 break; // total timeout reached
             }
@@ -328,7 +348,7 @@ namespace sgns
         return max_nonce;
     }
 
-    void AccountMessenger::RequestGenesis()
+    outcome::result<void> AccountMessenger::RequestGenesis( uint64_t timeout_ms )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
@@ -341,13 +361,106 @@ namespace sgns
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
 
-        logger_->debug( "[{}] Requesting genesis block with req_id {}", address_.substr( 0, 8 ), req_id );
+        logger_->debug( "[{}] Requesting genesis block with req_id {} and timeout {}",
+                        address_.substr( 0, 8 ),
+                        req_id,
+                        timeout_ms );
+
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
 
         auto request_result = RequestBlock( req_id, 0 );
         if ( request_result.has_error() )
         {
             logger_->error( "[{}] Failed to request genesis block", address_.substr( 0, 8 ) );
+            return request_result;
         }
+
+        const auto start_time        = std::chrono::steady_clock::now();
+        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time       = std::chrono::milliseconds( 150 );
+        const auto resend_interval   = std::chrono::milliseconds( 500 );
+        auto       last_request_sent = start_time;
+
+        bool first_seen = false;
+
+        while ( true )
+        {
+            const auto now = std::chrono::steady_clock::now();
+
+            {
+                std::lock_guard lock( block_responses_mutex_ );
+                auto            it = block_responses_.find( req_id );
+                if ( it != block_responses_.end() )
+                {
+                    // At least one peer responded (even if empty)
+                    if ( !first_seen )
+                    {
+                        first_seen                         = true;
+                        block_first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
+            {
+                auto resend_result = RequestBlock( req_id, 0 );
+                if ( resend_result.has_error() )
+                {
+                    logger_->error( "[{}] Failed to resend genesis block request for req_id {}",
+                                   address_.substr( 0, 8 ),
+                                   req_id );
+                }
+                else
+                {
+                    logger_->trace( "[{}] Resent genesis block request for req_id {}",
+                                    address_.substr( 0, 8 ),
+                                    req_id );
+                    last_request_sent = now;
+                }
+            }
+
+            if ( now - start_time >= full_timeout )
+            {
+                logger_->error( "[{}] Timeout: no genesis BlockResponse received for req_id {}",
+                                address_.substr( 0, 8 ),
+                                req_id );
+                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        bool any_response = false;
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto            it = block_responses_.find( req_id );
+            if ( it != block_responses_.end() )
+            {
+                any_response = true;
+            }
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        if ( !any_response )
+        {
+            logger_->error( "[{}] No genesis responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
+            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+        }
+
+        return outcome::success();
     }
 
     outcome::result<void> AccountMessenger::RequestBlock( uint64_t req_id, uint8_t block_index )
@@ -614,14 +727,18 @@ namespace sgns
         // Request block index 1 (account creation block)
         OUTCOME_TRY( RequestBlock( req_id, 1 ) );
 
-        const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( 150 );
+        const auto start_time        = std::chrono::steady_clock::now();
+        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time       = std::chrono::milliseconds( 150 );
+        const auto resend_interval   = std::chrono::milliseconds( 500 );
+        auto       last_request_sent = start_time;
 
         bool first_seen = false;
 
         while ( true )
         {
+            const auto now = std::chrono::steady_clock::now();
+
             {
                 std::lock_guard lock( block_responses_mutex_ );
                 auto            it = block_responses_.find( req_id );
@@ -644,7 +761,25 @@ namespace sgns
                 }
             }
 
-            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
+            {
+                auto resend_result = RequestBlock( req_id, 1 );
+                if ( resend_result.has_error() )
+                {
+                    logger_->warn( "[{}] Failed to resend account creation block request for req_id {}",
+                                   address_.substr( 0, 8 ),
+                                   req_id );
+                }
+                else
+                {
+                    logger_->trace( "[{}] Resent account creation block request for req_id {}",
+                                    address_.substr( 0, 8 ),
+                                    req_id );
+                    last_request_sent = now;
+                }
+            }
+
+            if ( now - start_time >= full_timeout )
             {
                 logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
                                 address_.substr( 0, 8 ),

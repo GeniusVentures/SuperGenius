@@ -125,6 +125,7 @@ namespace sgns
         static constexpr std::string_view GENESIS_CID_KEY                 = "gnus-genesis-block-cid";
         static constexpr std::string_view ACCOUNT_CREATION_KEY_PREFIX     = "gnus-account-creation-";
         static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX = "gnus-account-creation-cid-";
+        static constexpr uint64_t         TIMEOUT_GENESIS_BLOCK_MS        = 8000;
         static constexpr uint64_t         TIMEOUT_ACC_CREATION_BLOCK_MS   = 8000;
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance

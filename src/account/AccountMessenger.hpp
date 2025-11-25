@@ -88,9 +88,11 @@ namespace sgns
         outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms = 150 );
 
         /**
-         * @brief       Request genesis block from the network (no callback)
+         * @brief       Request genesis block from the network (retries until timeout)
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @return      success if at least one response arrives before timeout, error otherwise
          */
-        void RequestGenesis();
+        outcome::result<void> RequestGenesis( uint64_t timeout_ms );
 
         /**
          * @brief       Request account creation from the network and invoke callback with found CIDs

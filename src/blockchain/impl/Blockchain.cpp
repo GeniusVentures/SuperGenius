@@ -223,7 +223,18 @@ namespace sgns
                 {
                     logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
                                    account_->GetAddress().substr( 0, 8 ) );
-                    account_->RequestGenesis();
+                    auto genesis_request_result = account_->RequestGenesis( TIMEOUT_GENESIS_BLOCK_MS );
+                    if ( genesis_request_result.has_error() )
+                    {
+                        logger_->error( "[{}] Genesis request failed: no response received",
+                                        account_->GetAddress().substr( 0, 8 ) );
+                        return outcome::failure( Error::GENESIS_BLOCK_MISSING );
+                    }
+                    else
+                    {
+                        logger_->info( "[{}] Request succeeded for Genesis",
+                                       account_->GetAddress().substr( 0, 8 ) );
+                    }
                 }
             }
         }
