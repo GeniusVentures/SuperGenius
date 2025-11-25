@@ -32,6 +32,9 @@
 class BlockchainGenesisTest : public ::testing::Test
 {
 protected:
+    static constexpr char FULL_NODE_PUB_ADDRESS[] =
+        "7c51e24e36e1be4c81bcca26ce8cd79d0866c344c1de72b81255964ae93d37cc667f27d41ddc27b45e2250e2ca9e6fa74e7e834c176402f2893982e82c00612b";
+
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &dev_addr,
                                                   const std::string &tokenValue,
@@ -162,6 +165,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
 {
     std::cout << "=== Starting With Authorization Can Sync Test ===" << std::endl;
 
+    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
+    std::cout << "Setting authorized full node address to: " << full_node_pub_address << std::endl;
+    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
     // Create the full node first (this will be the genesis creator)
     auto node_full = CreateNode( "full_node_with_auth",
                                  "0xcafe",
@@ -170,6 +176,11 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                  true, // is full node
                                  true  // is processor
     );
+
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_full not ready" );
 
     // Create two regular nodes
     auto node_regular_1 = CreateNode( "regular_node_with_auth_1",
@@ -192,15 +203,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
     //std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
 
-    // Set the authorized full node address on ALL nodes using the full node's GetAddress()
-    std::string authorized_address = node_full->GetAddress();
-    std::cout << "Setting authorized full node address to: " << authorized_address << std::endl;
-
     node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-
-    node_full->SetAuthorizedFullNodeAddress( authorized_address );
-    node_regular_1->SetAuthorizedFullNodeAddress( authorized_address );
-    //node_regular_2->SetAuthorizedFullNodeAddress( authorized_address );
 
     std::cout << "Authorized address set on all nodes" << std::endl;
 
@@ -234,8 +237,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "All nodes are ready and synchronized!" << std::endl;
 
     // Verify that all nodes have the same authorized address configured
-    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), authorized_address );
-    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), authorized_address );
+    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), full_node_pub_address );
+    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), full_node_pub_address );
     //ASSERT_EQ( node_regular_2->GetAuthorizedFullNodeAddress(), authorized_address );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
@@ -245,14 +248,21 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 {
     std::cout << "=== Starting With Authorization Sync + Transactions Test ===" << std::endl;
 
+    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
+    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+    std::cout << "Authorized address set: " << full_node_pub_address << std::endl;
+
     // Create the full node first (this will be the genesis creator)
-    auto node_full = CreateNode( "full_node_tx_test",
+    auto node_full = CreateNode( "full_node_with_auth",
                                  "0xcafe",
                                  "1.0",
                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                  true,
                                  true );
-
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_full not ready" );
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
                                       "0xcafe",
@@ -272,16 +282,10 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     node_regular_1->GetPubSub()->AddPeers(
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-    
-    auto        token_id    = sgns::TokenID::FromBytes( { 0x00 } );
-    std::string auth_addr   = node_full->GetAddress();
-    uint64_t    mint_amount = 10000000000ULL;
 
-    node_full->SetAuthorizedFullNodeAddress( auth_addr );
-    node_regular_1->SetAuthorizedFullNodeAddress( auth_addr );
-    node_regular_2->SetAuthorizedFullNodeAddress( auth_addr );
+    auto token_id = sgns::TokenID::FromBytes( { 0x00 } );
 
-    std::cout << "Authorized address set: " << auth_addr << std::endl;
+    uint64_t mint_amount = 10000000000ULL;
 
     test::assertWaitForCondition(
         [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -345,6 +349,10 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
 {
     std::cout << "=== Starting Wrong Authorization Cannot Sync Test ===" << std::endl;
 
+    // Set WRONG authorized address (not matching the full node's address)
+    std::string wrong_address = "wrong_address_that_does_not_match_any_node";
+    Blockchain::SetAuthorizedFullNodeAddress( wrong_address );
+    std::cout << "Wrong authorized address set on all nodes" << std::endl;
     // Create a full node
     auto node_full = CreateNode( "full_node_wrong_auth",
                                  "0xcafe",
@@ -374,16 +382,6 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
     std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
-
-    // Set WRONG authorized address (not matching the full node's address)
-    std::string wrong_address = "wrong_address_that_does_not_match_any_node";
-    std::cout << "Setting WRONG authorized full node address to: " << wrong_address << std::endl;
-
-    node_full->SetAuthorizedFullNodeAddress( wrong_address );
-    node_regular_1->SetAuthorizedFullNodeAddress( wrong_address );
-    node_regular_2->SetAuthorizedFullNodeAddress( wrong_address );
-
-    std::cout << "Wrong authorized address set on all nodes" << std::endl;
 
     // Connect nodes to each other
     std::cout << "Connecting nodes..." << std::endl;
