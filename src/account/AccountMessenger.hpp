@@ -90,9 +90,10 @@ namespace sgns
         /**
          * @brief       Request genesis block from the network (retries until timeout)
          * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   callback Function to be called for each CID found (empty string if none)
          * @return      success if at least one response arrives before timeout, error otherwise
          */
-        outcome::result<void> RequestGenesis( uint64_t timeout_ms );
+        outcome::result<void> RequestGenesis( uint64_t timeout_ms, std::function<void( std::string )> callback );
 
         /**
          * @brief       Request account creation from the network and invoke callback with found CIDs

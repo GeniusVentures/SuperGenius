@@ -627,7 +627,8 @@ namespace sgns
         return result;
     }
 
-    outcome::result<void> GeniusAccount::RequestGenesis( uint64_t timeout_ms ) const
+    outcome::result<void> GeniusAccount::RequestGenesis( uint64_t                           timeout_ms,
+                                                         std::function<void( std::string )> callback ) const
     {
         if ( !messenger_ )
         {
@@ -635,7 +636,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        return messenger_->RequestGenesis( timeout_ms );
+        return messenger_->RequestGenesis( timeout_ms, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestAccountCreation( uint64_t                           timeout_ms,

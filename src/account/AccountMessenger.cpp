@@ -348,7 +348,8 @@ namespace sgns
         return max_nonce;
     }
 
-    outcome::result<void> AccountMessenger::RequestGenesis( uint64_t timeout_ms )
+    outcome::result<void> AccountMessenger::RequestGenesis( uint64_t                           timeout_ms,
+                                                            std::function<void( std::string )> callback )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
@@ -458,6 +459,53 @@ namespace sgns
         {
             logger_->error( "[{}] No genesis responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
             return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+        }
+
+        std::set<std::string> cids;
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto            it = block_responses_.find( req_id );
+            if ( it != block_responses_.end() )
+            {
+                cids = it->second;
+            }
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        if ( cids.empty() )
+        {
+            logger_->debug(
+                "[{}] Genesis responses received but no CIDs provided (req_id {}), invoking callback with empty string",
+                address_.substr( 0, 8 ),
+                req_id );
+            if ( callback )
+            {
+                try
+                {
+                    callback( "" );
+                }
+                catch ( const std::exception &e )
+                {
+                    logger_->error( "Genesis callback threw exception: {}", e.what() );
+                }
+            }
+            return outcome::success();
+        }
+
+        for ( const auto &cid : cids )
+        {
+            if ( callback )
+            {
+                try
+                {
+                    callback( cid );
+                }
+                catch ( const std::exception &e )
+                {
+                    logger_->error( "Genesis callback threw exception: {}", e.what() );
+                }
+            }
         }
 
         return outcome::success();

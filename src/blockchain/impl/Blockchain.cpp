@@ -223,7 +223,25 @@ namespace sgns
                 {
                     logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
                                    account_->GetAddress().substr( 0, 8 ) );
-                    auto genesis_request_result = account_->RequestGenesis( TIMEOUT_GENESIS_BLOCK_MS );
+                    auto genesis_request_result = account_->RequestGenesis(
+                        TIMEOUT_GENESIS_BLOCK_MS,
+                        [weakptr( weak_from_this() )]( const std::string &genesis_cid )
+                        {
+                            if ( auto self = weakptr.lock() )
+                            {
+                                if ( genesis_cid.empty() )
+                                {
+                                    self->logger_->debug( "[{}] Genesis callback received empty CID",
+                                                          self->account_->GetAddress().substr( 0, 8 ) );
+                                }
+                                else
+                                {
+                                    self->logger_->debug( "[{}] Genesis callback received CID: {}",
+                                                          self->account_->GetAddress().substr( 0, 8 ),
+                                                          genesis_cid );
+                                }
+                            }
+                        } );
                     if ( genesis_request_result.has_error() )
                     {
                         logger_->error( "[{}] Genesis request failed: no response received",
