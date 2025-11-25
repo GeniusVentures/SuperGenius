@@ -7,6 +7,7 @@
 #include <thread>
 #include <random>
 #include <boost/format.hpp>
+#include <future>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
@@ -97,9 +98,18 @@ namespace sgns
         pubsub_( std::move( pubsub ) ),
         methods_( std::move( methods ) )
     {
+        worker_thread_ = std::thread( &AccountMessenger::WorkerLoop, this );
     }
 
-    AccountMessenger::~AccountMessenger() {}
+    AccountMessenger::~AccountMessenger()
+    {
+        stop_worker_.store( true );
+        queue_cv_.notify_one();
+        if ( worker_thread_.joinable() )
+        {
+            worker_thread_.join();
+        }
+    }
 
     void AccountMessenger::RegisterBlockResponseHandler( BlockResponseHandler handler )
     {
@@ -205,309 +215,19 @@ namespace sgns
 
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms )
     {
-        // Generate a random value
-        std::mt19937_64 gen( rd_() );
-        uint64_t        random_value = gen();
+        auto promise = std::make_shared<std::promise<outcome::result<uint64_t>>>();
+        auto future  = promise->get_future();
 
-        // Concatenate address and random value
-        std::string to_hash = address_ + std::to_string( random_value );
+        EnqueueTask(
+            { RequestType::Nonce, timeout_ms, silent_time_ms, 0, nullptr, std::move( promise ) } );
 
-        // Use HasherImpl to hash the concatenated string
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
-
-        // Use the first 8 bytes of the hash as req_id
-        uint64_t req_id = 0;
-        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
-
-        logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
-                        address_.substr( 0, 8 ),
-                        timeout_ms,
-                        req_id );
-
-        {
-            std::lock_guard lock( nonce_responses_mutex_ );
-            nonce_responses_.erase( req_id );
-            no_nonce_responses_.erase( req_id );
-            first_response_time_.erase( req_id );
-        }
-
-        OUTCOME_TRY( RequestNonce( req_id ) );
-
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( silent_time_ms );
-        const auto resend_interval   = std::chrono::milliseconds( 500 );
-        auto       last_request_sent = start_time;
-
-        bool first_seen = false;
-
-        while ( true )
-        {
-            const auto now = std::chrono::steady_clock::now();
-
-            {
-                std::lock_guard lock( nonce_responses_mutex_ );
-                auto            nonce_it    = nonce_responses_.find( req_id );
-                auto            no_nonce_it = no_nonce_responses_.find( req_id );
-
-                // Check if we have any responses (either with nonce or without)
-                bool has_nonce_responses    = ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() );
-                bool has_no_nonce_responses = ( no_nonce_it != no_nonce_responses_.end() &&
-                                                !no_nonce_it->second.empty() );
-
-                if ( has_nonce_responses || has_no_nonce_responses )
-                {
-                    if ( !first_seen )
-                    {
-                        first_seen                   = true;
-                        first_response_time_[req_id] = std::chrono::steady_clock::now();
-                    }
-                    else
-                    {
-                        auto elapsed = std::chrono::steady_clock::now() - first_response_time_[req_id];
-                        if ( elapsed >= silent_time )
-                        {
-                            break; // silent window passed
-                        }
-                    }
-                }
-            }
-
-            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
-            {
-                auto resend_result = RequestNonce( req_id );
-                if ( resend_result.has_error() )
-                {
-                    logger_->warn( "[{}] Failed to resend nonce request for req_id {}",
-                                   address_.substr( 0, 8 ),
-                                   req_id );
-                }
-                else
-                {
-                    logger_->trace( "[{}] Resent nonce request for req_id {}", address_.substr( 0, 8 ), req_id );
-                    last_request_sent = now;
-                }
-            }
-
-            if ( now - start_time >= full_timeout )
-            {
-                break; // total timeout reached
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-
-        uint64_t max_nonce        = 0;
-        bool     has_any_nonce    = false;
-        bool     has_any_response = false;
-
-        {
-            std::lock_guard lock( nonce_responses_mutex_ );
-            auto            nonce_it    = nonce_responses_.find( req_id );
-            auto            no_nonce_it = no_nonce_responses_.find( req_id );
-
-            // Check if we have nonce responses
-            if ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() )
-            {
-                has_any_nonce    = true;
-                has_any_response = true;
-                max_nonce        = *nonce_it->second.rbegin();
-            }
-
-            // Check if we have "no nonce" responses
-            if ( no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty() )
-            {
-                has_any_response = true;
-            }
-
-            // Clean up
-            nonce_responses_.erase( req_id );
-            no_nonce_responses_.erase( req_id );
-            first_response_time_.erase( req_id );
-        }
-
-        if ( !has_any_response )
-        {
-            logger_->debug( "[{}] No response received within timeout for req_id {}", address_.substr( 0, 8 ), req_id );
-            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
-        }
-
-        if ( !has_any_nonce )
-        {
-            logger_->debug( "[{}] Response received but without nonce data for req_id {}",
-                            address_.substr( 0, 8 ),
-                            req_id );
-            return outcome::failure( Error::RESPONSE_WITHOUT_NONCE );
-        }
-
-        logger_->debug( "[{}] Returning highest collected nonce for req_id {}: {}",
-                        address_.substr( 0, 8 ),
-                        req_id,
-                        max_nonce );
-        return max_nonce;
+        return future.get();
     }
 
-    outcome::result<void> AccountMessenger::RequestGenesis( uint64_t                           timeout_ms,
-                                                            std::function<void( std::string )> callback )
+    outcome::result<void> AccountMessenger::RequestGenesis(
+        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback )
     {
-        std::mt19937_64 gen( rd_() );
-        uint64_t        random_value = gen();
-
-        std::string              to_hash = address_ + std::to_string( random_value );
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
-
-        uint64_t req_id = 0;
-        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
-
-        logger_->debug( "[{}] Requesting genesis block with req_id {} and timeout {}",
-                        address_.substr( 0, 8 ),
-                        req_id,
-                        timeout_ms );
-
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
-
-        auto request_result = RequestBlock( req_id, 0 );
-        if ( request_result.has_error() )
-        {
-            logger_->error( "[{}] Failed to request genesis block", address_.substr( 0, 8 ) );
-            return request_result;
-        }
-
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( 150 );
-        const auto resend_interval   = std::chrono::milliseconds( 500 );
-        auto       last_request_sent = start_time;
-
-        bool first_seen = false;
-
-        while ( true )
-        {
-            const auto now = std::chrono::steady_clock::now();
-
-            {
-                std::lock_guard lock( block_responses_mutex_ );
-                auto            it = block_responses_.find( req_id );
-                if ( it != block_responses_.end() )
-                {
-                    // At least one peer responded (even if empty)
-                    if ( !first_seen )
-                    {
-                        first_seen                         = true;
-                        block_first_response_time_[req_id] = std::chrono::steady_clock::now();
-                    }
-                    else
-                    {
-                        auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
-                        if ( elapsed >= silent_time )
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
-            {
-                auto resend_result = RequestBlock( req_id, 0 );
-                if ( resend_result.has_error() )
-                {
-                    logger_->error( "[{}] Failed to resend genesis block request for req_id {}",
-                                   address_.substr( 0, 8 ),
-                                   req_id );
-                }
-                else
-                {
-                    logger_->trace( "[{}] Resent genesis block request for req_id {}",
-                                    address_.substr( 0, 8 ),
-                                    req_id );
-                    last_request_sent = now;
-                }
-            }
-
-            if ( now - start_time >= full_timeout )
-            {
-                logger_->error( "[{}] Timeout: no genesis BlockResponse received for req_id {}",
-                                address_.substr( 0, 8 ),
-                                req_id );
-                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
-            }
-
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-
-        bool any_response = false;
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            auto            it = block_responses_.find( req_id );
-            if ( it != block_responses_.end() )
-            {
-                any_response = true;
-            }
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
-
-        if ( !any_response )
-        {
-            logger_->error( "[{}] No genesis responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
-            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
-        }
-
-        std::set<std::string> cids;
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            auto            it = block_responses_.find( req_id );
-            if ( it != block_responses_.end() )
-            {
-                cids = it->second;
-            }
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
-
-        if ( cids.empty() )
-        {
-            logger_->debug(
-                "[{}] Genesis responses received but no CIDs provided (req_id {}), invoking callback with empty string",
-                address_.substr( 0, 8 ),
-                req_id );
-            if ( callback )
-            {
-                try
-                {
-                    callback( "" );
-                }
-                catch ( const std::exception &e )
-                {
-                    logger_->error( "Genesis callback threw exception: {}", e.what() );
-                }
-            }
-            return outcome::success();
-        }
-
-        for ( const auto &cid : cids )
-        {
-            if ( callback )
-            {
-                try
-                {
-                    callback( cid );
-                }
-                catch ( const std::exception &e )
-                {
-                    logger_->error( "Genesis callback threw exception: {}", e.what() );
-                }
-            }
-        }
-
+        EnqueueTask( { RequestType::Genesis, timeout_ms, 150, 0, std::move( callback ), nullptr } );
         return outcome::success();
     }
 
@@ -746,157 +466,10 @@ namespace sgns
         }
     }
 
-    outcome::result<void> AccountMessenger::RequestAccountCreation( uint64_t                           timeout_ms,
-                                                                    std::function<void( std::string )> callback )
+    outcome::result<void> AccountMessenger::RequestAccountCreation(
+        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback )
     {
-        // Create request id
-        std::mt19937_64 gen( rd_() );
-        uint64_t        random_value = gen();
-
-        std::string              to_hash = address_ + std::to_string( random_value );
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
-
-        uint64_t req_id = 0;
-        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
-
-        logger_->debug( "[{}] Requesting account creation with req_id {} and timeout {}",
-                        address_.substr( 0, 8 ),
-                        req_id,
-                        timeout_ms );
-
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
-
-        // Request block index 1 (account creation block)
-        OUTCOME_TRY( RequestBlock( req_id, 1 ) );
-
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( 150 );
-        const auto resend_interval   = std::chrono::milliseconds( 500 );
-        auto       last_request_sent = start_time;
-
-        bool first_seen = false;
-
-        while ( true )
-        {
-            const auto now = std::chrono::steady_clock::now();
-
-            {
-                std::lock_guard lock( block_responses_mutex_ );
-                auto            it = block_responses_.find( req_id );
-                if ( it != block_responses_.end() )
-                {
-                    // At least one peer responded (even if empty)
-                    if ( !first_seen )
-                    {
-                        first_seen                         = true;
-                        block_first_response_time_[req_id] = std::chrono::steady_clock::now();
-                    }
-                    else
-                    {
-                        auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
-                        if ( elapsed >= silent_time )
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
-            {
-                auto resend_result = RequestBlock( req_id, 1 );
-                if ( resend_result.has_error() )
-                {
-                    logger_->warn( "[{}] Failed to resend account creation block request for req_id {}",
-                                   address_.substr( 0, 8 ),
-                                   req_id );
-                }
-                else
-                {
-                    logger_->trace( "[{}] Resent account creation block request for req_id {}",
-                                    address_.substr( 0, 8 ),
-                                    req_id );
-                    last_request_sent = now;
-                }
-            }
-
-            if ( now - start_time >= full_timeout )
-            {
-                logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
-                                address_.substr( 0, 8 ),
-                                req_id );
-                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
-            }
-
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-
-        // ------------------------------------------------------------
-        // Evaluate collected responses
-        // ------------------------------------------------------------
-        std::set<std::string> cids;
-        bool                  any_response = false;
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            auto            it = block_responses_.find( req_id );
-            if ( it != block_responses_.end() )
-            {
-                any_response = true;
-                cids         = it->second;
-            }
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
-
-        if ( !any_response )
-        {
-            // This should not normally happen because we break only after receiving at least one response
-            logger_->warn( "[{}] No responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
-            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
-        }
-
-        // ------------------------------------------------------------
-        // If we received responses but no CIDs
-        // ------------------------------------------------------------
-        if ( cids.empty() )
-        {
-            logger_->debug(
-                "[{}] All peers responded but no CIDs provided (req_id {}), invoking callback with empty string",
-                address_.substr( 0, 8 ),
-                req_id );
-            try
-            {
-                callback( "" );
-            }
-            catch ( const std::exception &e )
-            {
-                logger_->error( "Callback threw exception: {}", e.what() );
-            }
-            return outcome::success();
-        }
-
-        // ------------------------------------------------------------
-        // Valid CIDs received — call callback once per CID
-        // ------------------------------------------------------------
-        for ( const auto &cid : cids )
-        {
-            try
-            {
-                callback( cid );
-            }
-            catch ( const std::exception &e )
-            {
-                logger_->error( "Callback threw exception: {}", e.what() );
-            }
-        }
-
+        EnqueueTask( { RequestType::AccountCreation, timeout_ms, 150, 1, std::move( callback ), nullptr } );
         return outcome::success();
     }
 
@@ -916,6 +489,358 @@ namespace sgns
             pubsub_->Publish( topic, serialized_proto );
         }
         return outcome::success();
+    }
+
+    void AccountMessenger::WorkerLoop()
+    {
+        while ( true )
+        {
+            RequestTask task;
+            {
+                std::unique_lock lock( queue_mutex_ );
+                queue_cv_.wait( lock, [this]() { return stop_worker_.load() || !request_queue_.empty(); } );
+                if ( stop_worker_.load() && request_queue_.empty() )
+                {
+                    break;
+                }
+                task = std::move( request_queue_.front() );
+                request_queue_.pop();
+            }
+
+            switch ( task.type )
+            {
+                case RequestType::Nonce:
+                {
+                    auto res = PerformNonceRequest( task.timeout_ms, task.silent_time_ms );
+                    if ( task.nonce_promise )
+                    {
+                        task.nonce_promise->set_value( res );
+                    }
+                    break;
+                }
+                case RequestType::Genesis:
+                {
+                    auto res = PerformBlockRequest( task.timeout_ms, task.block_index );
+                    if ( task.callback )
+                    {
+                        if ( res.has_error() )
+                        {
+                            task.callback( outcome::failure( res.error() ) );
+                        }
+                        else
+                        {
+                            const auto &cids = res.value();
+                            if ( cids.empty() )
+                            {
+                                task.callback( outcome::success( std::string() ) );
+                            }
+                            else
+                            {
+                                for ( const auto &cid : cids )
+                                {
+                                    task.callback( outcome::success( cid ) );
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                case RequestType::AccountCreation:
+                {
+                    auto res = PerformBlockRequest( task.timeout_ms, task.block_index );
+                    if ( task.callback )
+                    {
+                        if ( res.has_error() )
+                        {
+                            task.callback( outcome::failure( res.error() ) );
+                        }
+                        else
+                        {
+                            const auto &cids = res.value();
+                            if ( cids.empty() )
+                            {
+                                task.callback( outcome::success( std::string() ) );
+                            }
+                            else
+                            {
+                                for ( const auto &cid : cids )
+                                {
+                                    task.callback( outcome::success( cid ) );
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    void AccountMessenger::EnqueueTask( RequestTask task )
+    {
+        {
+            std::lock_guard lock( queue_mutex_ );
+            request_queue_.push( std::move( task ) );
+        }
+        queue_cv_.notify_one();
+    }
+
+    outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms )
+    {
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
+
+        std::string              to_hash = address_ + std::to_string( random_value );
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+
+        uint64_t req_id = 0;
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
+
+        logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
+                        address_.substr( 0, 8 ),
+                        timeout_ms,
+                        req_id );
+
+        {
+            std::lock_guard lock( nonce_responses_mutex_ );
+            nonce_responses_.erase( req_id );
+            no_nonce_responses_.erase( req_id );
+            first_response_time_.erase( req_id );
+        }
+
+        OUTCOME_TRY( RequestNonce( req_id ) );
+
+        const auto start_time        = std::chrono::steady_clock::now();
+        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time       = std::chrono::milliseconds( silent_time_ms );
+        const auto resend_interval   = std::chrono::milliseconds( 500 );
+        auto       last_request_sent = start_time;
+
+        bool first_seen = false;
+
+        while ( true )
+        {
+            const auto now = std::chrono::steady_clock::now();
+
+            {
+                std::lock_guard lock( nonce_responses_mutex_ );
+                auto            nonce_it    = nonce_responses_.find( req_id );
+                auto            no_nonce_it = no_nonce_responses_.find( req_id );
+
+                bool has_nonce_responses    = ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() );
+                bool has_no_nonce_responses = ( no_nonce_it != no_nonce_responses_.end() &&
+                                                !no_nonce_it->second.empty() );
+
+                if ( has_nonce_responses || has_no_nonce_responses )
+                {
+                    if ( !first_seen )
+                    {
+                        first_seen                   = true;
+                        first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break; // silent window passed
+                        }
+                    }
+                }
+            }
+
+            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
+            {
+                auto resend_result = RequestNonce( req_id );
+                if ( resend_result.has_error() )
+                {
+                    logger_->warn( "[{}] Failed to resend nonce request for req_id {}",
+                                   address_.substr( 0, 8 ),
+                                   req_id );
+                }
+                else
+                {
+                    logger_->trace( "[{}] Resent nonce request for req_id {}", address_.substr( 0, 8 ), req_id );
+                    last_request_sent = now;
+                }
+            }
+
+            if ( now - start_time >= full_timeout )
+            {
+                break; // total timeout reached
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        uint64_t max_nonce        = 0;
+        bool     has_any_nonce    = false;
+        bool     has_any_response = false;
+
+        {
+            std::lock_guard lock( nonce_responses_mutex_ );
+            auto            nonce_it    = nonce_responses_.find( req_id );
+            auto            no_nonce_it = no_nonce_responses_.find( req_id );
+
+            if ( nonce_it != nonce_responses_.end() && !nonce_it->second.empty() )
+            {
+                has_any_nonce    = true;
+                has_any_response = true;
+                max_nonce        = *nonce_it->second.rbegin();
+            }
+
+            if ( no_nonce_it != no_nonce_responses_.end() && !no_nonce_it->second.empty() )
+            {
+                has_any_response = true;
+            }
+
+            nonce_responses_.erase( req_id );
+            no_nonce_responses_.erase( req_id );
+            first_response_time_.erase( req_id );
+        }
+
+        if ( !has_any_response )
+        {
+            logger_->debug( "[{}] No response received within timeout for req_id {}", address_.substr( 0, 8 ), req_id );
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
+
+        if ( !has_any_nonce )
+        {
+            logger_->debug( "[{}] Response received but without nonce data for req_id {}",
+                            address_.substr( 0, 8 ),
+                            req_id );
+            return outcome::failure( Error::RESPONSE_WITHOUT_NONCE );
+        }
+
+        logger_->debug( "[{}] Returning highest collected nonce for req_id {}: {}",
+                        address_.substr( 0, 8 ),
+                        req_id,
+                        max_nonce );
+        return max_nonce;
+    }
+
+    outcome::result<std::set<std::string>> AccountMessenger::PerformBlockRequest( uint64_t timeout_ms,
+                                                                                  uint8_t  block_index )
+    {
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
+
+        std::string              to_hash = address_ + std::to_string( random_value );
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+
+        uint64_t req_id = 0;
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
+
+        logger_->debug( "[{}] Requesting block {} with req_id {} and timeout {}",
+                        address_.substr( 0, 8 ),
+                        block_index,
+                        req_id,
+                        timeout_ms );
+
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        auto request_result = RequestBlock( req_id, block_index );
+        if ( request_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to request block {}", address_.substr( 0, 8 ), block_index );
+            return request_result.error();
+        }
+
+        const auto start_time        = std::chrono::steady_clock::now();
+        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time       = std::chrono::milliseconds( 150 );
+        const auto resend_interval   = std::chrono::milliseconds( 500 );
+        auto       last_request_sent = start_time;
+
+        bool first_seen = false;
+
+        while ( true )
+        {
+            const auto now = std::chrono::steady_clock::now();
+
+            {
+                std::lock_guard lock( block_responses_mutex_ );
+                auto            it = block_responses_.find( req_id );
+                if ( it != block_responses_.end() )
+                {
+                    if ( !first_seen )
+                    {
+                        first_seen                         = true;
+                        block_first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - block_first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
+            {
+                auto resend_result = RequestBlock( req_id, block_index );
+                if ( resend_result.has_error() )
+                {
+                    logger_->warn( "[{}] Failed to resend block {} request for req_id {}",
+                                   address_.substr( 0, 8 ),
+                                   block_index,
+                                   req_id );
+                }
+                else
+                {
+                    logger_->trace( "[{}] Resent block {} request for req_id {}",
+                                    address_.substr( 0, 8 ),
+                                    block_index,
+                                    req_id );
+                    last_request_sent = now;
+                }
+            }
+
+            if ( now - start_time >= full_timeout )
+            {
+                logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
+                                address_.substr( 0, 8 ),
+                                req_id );
+                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        std::set<std::string> cids;
+        bool                  any_response = false;
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            auto            it = block_responses_.find( req_id );
+            if ( it != block_responses_.end() )
+            {
+                any_response = true;
+                cids         = it->second;
+            }
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
+        if ( !any_response )
+        {
+            logger_->warn( "[{}] No responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
+            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+        }
+
+        return outcome::success( cids );
     }
 
     void AccountMessenger::HandleNonceRequest( const accountComm::SignedNonceRequest &signed_req )

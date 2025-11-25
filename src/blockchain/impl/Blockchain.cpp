@@ -198,14 +198,18 @@ namespace sgns
                 logger_->info( "[{}] Requesting account creation block via pubsub",
                                account_->GetAddress().substr( 0, 8 ) );
 
-                account_->RequestAccountCreation( TIMEOUT_ACC_CREATION_BLOCK_MS,
-                                                  [weakptr( weak_from_this() )]( std::string creation_cid )
-                                                  {
-                                                      if ( auto self = weakptr.lock() )
-                                                      {
-                                                          self->InformAccountCreationResponse( creation_cid );
-                                                      }
-                                                  } );
+                account_->RequestAccountCreation(
+                    TIMEOUT_ACC_CREATION_BLOCK_MS,
+                    [weakptr( weak_from_this() )]( outcome::result<std::string> creation_cid_res )
+                    {
+                        if ( auto self = weakptr.lock() )
+                        {
+                            self->logger_->debug( "[{}] Account creation request finished",
+                                                  self->account_->GetAddress().substr( 0, 8 ) );
+
+                            self->InformAccountCreationResponse( std::move( creation_cid_res ) );
+                        }
+                    } );
             }
             else
             {
@@ -225,10 +229,19 @@ namespace sgns
                                    account_->GetAddress().substr( 0, 8 ) );
                     auto genesis_request_result = account_->RequestGenesis(
                         TIMEOUT_GENESIS_BLOCK_MS,
-                        [weakptr( weak_from_this() )]( const std::string &genesis_cid )
+                        [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
                         {
                             if ( auto self = weakptr.lock() )
                             {
+                                if ( genesis_cid_res.has_error() )
+                                {
+                                    self->logger_->debug( "[{}] Genesis callback received error: {}",
+                                                          self->account_->GetAddress().substr( 0, 8 ),
+                                                          genesis_cid_res.error().message() );
+                                    return;
+                                }
+
+                                auto genesis_cid = genesis_cid_res.value();
                                 if ( genesis_cid.empty() )
                                 {
                                     self->logger_->debug( "[{}] Genesis callback received empty CID",
@@ -250,8 +263,7 @@ namespace sgns
                     }
                     else
                     {
-                        logger_->info( "[{}] Request succeeded for Genesis",
-                                       account_->GetAddress().substr( 0, 8 ) );
+                        logger_->info( "[{}] Request succeeded for Genesis", account_->GetAddress().substr( 0, 8 ) );
                     }
                 }
             }
@@ -423,11 +435,11 @@ namespace sgns
 
                     auto result = self->account_->RequestAccountCreation(
                         TIMEOUT_ACC_CREATION_BLOCK_MS,
-                        [weakself = weakptr]( std::string creation_cid )
+                        [weakself = weakptr]( outcome::result<std::string> creation_cid_res )
                         {
                             if ( auto s = weakself.lock() )
                             {
-                                s->InformAccountCreationResponse( creation_cid );
+                                s->InformAccountCreationResponse( creation_cid_res );
                             }
                         } );
                     if ( result.has_error() )
@@ -436,8 +448,7 @@ namespace sgns
                             "[{}] Account creation request failed asynchronously: {}. Creating account...",
                             self->account_->GetAddress().substr( 0, 8 ),
                             result.error().message() );
-                        self->InformAccountCreationResponse( "" );
-                        //self->InformBlockchainResult( result );
+                        self->InformAccountCreationResponse( outcome::failure(Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED) );
                     }
                     else
                     {
@@ -678,9 +689,9 @@ namespace sgns
         return verification_result;
     }
 
-    void Blockchain::InformAccountCreationResponse( const std::string creation_cid )
+    void Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
     {
-        if ( creation_cid.empty() )
+        if ( creation_result.has_error() )
         {
             logger_->debug( "[{}] Received empty account creation CID, no account created yet",
                             account_->GetAddress().substr( 0, 8 ) );
@@ -692,7 +703,7 @@ namespace sgns
         {
             logger_->debug( "[{}] Informing account creation response with CID: {}",
                             account_->GetAddress().substr( 0, 8 ),
-                            creation_cid );
+                            creation_result.value() );
             //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
         }
     }

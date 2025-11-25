@@ -114,7 +114,7 @@ namespace sgns
         void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         void AccountCreationReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         outcome::result<void> InformBlockchainResult( outcome::result<void> result );
-        void                  InformAccountCreationResponse( const std::string creation_cid );
+        void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
 
         /// Topic used for the blockchain CRDT
         static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain";

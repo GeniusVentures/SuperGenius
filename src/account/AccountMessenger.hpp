@@ -12,6 +12,9 @@
 #include <vector>
 #include <cstdlib>
 #include <future>
+#include <condition_variable>
+#include <queue>
+#include <atomic>
 #include <mutex>
 #include <unordered_map>
 #include <set>
@@ -93,7 +96,9 @@ namespace sgns
          * @param[in]   callback Function to be called for each CID found (empty string if none)
          * @return      success if at least one response arrives before timeout, error otherwise
          */
-        outcome::result<void> RequestGenesis( uint64_t timeout_ms, std::function<void( std::string )> callback );
+        outcome::result<void> RequestGenesis(
+            uint64_t timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Request account creation from the network and invoke callback with found CIDs
@@ -101,8 +106,9 @@ namespace sgns
          * @param[in]   callback Function to be called for each CID found (signature: void(std::string))
          * @return      success on scheduled request, error otherwise
          */
-        outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
-                                                      std::function<void( std::string )> callback );
+        outcome::result<void> RequestAccountCreation(
+            uint64_t timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback );
 
         /**
          * @brief       Register global block response handler
@@ -151,6 +157,35 @@ namespace sgns
         /// Global block response handler
         BlockResponseHandler global_block_handler_;
         std::mutex           global_handler_mutex_;
+
+        // Worker thread state
+        enum class RequestType
+        {
+            Nonce,
+            Genesis,
+            AccountCreation
+        };
+
+        struct RequestTask
+        {
+            RequestType                                         type;
+            uint64_t                                            timeout_ms;
+            uint64_t                                            silent_time_ms{ 150 };
+            uint8_t                                             block_index{ 0 };
+            std::function<void( outcome::result<std::string> )> callback;
+            std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
+        };
+
+        std::thread                     worker_thread_;
+        std::mutex                      queue_mutex_;
+        std::condition_variable         queue_cv_;
+        std::queue<RequestTask>         request_queue_;
+        std::atomic<bool>               stop_worker_{ false };
+
+        void WorkerLoop();
+        void EnqueueTask( RequestTask task );
+        outcome::result<uint64_t> PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
+        outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, uint8_t block_index );
 
         /**
          * @brief       Private constructor of the Account Messenger 

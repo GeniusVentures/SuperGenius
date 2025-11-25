@@ -370,7 +370,7 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );

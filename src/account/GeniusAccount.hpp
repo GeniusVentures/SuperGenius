@@ -244,10 +244,10 @@ namespace sgns
          */
         void ReleaseNonce( uint64_t nonce );
 
-        outcome::result<void> RequestGenesis( uint64_t                           timeout_ms = 8000,
-                                              std::function<void( std::string )> callback ) const;
-        outcome::result<void> RequestAccountCreation( uint64_t                           timeout_ms,
-                                                      std::function<void( std::string )> callback ) const;
+        outcome::result<void> RequestGenesis( uint64_t timeout_ms = 8000,
+                                              std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        outcome::result<void> RequestAccountCreation( uint64_t timeout_ms,
+                                                      std::function<void( outcome::result<std::string> )> callback ) const;
 
     protected:
         friend class Blockchain;
