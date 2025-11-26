@@ -767,6 +767,7 @@ namespace sgns::crdt
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
         OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+        const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
         {
@@ -778,7 +779,7 @@ namespace sgns::crdt
                 rootCIDJobList_.push( root_final_job );
             }
         }
-        else if ( !links.empty() )
+        else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
             OUTCOME_TRY( FetchNodes( job_to_process, links ) );
@@ -786,6 +787,13 @@ namespace sgns::crdt
         }
         else if ( is_root )
         {
+            if ( job_to_process.created_by_self_ && !links.empty() )
+            {
+                logger_->error( "{}: Self-created job {}, skipping fetch of {} links and finalizing heads",
+                                __func__,
+                                root_cid_string,
+                                links.size() );
+            }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
             UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
             {
