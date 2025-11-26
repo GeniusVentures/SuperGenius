@@ -403,8 +403,9 @@ DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x
 int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
-    bool        last_param       = true;  // Default value for the last parameter
+    bool        is_processor     = true;  // Default value for the last parameter
     bool        use_upnp         = true;  // Default UPNP usage
+    bool        is_full_node     = false;
     std::string path_override    = "";    // Path override for DEV_CONFIG
 
     // Parse command-line arguments
@@ -413,9 +414,17 @@ int main( int argc, char *argv[] )
         std::string arg = argv[1];
         if ( arg == "server" )
         {
-            start_processing = true;
-            last_param       = false;
+            start_processing = false;
+            is_processor     = false;
             use_upnp         = false;   
+            is_full_node     = true;
+        }
+        else if(arg == "jobposter")
+        {
+            start_processing = true;
+            is_processor     = false;
+            use_upnp         = true;   
+            is_full_node     = false;
         }
         
         // Check for path override argument (e.g., --path=/custom/path or -p /custom/path)
@@ -447,7 +456,7 @@ int main( int argc, char *argv[] )
 
     std::thread input_thread( keyboard_input_thread );
 
-    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, last_param, 40101, start_processing, use_upnp );
+    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
