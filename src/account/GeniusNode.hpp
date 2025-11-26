@@ -49,7 +49,8 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false );
+                                                bool                is_full_node = false,
+                                                bool                use_upnp     = true );
 
         ~GeniusNode() override;
 
@@ -232,7 +233,8 @@ namespace sgns
                     bool                autodht,
                     bool                isprocessor,
                     uint16_t            base_port,
-                    bool                is_full_node );
+                    bool                is_full_node,
+                    bool                use_upnp );
         bool                  InitLoggers( const std::string &base_path );
         base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );

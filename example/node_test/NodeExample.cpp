@@ -328,7 +328,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
     {
-        std::this_thread::sleep_for( std::chrono::minutes( 30 ) ); // Wait for 1 minute
+        std::this_thread::sleep_for( std::chrono::minutes( 7 ) ); // Wait for 1 minute
         if ( finished )
         {
             break; // Exit if the application is shutting down
@@ -402,8 +402,10 @@ DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x
 
 int main( int argc, char *argv[] )
 {
-    bool start_processing = false; // Default behavior for "process"
-    bool last_param       = true;  // Default value for the last parameter
+    bool        start_processing = false; // Default behavior for "process"
+    bool        last_param       = true;  // Default value for the last parameter
+    bool        use_upnp         = true;  // Default UPNP usage
+    std::string path_override    = "";    // Path override for DEV_CONFIG
 
     // Parse command-line arguments
     if ( argc > 1 )
@@ -413,7 +415,30 @@ int main( int argc, char *argv[] )
         {
             start_processing = true;
             last_param       = false;
+            use_upnp         = false;   
         }
+        
+        // Check for path override argument (e.g., --path=/custom/path or -p /custom/path)
+        for ( int i = 1; i < argc; ++i )
+        {
+            std::string current_arg = argv[i];
+            if ( current_arg.rfind( "--path=", 0 ) == 0 )
+            {
+                path_override = current_arg.substr( 7 ); // Extract path after "--path="
+            }
+            else if ( ( current_arg == "-p" || current_arg == "--path" ) && i + 1 < argc )
+            {
+                path_override = argv[i + 1];
+            }
+        }
+    }
+
+    // Apply path override if provided
+    if ( !path_override.empty() )
+    {
+        strncpy( DEV_CONFIG.BaseWritePath, path_override.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) - 1 );
+        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0'; // Ensure null termination
+        std::cout << "Using custom path: " << path_override << std::endl;
     }
 
     // Generate a random Ethereum-compatible private key
@@ -422,7 +447,7 @@ int main( int argc, char *argv[] )
 
     std::thread input_thread( keyboard_input_thread );
 
-    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, last_param, 40101, start_processing );
+    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, last_param, 40101, start_processing, use_upnp );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();

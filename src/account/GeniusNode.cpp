@@ -96,10 +96,11 @@ namespace sgns
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
-                                                 bool                is_full_node )
+                                                 bool                is_full_node,
+                                                 bool                use_upnp ) 
     {
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node ) );
+            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node, use_upnp ) );
 
         instance->processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
             instance->pubsub_,                                                          //
@@ -141,7 +142,10 @@ namespace sgns
         {
             instance->DHTInit();
         }
-        instance->RefreshUPNP( instance->pubsubport_ );
+        if( use_upnp )
+        {
+            instance->RefreshUPNP( instance->pubsubport_ );
+        }
 
         instance->io_work_guard_.emplace( instance->io_->get_executor() );
         unsigned desired_threads = instance->io_thread_count_;
@@ -162,7 +166,8 @@ namespace sgns
                             bool                autodht,
                             bool                isprocessor,
                             uint16_t            base_port,
-                            bool                is_full_node ) :
+                            bool                is_full_node,
+                            bool                use_upnp ) :
         account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
@@ -191,63 +196,66 @@ namespace sgns
         pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
 
         std::vector<std::string> addresses;
-        // UPNP
-        auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
-
-        if ( upnp->GetIGD() )
+        std::string wanip;
+        if( use_upnp )
         {
-            std::string wanip = upnp->GetWanIP();
-            lanip             = upnp->GetLocalIP();
-            node_logger_->info( "Wan IP: {}", wanip );
-            node_logger_->info( "Lan IP: {}", lanip );
-
-            bool        success = false;
-            std::string owner;
-
-            constexpr int max_attempts = 10;
-            for ( int i = 0; i < max_attempts; ++i )
+            // UPNP
+            auto        upnp = std::make_shared<upnp::UPNP>();
+            
+            if ( upnp->GetIGD() )
             {
-                int candidate_port = pubsubport_ + i;
-                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
-                {
-                    if ( owner == lanip )
-                    {
-                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                        {
-                            addresses.push_back( wanip );
-                            success     = true;
-                            pubsubport_ = candidate_port;
-                            break;
-                        }
+                wanip             = upnp->GetWanIP();
+                lanip             = upnp->GetLocalIP();
+                node_logger_->info( "Wan IP: {}", wanip );
+                node_logger_->info( "Lan IP: {}", lanip );
 
-                        node_logger_->error(
-                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                            candidate_port );
+                bool        success = false;
+                std::string owner;
+
+                constexpr int max_attempts = 10;
+                for ( int i = 0; i < max_attempts; ++i )
+                {
+                    int candidate_port = pubsubport_ + i;
+                    if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                    {
+                        if ( owner == lanip )
+                        {
+                            node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                            if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                            {
+                                addresses.push_back( wanip );
+                                success     = true;
+                                pubsubport_ = candidate_port;
+                                break;
+                            }
+
+                            node_logger_->error(
+                                "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                                candidate_port );
+                            continue;
+                        }
+                        node_logger_->warn( "Port {} already in use by {}", candidate_port, owner );
                         continue;
                     }
-                    node_logger_->warn( "Port {} already in use by {}", candidate_port, owner );
-                    continue;
+
+                    if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                    {
+                        node_logger_->info( "Successfully opened port {}", candidate_port );
+                        addresses.push_back( wanip );
+                        success     = true;
+                        pubsubport_ = candidate_port;
+                        break;
+                    }
+                    node_logger_->warn( "Failed to open port {}", candidate_port );
                 }
 
-                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                if ( !success )
                 {
-                    node_logger_->info( "Successfully opened port {}", candidate_port );
-                    addresses.push_back( wanip );
-                    success     = true;
-                    pubsubport_ = candidate_port;
-                    break;
+                    node_logger_->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
                 }
-                node_logger_->warn( "Failed to open port {}", candidate_port );
-            }
-
-            if ( !success )
-            {
-                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
             }
         }
-
         // Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
@@ -397,7 +405,7 @@ namespace sgns
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
 #else
         // Release mode
-        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::err );
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
