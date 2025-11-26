@@ -237,7 +237,9 @@ namespace sgns::crdt
 
         // Delete blocks
         (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+        if (job.node_ && job.node_->getCID() != job.root_node_->getCID()) {
+            (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+        }
 
         if ( !job.created_by_self_ )
         {
