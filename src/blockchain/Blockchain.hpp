@@ -37,6 +37,7 @@ namespace sgns
             GENESIS_BLOCK_UNAUTHORIZED_CREATOR,          ///< Genesis block created by unauthorized key
             GENESIS_BLOCK_SERIALIZATION_FAILED,          ///< Failed to serialize/deserialize genesis block
             GENESIS_BLOCK_MISSING,                       ///< Genesis block wasn't received
+            ACCOUNT_CREATION_BLOCK_MISSING,              ///< Account creation is missing
             ACCOUNT_CREATION_BLOCK_CREATION_FAILED,      ///< Failed to create account creation block
             ACCOUNT_CREATION_BLOCK_INVALID_SIGNATURE,    ///< Account creation block has invalid signature
             ACCOUNT_CREATION_BLOCK_SERIALIZATION_FAILED, ///< Failed to serialize/deserialize account creation block
@@ -89,6 +90,9 @@ namespace sgns
          */
         static const std::string &GetAuthorizedFullNodeAddress();
 
+        outcome::result<std::string> GetGenesisCID() const;
+        outcome::result<std::string> GetAccountCreationCID() const;
+
     private:
         /// Make constructor private to force use of factory method
         Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
@@ -114,6 +118,7 @@ namespace sgns
         void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         void AccountCreationReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         outcome::result<void> InformBlockchainResult( outcome::result<void> result );
+        void                  InformGenesisResult( outcome::result<std::string> result );
         void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
 
         /// Topic used for the blockchain CRDT
@@ -134,8 +139,6 @@ namespace sgns
         BlockchainCallback blockchain_processed_callback_; ///< Callback when the processing of the blockchain is done
         sgns::blockchain::GenesisBlock         genesis_block_;          ///< Cached genesis block for easy access
         sgns::blockchain::AccountCreationBlock account_creation_block_; ///< Cached account creation block
-        std::string                            genesis_cid_;
-        std::string                            account_creation_cid_;
 
         struct BlockchainCIDs
         {

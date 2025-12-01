@@ -22,6 +22,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
             return "Failed to serialize/deserialize genesis block";
         case Error::GENESIS_BLOCK_MISSING:
             return "Genesis block was not received";
+        case Error::ACCOUNT_CREATION_BLOCK_MISSING:
+            return "Account creation block was not received";
         case Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED:
             return "Couldn't create account creation block";
         case Error::ACCOUNT_CREATION_BLOCK_INVALID_SIGNATURE:
@@ -233,26 +235,9 @@ namespace sgns
                         {
                             if ( auto self = weakptr.lock() )
                             {
-                                if ( genesis_cid_res.has_error() )
-                                {
-                                    self->logger_->debug( "[{}] Genesis callback received error: {}",
-                                                          self->account_->GetAddress().substr( 0, 8 ),
-                                                          genesis_cid_res.error().message() );
-                                    return;
-                                }
-
-                                auto genesis_cid = genesis_cid_res.value();
-                                if ( genesis_cid.empty() )
-                                {
-                                    self->logger_->debug( "[{}] Genesis callback received empty CID",
-                                                          self->account_->GetAddress().substr( 0, 8 ) );
-                                }
-                                else
-                                {
-                                    self->logger_->debug( "[{}] Genesis callback received CID: {}",
-                                                          self->account_->GetAddress().substr( 0, 8 ),
-                                                          genesis_cid );
-                                }
+                                self->logger_->debug( "[{}] Genesis request finished",
+                                                      self->account_->GetAddress().substr( 0, 8 ) );
+                                self->InformGenesisResult( std::move( genesis_cid_res ) );
                             }
                         } );
                     if ( genesis_request_result.has_error() )
@@ -315,7 +300,7 @@ namespace sgns
             return outcome::failure( put_result.error() );
         }
         cids_.genesis_ = cid;
-        logger_->debug( "[{}] Genesis CID stored: {}", account_->GetAddress().substr( 0, 8 ), genesis_cid_ );
+        logger_->debug( "[{}] Genesis CID stored: {}", account_->GetAddress().substr( 0, 8 ), cid );
         return outcome::success();
     }
 
@@ -337,9 +322,7 @@ namespace sgns
             return outcome::failure( put_result.error() );
         }
         cids_.account_ = cid;
-        logger_->debug( "[{}] Account creation CID stored: {}",
-                        account_->GetAddress().substr( 0, 8 ),
-                        account_creation_cid_ );
+        logger_->debug( "[{}] Account creation CID stored: {}", account_->GetAddress().substr( 0, 8 ), cid );
         return outcome::success();
     }
 
@@ -376,6 +359,42 @@ namespace sgns
             blockchain_processed_callback_( result );
         }
         return result;
+    }
+
+    void Blockchain::InformGenesisResult( outcome::result<std::string> genesis_result )
+    {
+        if ( genesis_result.has_error() )
+        {
+            logger_->debug( "[{}] Genesis block not found", account_->GetAddress().substr( 0, 8 ) );
+
+            InformBlockchainResult( outcome::failure( Error::GENESIS_BLOCK_MISSING ) );
+        }
+        else
+        {
+            logger_->debug( "[{}] Informing genesis result response with CID: {}",
+                            account_->GetAddress().substr( 0, 8 ),
+                            genesis_result.value() );
+            //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
+        }
+    }
+
+    void Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
+    {
+        if ( creation_result.has_error() ) 
+        {
+            logger_->debug( "[{}] Received empty account creation CID, no account created yet",
+                            account_->GetAddress().substr( 0, 8 ) );
+
+            auto account_creation_result = CreateAccountCreationBlock();
+            InformBlockchainResult( account_creation_result );
+        }
+        else 
+        {
+            logger_->debug( "[{}] Informing account creation response with CID: {}",
+                            account_->GetAddress().substr( 0, 8 ),
+                            creation_result.value() );
+            //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
+        }
     }
 
     void Blockchain::GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
@@ -448,7 +467,8 @@ namespace sgns
                             "[{}] Account creation request failed asynchronously: {}. Creating account...",
                             self->account_->GetAddress().substr( 0, 8 ),
                             result.error().message() );
-                        self->InformAccountCreationResponse( outcome::failure(Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED) );
+                        self->InformAccountCreationResponse(
+                            outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED ) );
                     }
                     else
                     {
@@ -689,25 +709,6 @@ namespace sgns
         return verification_result;
     }
 
-    void Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
-    {
-        if ( creation_result.has_error() )
-        {
-            logger_->debug( "[{}] Received empty account creation CID, no account created yet",
-                            account_->GetAddress().substr( 0, 8 ) );
-
-            auto account_creation_result = CreateAccountCreationBlock();
-            InformBlockchainResult( account_creation_result );
-        }
-        else
-        {
-            logger_->debug( "[{}] Informing account creation response with CID: {}",
-                            account_->GetAddress().substr( 0, 8 ),
-                            creation_result.value() );
-            //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
-        }
-    }
-
     outcome::result<void> Blockchain::CreateAccountCreationBlock()
     {
         if ( !cids_.hasGenesis() )
@@ -822,10 +823,9 @@ namespace sgns
 
         if ( !cids_.hasGenesis() )
         {
-            logger_->error( "[{}] Account creation block linked to wrong genesis CID: {} (expected: {})",
+            logger_->error( "[{}] Account creation received without any genesis. Linked genesis CID: {} ",
                             account_->GetAddress().substr( 0, 8 ),
-                            ac.genesis_block_cid().substr( 0, 8 ),
-                            genesis_cid_.substr( 0, 8 ) );
+                            ac.genesis_block_cid().substr( 0, 8 ) );
             return outcome::failure( Error::ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK );
         }
 
@@ -905,6 +905,28 @@ namespace sgns
         } while ( 0 );
 
         InformBlockchainResult( new_account_return );
+    }
+
+    outcome::result<std::string> Blockchain::GetGenesisCID() const
+    {
+        if ( !cids_.hasGenesis() )
+        {
+            logger_->error( "[{}] Trying to grab Genesis CID, but no local information",
+                            account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::GENESIS_BLOCK_MISSING );
+        }
+        return cids_.genesis_.value();
+    }
+
+    outcome::result<std::string> Blockchain::GetAccountCreationCID() const
+    {
+        if ( !cids_.hasAccount() )
+        {
+            logger_->error( "[{}] Trying to grab Account Creation, but no local information",
+                            account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING );
+        }
+        return cids_.account_.value();
     }
 
 }
