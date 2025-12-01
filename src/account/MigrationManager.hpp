@@ -37,6 +37,10 @@ namespace sgns
     class MigrationManager : public std::enable_shared_from_this<MigrationManager>
     {
     public:
+        enum class Error
+        {
+            BLOCKCHAIN_INIT_FAILED = 1,
+        };
         /**
          * @brief   Factory function to create a MigrationManager and register all known steps.
          * @param   ioContext     Shared io_context for both legacy and new DB.
@@ -82,3 +86,5 @@ namespace sgns
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
     };
 } // namespace sgns
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, MigrationManager::Error );

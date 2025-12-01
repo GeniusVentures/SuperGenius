@@ -8,6 +8,7 @@
 #include "Migration3_4_0To3_5_0.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TransactionManager.hpp"
+#include "account/MigrationManager.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -155,10 +156,32 @@ namespace sgns
             auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() -
                                                                                      start_time )
                                        .count();
-            logger_->error( "{}: Blockchain errored out (elasped {}s)", __func__, elapsed_seconds );
+            logger_->error( "{}: Blockchain errored out (elapsed {}s)", __func__, elapsed_seconds );
 
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
+
+        start_time           = std::chrono::steady_clock::now();
+        blockchain_succeeded = false;
+        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        {
+            auto genesis_cid_result          = blockchain_->GetGenesisCID();
+            auto account_creation_cid_result = blockchain_->GetAccountCreationCID();
+            if ( genesis_cid_result.has_value() && account_creation_cid_result.has_value() )
+            {
+                blockchain_succeeded = true;
+                break;
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        if ( !blockchain_succeeded )
+        {
+            logger_->error( "{}: Genesis and/or Account Creation CID not fetched", __func__ );
+
+            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+        }
+
         auto                  crdt_transaction_ = db_3_5_0_->BeginTransaction();
         std::set<std::string> topics_;
 

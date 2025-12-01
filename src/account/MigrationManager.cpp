@@ -15,6 +15,17 @@
 #include <boost/system/error_code.hpp>
 #include "base/sgns_version.hpp"
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, MigrationManager::Error, e )
+{
+    using Err = sgns::MigrationManager::Error;
+    switch ( e )
+    {
+        case Err::BLOCKCHAIN_INIT_FAILED:
+            return "Blockchain initialization failed during migration";
+    }
+    return "Unknown error";
+}
+
 namespace sgns
 {
 
