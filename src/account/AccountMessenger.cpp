@@ -532,7 +532,7 @@ namespace sgns
                             const auto &cids = res.value();
                             if ( cids.empty() )
                             {
-                                task.callback( outcome::success( std::string() ) );
+                                task.callback( outcome::failure( boost::system::error_code{} ) );
                             }
                             else
                             {
@@ -559,7 +559,7 @@ namespace sgns
                             const auto &cids = res.value();
                             if ( cids.empty() )
                             {
-                                task.callback( outcome::success( std::string() ) );
+                                task.callback( outcome::failure( boost::system::error_code{} ) );
                             }
                             else
                             {
