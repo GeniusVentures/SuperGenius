@@ -120,6 +120,7 @@ namespace sgns
         outcome::result<void> InformBlockchainResult( outcome::result<void> result );
         void                  InformGenesisResult( outcome::result<std::string> result );
         void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
+        void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
 
         /// Topic used for the blockchain CRDT
         static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain";

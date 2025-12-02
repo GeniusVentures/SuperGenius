@@ -6,6 +6,7 @@
  */
 #include <chrono>
 #include "blockchain/Blockchain.hpp"
+#include <primitives/cid/cid.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 {
@@ -374,7 +375,9 @@ namespace sgns
             logger_->debug( "[{}] Informing genesis result response with CID: {}",
                             account_->GetAddress().substr( 0, 8 ),
                             genesis_result.value() );
-            //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
+            WatchCIDDownload( genesis_result.value(),
+                              Error::GENESIS_BLOCK_MISSING,
+                              TIMEOUT_GENESIS_BLOCK_MS );
         }
     }
 
@@ -393,8 +396,85 @@ namespace sgns
             logger_->debug( "[{}] Informing account creation response with CID: {}",
                             account_->GetAddress().substr( 0, 8 ),
                             creation_result.value() );
-            //TODO - REQUEST THE BLOCK USING THE CID? GeniusAccount will do it I guess
+            WatchCIDDownload( creation_result.value(),
+                              Error::ACCOUNT_CREATION_BLOCK_MISSING,
+                              TIMEOUT_ACC_CREATION_BLOCK_MS );
         }
+    }
+
+    void Blockchain::WatchCIDDownload( const std::string &cid,
+                                       Error               error_on_failure,
+                                       uint64_t            timeout_ms )
+    {
+        std::thread(
+            [weakptr = weak_from_this(), cid, error_on_failure, timeout_ms]
+            {
+                auto cid_result = CID::fromString( cid );
+                if ( cid_result.has_failure() )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->logger_->error( "[{}] Invalid CID received: {}",
+                                              self->account_->GetAddress().substr( 0, 8 ),
+                                              cid );
+                    }
+                    return;
+                }
+
+                auto deadline       = std::chrono::steady_clock::now() + std::chrono::milliseconds( timeout_ms );
+                auto sleep_interval = std::chrono::milliseconds( 200 );
+
+                while ( std::chrono::steady_clock::now() < deadline )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        // Exit if block already processed via normal flow
+                        if ( ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
+                             ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
+                               self->cids_.hasAccount() ) )
+                        {
+                            return;
+                        }
+
+                        auto status = self->db_->GetCIDJobStatus( cid_result.value() );
+                        if ( status.has_value() &&
+                             status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED )
+                        {
+                            return;
+                        }
+                        if ( status.has_value() && status.value() == crdt::CrdtDatastore::JobStatus::FAILED )
+                        {
+                            self->logger_->error( "[{}] CID {} failed to download via GraphSync",
+                                                  self->account_->GetAddress().substr( 0, 8 ),
+                                                  cid.substr( 0, 8 ) );
+                            self->InformBlockchainResult( outcome::failure( error_on_failure ) );
+                            return;
+                        }
+                    }
+                    std::this_thread::sleep_for( sleep_interval );
+                }
+
+                if ( auto self = weakptr.lock() )
+                {
+                    auto status = self->db_->GetCIDJobStatus( cid_result.value() );
+                    bool done   = status.has_value() &&
+                                status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED;
+                    bool local_state =
+                        ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
+                        ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING && self->cids_.hasAccount() );
+
+                    if ( done || local_state )
+                    {
+                        return;
+                    }
+
+                    self->logger_->error( "[{}] Timeout waiting for CID {} to be processed",
+                                          self->account_->GetAddress().substr( 0, 8 ),
+                                          cid.substr( 0, 8 ) );
+                    self->InformBlockchainResult( outcome::failure( error_on_failure ) );
+                }
+            } )
+            .detach();
     }
 
     void Blockchain::GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
