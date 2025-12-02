@@ -360,4 +360,13 @@ namespace sgns::crdt
     {
         return m_broadcaster;
     }
+
+    outcome::result<crdt::CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
+    {
+        if ( !m_crdtDatastore )
+        {
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return m_crdtDatastore->GetJobStatus( cid );
+    }
 }

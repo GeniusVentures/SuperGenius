@@ -52,6 +52,13 @@ namespace sgns::crdt
         using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
         using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
 
+        enum class JobStatus
+        {
+            PENDING,
+            COMPLETED,
+            FAILED
+        };
+
         enum class Error
         {
             INVALID_PARAM = 0,
@@ -208,7 +215,8 @@ namespace sgns::crdt
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
-        outcome::result<void> AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<JobStatus> GetJobStatus( const CID &cid );
 
     protected:
         friend class PubSubBroadcasterExt;
@@ -419,14 +427,10 @@ namespace sgns::crdt
 
         CRDTCallbackManager crdt_cb_manager_;
 
-        enum class JobStatus
-        {
-            PENDING,
-            COMPLETED,
-            FAILED
-        };
-
         std::map<CID, JobStatus> pending_jobs_;
+
+        void MarkJobPending( const CID &cid );
+        void MarkJobFailed( const CID &cid );
     };
 
 }

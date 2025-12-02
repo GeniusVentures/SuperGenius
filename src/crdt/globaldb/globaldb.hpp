@@ -149,6 +149,7 @@ namespace sgns::crdt
         outcome::result<uint64_t> GetCRDTHeadHeight( const CID &aCid, const std::string &topic );
         outcome::result<void>     CRDTHeadRemove( const CID &aCid, const std::string &topic );
         outcome::result<void>     CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<crdt::CrdtDatastore::JobStatus> GetCIDJobStatus( const CID &cid ) const;
 
     private:
         /**

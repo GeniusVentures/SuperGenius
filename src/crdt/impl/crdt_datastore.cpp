@@ -221,11 +221,7 @@ namespace sgns::crdt
         // Signal job failure
         {
             std::lock_guard lock_jobs( dagWorkerMutex_ );
-            auto            job_it = pending_jobs_.find( job.root_node_->getCID() );
-            if ( job_it != pending_jobs_.end() )
-            {
-                job_it->second = JobStatus::FAILED;
-            }
+            pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
         }
 
         const std::string jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
@@ -250,15 +246,13 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingSuccess( const RootCIDJob &job )
     {
-        if ( job.created_by_self_ )
         {
             // Mark self-created job as completed
             std::lock_guard lock_jobs( dagWorkerMutex_ );
-            auto            job_it = pending_jobs_.find( job.root_node_->getCID() );
-            if ( job_it != pending_jobs_.end() )
-            {
-                job_it->second = JobStatus::COMPLETED;
-            }
+            pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
+        }
+        if ( job.created_by_self_ )
+        {
             logger_->debug( "Successfully completed self-created job for CID {}",
                             job.root_node_->getCID().toString().value() );
         }
@@ -565,11 +559,26 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
-        OUTCOME_TRY( auto &&root_job, CreateRootJob( aCid ) );
+        auto root_job_result = CreateRootJob( aCid );
+        if ( root_job_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return root_job_result.as_failure();
+        }
 
-        OUTCOME_TRY( auto &&links, GetLinksToFetch( root_job ) );
+        auto links_result = GetLinksToFetch( root_job_result.value() );
+        if ( links_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return links_result.as_failure();
+        }
 
-        OUTCOME_TRY( FetchNodes( root_job, links ) );
+        auto fetch_result = FetchNodes( root_job_result.value(), links_result.value() );
+        if ( fetch_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return fetch_result.as_failure();
+        }
         return outcome::success();
     }
 
@@ -1069,8 +1078,8 @@ namespace sgns::crdt
         RootCIDJob rootJob{ nullptr, node, true };
 
         {
+            MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
-            pending_jobs_[node->getCID()] = JobStatus::PENDING;
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
 
             logger_->debug(
@@ -1147,6 +1156,39 @@ namespace sgns::crdt
             pending_jobs_.erase( cid );
         }
         return outcome::failure( Error::NODE_CREATION );
+    }
+
+    void CrdtDatastore::MarkJobPending( const CID &cid )
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = pending_jobs_.find( cid );
+        if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
+        {
+            pending_jobs_[cid] = JobStatus::PENDING;
+        }
+    }
+
+    void CrdtDatastore::MarkJobFailed( const CID &cid )
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        pending_jobs_[cid] = JobStatus::FAILED;
+    }
+
+    outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
+    {
+        auto has_block = dagSyncer_->HasBlock( cid );
+        if ( has_block.has_value() && has_block.value() )
+        {
+            return JobStatus::COMPLETED;
+        }
+
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = pending_jobs_.find( cid );
+        if ( it != pending_jobs_.end() )
+        {
+            return it->second;
+        }
+        return outcome::failure( boost::system::error_code{} );
     }
 
     outcome::result<void> CrdtDatastore::PrintDAG()
@@ -1437,6 +1479,11 @@ namespace sgns::crdt
         }
 
         pendingRootQueue_.push( cid );
+        auto it = pending_jobs_.find( cid );
+        if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
+        {
+            pending_jobs_[cid] = JobStatus::PENDING;
+        }
         return true;
     }
 
