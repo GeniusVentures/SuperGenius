@@ -1164,7 +1164,14 @@ namespace sgns::crdt
                 last_log_time = current_time;
             }
 
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            // Sleep for the minimum of 500ms or remaining time to avoid tight loops near timeout
+            auto time_remaining = timeout_duration - ( current_time - start_time );
+            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ), 
+                                           std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
+            if ( sleep_duration.count() > 0 )
+            {
+                std::this_thread::sleep_for( sleep_duration );
+            }
         }
 
         // Timeout reached

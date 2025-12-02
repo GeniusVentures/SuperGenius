@@ -390,7 +390,7 @@ namespace sgns::crdt
         std::shared_ptr<DAGSyncer>   dagSyncer_   = nullptr;
         Logger                       logger_      = base::createLogger( "CrdtDatastore" );
 
-        static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 100 );
+        static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 500 );
         static constexpr std::string_view          headsNamespace_                = "h";
         static constexpr std::string_view          setsNamespace_                 = "s";
         int                                        numberOfDagWorkers             = 1;
