@@ -1,5 +1,6 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -888,9 +889,29 @@ namespace sgns::crdt
         }
         auto [head_map, maxHeight] = getListResult.value();
 
+        // Get PeerInfo once before the loop to avoid repeated calls
+        boost::optional<libp2p::peer::PeerInfo> peerInfo;
+        if ( broadcaster_ )
+        {
+            // Cast the broadcaster's DAG syncer to GraphsyncDAGSyncer to get PeerInfo
+            auto dagSyncerPtr = std::static_pointer_cast<GraphsyncDAGSyncer>( broadcaster_->GetDagSyncer() );
+            if ( dagSyncerPtr )
+            {
+                auto peerInfoResult = dagSyncerPtr->GetPeerInfo();
+                if ( peerInfoResult.has_value() )
+                {
+                    peerInfo = peerInfoResult.value();
+                }
+                else
+                {
+                    logger_->warn( "RebroadcastHeads: Failed to get peer info, broadcasts will retry per-call" );
+                }
+            }
+        }
+
         for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            auto broadcastResult = Broadcast( cid_set, topic_name );
+            auto broadcastResult = Broadcast( cid_set, topic_name, peerInfo );
             if ( broadcastResult.has_failure() )
             {
                 logger_->error( "RebroadcastHeads: Broadcast failed" );
@@ -994,7 +1015,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         if ( !broadcaster_ )
         {
@@ -1013,7 +1034,7 @@ namespace sgns::crdt
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic );
+        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic, peerInfo );
         if ( bcastResult.has_failure() )
         {
             logger_->error( "Broadcast: Broadcaster failed to broadcast" );

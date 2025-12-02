@@ -307,9 +307,11 @@ namespace sgns::crdt
          * @brief Broadcasts a set of CIDs.
          * Encodes and broadcasts the provided list of CIDs
          * @param[in] cids The list of CIDs to broadcast.
+         * @param[in] topic The topic to broadcast to.
+         * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic );
+        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs

@@ -226,7 +226,7 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         std::set<std::string> broadcastTopicsCopy;
         {
@@ -248,27 +248,35 @@ namespace sgns::crdt
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        auto peer_info_res = dagSyncer_->GetPeerInfo();
-        if ( !peer_info_res )
+        // Get peer_id - determine which branch to use first, then initialize
+        boost::optional<libp2p::peer::PeerId> peer_id_opt;
+        
+        if ( peerInfo )
         {
-            m_logger->error( "Dag syncer has no peer info." );
-            delete bpi;
-            return outcome::failure( boost::system::error_code{} );
+            peer_id_opt = peerInfo->id;
         }
-        auto peer_info = peer_info_res.value();
-        bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+        else
+        {
+            auto peer_id_res = dagSyncer_->GetId();
+            if ( !peer_id_res )
+            {
+                m_logger->error( "Dag syncer has no peer ID." );
+                delete bpi;
+                return outcome::failure( boost::system::error_code{} );
+            }
+            peer_id_opt = peer_id_res.value();
+        }
 
-        // Add observed addresses and the peer’s own addresses.
-        auto pubsubObserved = pubSub_->GetHost()->getObservedAddressesReal();
-        for ( auto &address : pubsubObserved )
+        auto& peer_id = peer_id_opt.value();
+        bpi->set_id( std::string( peer_id.toVector().begin(), peer_id.toVector().end() ) );
+
+        // Add addresses from PeerInfo (which already includes observed, interface, and relay addresses)
+        if ( peerInfo )
         {
-            bpi->add_addrs( address.getStringAddress() );
-        }
-        auto mas = peer_info.addresses;
-        for ( auto &address : mas )
-        {
-            bpi->add_addrs( address.getStringAddress() );
-            m_logger->info( "Address Broadcast: {}", address.getStringAddress() );
+            for ( auto &address : peerInfo->addresses )
+            {
+                bpi->add_addrs( address.getStringAddress() );
+            }
         }
 
         if ( bpi->addrs_size() <= 0 )
@@ -291,7 +299,7 @@ namespace sgns::crdt
         {
             pubSub_->Publish( topic, serialized_proto );
             m_logger->debug( "CIDs broadcasted by {} to topic {}, at this {}",
-                             peer_info.id.toBase58(),
+                             peer_id.toBase58(),
                              topic,
                              reinterpret_cast<size_t>( this ) );
         }
