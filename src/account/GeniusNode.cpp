@@ -191,11 +191,16 @@ namespace sgns
                     {
                         if ( auto strong = weak_self.lock() )
                         {
-                            if ( result.has_error() )
+                        if ( result.has_error() )
+                        {
+                            strong->node_logger_->error( "Database migration error: {}", result.error().message() );
+                            if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
                             {
-                                strong->node_logger_->error( "Database migration error: {}", result.error().message() );
-                                return;
+                                strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                strong->ScheduleMigrationRetry();
                             }
+                            return;
+                        }
                             strong->StateTransition( NodeState::INITIALIZING_DATABASE );
                         }
                     } );
@@ -575,6 +580,20 @@ namespace sgns
                 }
             } );
         migration_thread.detach();
+    }
+
+    void GeniusNode::ScheduleMigrationRetry()
+    {
+        std::thread(
+            [weak_self = weak_from_this()]
+            {
+                std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->StateTransition( NodeState::MIGRATING_DATABASE );
+                }
+            } )
+            .detach();
     }
 
     base::Logger GeniusNode::ConfigureLogger( const std::string        &tag,

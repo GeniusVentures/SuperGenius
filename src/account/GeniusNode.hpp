@@ -285,6 +285,7 @@ namespace sgns
         void         BeginDBInitialization();
         void         StateTransition( NodeState next_state );
         void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
+        void         ScheduleMigrationRetry();
         outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
         outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
 
