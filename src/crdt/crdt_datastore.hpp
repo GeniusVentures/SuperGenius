@@ -317,7 +317,7 @@ namespace sgns::crdt
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
-        static outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+        outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
 
         /** PutBlock add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
@@ -435,6 +435,10 @@ namespace sgns::crdt
         };
 
         std::map<CID, JobStatus> pending_jobs_;
+
+        // Cache for CID string representations to avoid repeated base58 encoding
+        mutable std::map<CID, std::string> cid_string_cache_;
+        mutable std::mutex                  cid_string_cache_mutex_;
     };
 
 }

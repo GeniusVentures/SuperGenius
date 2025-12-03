@@ -864,14 +864,39 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
     {
         CRDTBroadcast bcastData;
+        
         for ( const auto &head : heads )
         {
-            auto encodedHead   = bcastData.add_heads();
-            auto strHeadResult = head.toString();
-            if ( !strHeadResult.has_failure() )
+            auto encodedHead = bcastData.add_heads();
+            
+            // Check cache first to avoid expensive base58 encoding
+            std::string cid_string;
             {
-                encodedHead->set_cid( strHeadResult.value() );
+                std::lock_guard<std::mutex> lock( cid_string_cache_mutex_ );
+                auto                        it = cid_string_cache_.find( head );
+                if ( it != cid_string_cache_.end() )
+                {
+                    cid_string = it->second;
+                }
             }
+            
+            // Cache miss - compute and cache the string
+            if ( cid_string.empty() )
+            {
+                auto strHeadResult = head.toString();
+                if ( !strHeadResult.has_failure() )
+                {
+                    cid_string = strHeadResult.value();
+                    std::lock_guard<std::mutex> lock( cid_string_cache_mutex_ );
+                    cid_string_cache_[head] = cid_string;
+                }
+                else
+                {
+                    continue; // Skip this CID if conversion fails
+                }
+            }
+            
+            encodedHead->set_cid( cid_string );
         }
 
         Buffer outputBuffer;
@@ -921,7 +946,10 @@ namespace sgns::crdt
                 logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
-                    logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                    if(logger_->level() == spdlog::level::trace)
+                    {
+                        logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                    }
                 }
             }
         }
