@@ -296,7 +296,7 @@ namespace sgns::crdt
 
         for ( auto &topic : broadcastTopicsCopy )
         {
-            pubSub_->Publish( topic, serialized_proto );
+            pubSub_->PublishBuffered( topic, serialized_proto );
             m_logger->debug( "CIDs broadcasted by {} to topic {}, at this {}",
                              peer_id.toBase58(),
                              topic,
