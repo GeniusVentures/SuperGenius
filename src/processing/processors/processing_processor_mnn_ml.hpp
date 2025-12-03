@@ -23,14 +23,12 @@ namespace sgns::processing
         /** Create a posenet processor
         */
         MNN_ML() 
-            //imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
-            //modelFile_( std::make_unique<std::vector<uint8_t>>() )
         {
         }
 
         ~MNN_ML() override{
-            //stbi_image_free(imageData_);
         };
+
         /** Start processing data
         * @param result - Reference to result item to set hashes to
         * @param task - Reference to task to get image split data
@@ -56,14 +54,10 @@ namespace sgns::processing
         */
         std::unique_ptr<MNN::Tensor> Process( const std::vector<uint8_t> &audiodata, 
                                                 std::vector<uint8_t> &modelFile, 
-                                                const int channels, 
-                                                const int origwidth, 
-                                                const int origheight,
-                                                const std::string filename = "" );
-
-        //std::unique_ptr<std::vector<std::vector<char>>> imageData_;
-        //std::unique_ptr<std::vector<uint8_t>>           modelFile_;
-        //std::string                                     fileName_;
+                                                int channels,
+                                                int origwidth,
+                                                int origheight,
+                                                std::string filename = "" );
     };
 
 }

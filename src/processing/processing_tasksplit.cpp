@@ -50,7 +50,6 @@ namespace sgns
             }
 
             size_t chunkId = 0;
-            //auto subtaskId = base58.value();
             SGProcessing::SubTask subtask;
 
             //IPFS Block is the task ID for lookup
@@ -59,10 +58,6 @@ namespace sgns
             subtask.set_json_data(json_data);
 
             //Generate a subtask uuid.
-            //boost::uuids::uuid uuid = boost::uuids::random_generator()();
-            // boost::uuids::random_generator_pure gen;
-            // boost::uuids::uuid uuid = gen();
-            // auto uuidstring = boost::uuids::to_string(uuid);
             auto uuidstring = generate_uuid_with_ipfs_id(ipfsid);
             std::cout << "Subtask UID: " << uuidstring << std::endl;
             subtask.set_subtaskid(uuidstring);

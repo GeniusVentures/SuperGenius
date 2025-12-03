@@ -16,8 +16,6 @@ namespace sgns::processing
         OUTCOME_TRY( ( auto &&, task_result ), m_taskQueue->GrabTask() );
 
         auto [taskKey, task] = task_result;
-        //std::string taskKey = maybe_grabbed.value().first;
-        //SGProcessing::Task task    = maybe_grabbed.value().second; //TODO - Not used for anything. Rewrite this code
 
         subTaskQueueId = taskKey;
         m_logger->debug( "ENQUEUE_SUBTASKS: taskKey={}, task.ipfs_block_id()={}", taskKey, task.ipfs_block_id() );

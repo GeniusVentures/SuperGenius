@@ -187,7 +187,6 @@ namespace sgns::crdt
                 m_logger->debug( "The peer {} is blacklisted", peerId.toBase58() );
                 break;
             }
-            //auto pi = PeerInfoFromString(bmsg.multiaddress());
             bool new_content = false;
             for ( const auto &cid : cids.value() )
             {

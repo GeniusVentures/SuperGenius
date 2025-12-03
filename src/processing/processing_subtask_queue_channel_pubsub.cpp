@@ -24,7 +24,6 @@ namespace sgns::processing
     ProcessingSubTaskQueueChannelPubSub::Listen(std::chrono::milliseconds msSubscriptionWaitingDuration)
     {
         // Subscribe to the processing queue channel
-        // Changed: Use 'auto' (not 'auto&') to allow moving/copying the shared_future
         auto subscription_future = m_processingQueueChannel->Subscribe(
             [weakSelf = weak_from_this()](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message)
             {
@@ -52,11 +51,10 @@ namespace sgns::processing
                 m_logger->debug("Subscription established after {} ms", resultTime.count());
                 // Fixed: Use consistent type (GossipPubSubTopic::Subscription)
                 return std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(resultTime);
-            } else {
-                m_logger->error("Subscription not established within the specified time ({} ms)",
-                            msSubscriptionWaitingDuration.count());
-                return outcome::failure(boost::system::errc::timed_out);
             }
+            m_logger->error( "Subscription not established within the specified time ({} ms)",
+                             msSubscriptionWaitingDuration.count() );
+            return outcome::failure( boost::system::errc::timed_out );
         }
 
         // If no waiting requested, return the future

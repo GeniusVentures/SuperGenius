@@ -611,11 +611,9 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        // size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        // nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -629,11 +627,8 @@ namespace sgns
             std::string inputAsString = buffer.GetString();
             taskSplitter
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
-
-            //}
-            // imageindex++;
         }
-        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
+        auto cut = TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );

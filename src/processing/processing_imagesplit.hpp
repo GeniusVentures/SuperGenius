@@ -55,7 +55,6 @@ namespace sgns::processing
 
         ~ImageSplitter()
         {
-            //free(inputImage);
         }
 
         /** Get data of part
