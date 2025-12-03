@@ -275,8 +275,14 @@ namespace sgns
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
+        //Set a pubsub config, use no signing because we can verify with proof and dag structure
+        libp2p::protocol::gossip::Config config;
+        config.echo_forward_mode       = false;
+        config.sign_messages           = false;
+        config.seen_cache_limit        = 10;
+        config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
+            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(), config );
         auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
         account_->InitMessenger( pubsub_ );
         pubs.wait();
@@ -286,6 +292,10 @@ namespace sgns
         {
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
+        }
+        else {
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water = 400;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;          
         }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -382,7 +392,7 @@ namespace sgns
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
-        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::trace );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
@@ -399,7 +409,7 @@ namespace sgns
         auto loggerProcqm         = ConfigureLogger( "ProcessingSubTaskQueueManager", logdir, spdlog::level::err );
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
-        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::trace );
+        auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
