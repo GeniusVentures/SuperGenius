@@ -146,7 +146,8 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetLocalAddress() } );
+                    nodes_[i].pubsub->AddPeers(
+                        { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
             std::this_thread::sleep_for( delay );
