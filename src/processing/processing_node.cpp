@@ -7,7 +7,6 @@
 
 namespace sgns::processing
 {
-    ////////////////////////////////////////////////////////////////////////////////
     std::shared_ptr<ProcessingNode> ProcessingNode::New(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
         std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
@@ -280,6 +279,4 @@ namespace sgns::processing
                 } );
         }
     }
-
-    ////////////////////////////////////////////////////////////////////////////////
 }

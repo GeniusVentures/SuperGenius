@@ -12,16 +12,16 @@ namespace sgns::processing
     {
     public:
         /** Constructs a processing service.
-    * @param gossipPubSub - pubsub service
-    * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
-    */
-        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-                               size_t                                           maximalNodesCount,
-                               std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
-                               std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
-                               std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>                  processingCore );
-        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                  gossipPubSub,
+         * @param gossipPubSub - pubsub service
+         * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
+         */
+        ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
+                               size_t                                     maximalNodesCount,
+                               std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
+                               std::shared_ptr<SubTaskStateStorage>       subTaskStateStorage,
+                               std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+                               std::shared_ptr<ProcessingCore>            processingCore );
+        ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>                        gossipPubSub,
                                size_t                                                            maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>                                  subTaskEnqueuer,
                                std::shared_ptr<SubTaskStateStorage>                              subTaskStateStorage,
@@ -83,7 +83,7 @@ namespace sgns::processing
         std::map<std::string, std::shared_ptr<ProcessingNode>> m_processingNodes;
         boost::asio::deadline_timer                            m_timerChannelListRequestTimeout;
         boost::posix_time::time_duration                       m_channelListRequestTimeout;
-        bool                                                   m_waitingCHannelRequest = false;
+        bool                                                   m_waitingChannelRequest = false;
         std::atomic<bool>                                      m_isStopped;
         mutable std::recursive_mutex                           m_mutexNodes;
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
@@ -103,8 +103,8 @@ namespace sgns::processing
         std::mutex                          m_mutexPendingCreation;
 
         // Blacklist for failed tasks/channels to prevent repeated processing attempts
-        std::set<std::string>               m_blacklistedChannels;
-        std::mutex                          m_mutexBlacklist;
+        std::set<std::string> m_blacklistedChannels;
+        std::mutex            m_mutexBlacklist;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );
     };

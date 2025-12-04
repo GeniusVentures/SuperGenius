@@ -51,7 +51,7 @@ namespace sgns::processing
         bool CreateQueue( std::list<SGProcessing::SubTask> &subTasks );
 
         /** Asynchronous getting of a subtask from the queue
-        * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
+        * @param onSubTaskGrabbedCallback a callback that is called when a grabbed iosubtask is locked by the local node
         */
         void GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback );
 
@@ -61,7 +61,7 @@ namespace sgns::processing
         bool MoveOwnershipTo( const std::string &nodeId );
 
         /** Checks id the local processing node owns the queue
-        * @return true is the lolca node owns the queue
+        * @return true is the local node owns the queue
         */
         bool HasOwnership() const;
 
