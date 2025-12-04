@@ -616,8 +616,10 @@ namespace sgns
             {
                 const auto &tx  = tx_pair.first;
                 const auto  key = GetTransactionPath( *tx );
+                const auto nonce = tx->dag_st.nonce();
                 // tx visible to status queries immediately
-                outgoing_tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CREATED };
+                outgoing_tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CREATED, nonce };
+                outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
                 m_logger->debug( "[{} - full: {}] Setting {} to CREATED",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -766,6 +768,7 @@ namespace sgns
             {
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
                 const auto                          key      = GetTransactionPath( *transaction_pair.first );
+                const auto                          nonce    = transaction_pair.first->dag_st.nonce();
                 auto                                it       = outgoing_tx_processed_m.find( key );
                 auto                                tx_state = TransactionStatus::VERIFYING;
                 if ( full_node_m )
@@ -774,11 +777,20 @@ namespace sgns
                 }
                 if ( it != outgoing_tx_processed_m.end() )
                 {
+                    if ( it->second.status != tx_state && tx_state == TransactionStatus::VERIFYING )
+                    {
+                        verifying_count_.fetch_add( 1, std::memory_order_relaxed );
+                    }
                     it->second.status = tx_state;
                 }
                 else
                 {
-                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, tx_state };
+                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, tx_state, nonce };
+                    outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
+                    if ( tx_state == TransactionStatus::VERIFYING )
+                    {
+                        verifying_count_.fetch_add( 1, std::memory_order_relaxed );
+                    }
                 }
             }
         }
@@ -844,11 +856,19 @@ namespace sgns
             }
             {
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                const auto                          key = GetTransactionPath( *transaction );
+                const auto                          key   = GetTransactionPath( *transaction );
+                const auto                          nonce = transaction->dag_st.nonce();
 
                 auto &t  = outgoing_tx_processed_m[key]; // create if missing
-                t.tx     = transaction;
-                t.status = TransactionStatus::FAILED;
+                // Update verifying_count if status is changing from VERIFYING
+                if ( t.status == TransactionStatus::VERIFYING )
+                {
+                    verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                }
+                t.tx           = transaction;
+                t.status       = TransactionStatus::FAILED;
+                t.cached_nonce = nonce;
+                outgoing_nonce_to_key_m[nonce] = key;  // Ensure nonce index is updated
             }
             RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
             account_m->ReleaseNonce( transaction->dag_st.nonce() );
@@ -1157,8 +1177,10 @@ namespace sgns
                                      full_node_m,
                                      transaction_key.value() );
                     std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
+                    const auto nonce = maybe_transaction.value()->dag_st.nonce();
                     incoming_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
-                                                                                  TransactionStatus::CONFIRMED };
+                                                                                  TransactionStatus::CONFIRMED,
+                                                                                  nonce };
                 }
             }
         }
@@ -1238,8 +1260,11 @@ namespace sgns
                                      full_node_m,
                                      transaction_key.value() );
                     std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                    const auto nonce = maybe_transaction.value()->dag_st.nonce();
                     outgoing_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
-                                                                                  TransactionStatus::CONFIRMED };
+                                                                                  TransactionStatus::CONFIRMED,
+                                                                                  nonce };
+                    outgoing_nonce_to_key_m[nonce] = transaction_key.value();  // Add to nonce index
                 }
             }
         }
@@ -2017,16 +2042,29 @@ namespace sgns
     bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
     {
         std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-        for ( auto &kv : outgoing_tx_processed_m )
+        auto nonce_it = outgoing_nonce_to_key_m.find( nonce );
+        if ( nonce_it != outgoing_nonce_to_key_m.end() )
         {
-            auto &tracked = kv.second;
-            if ( tracked.tx && tracked.tx->dag_st.nonce() == nonce )
+            auto it = outgoing_tx_processed_m.find( nonce_it->second );
+            if ( it != outgoing_tx_processed_m.end() )
             {
-                tracked.status = s;
+                auto old_status = it->second.status;
+                it->second.status = s;
+                
+                // Update verifying_count
+                if ( old_status == TransactionStatus::VERIFYING && s != TransactionStatus::VERIFYING )
+                {
+                    verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                }
+                else if ( old_status != TransactionStatus::VERIFYING && s == TransactionStatus::VERIFYING )
+                {
+                    verifying_count_.fetch_add( 1, std::memory_order_relaxed );
+                }
+                
                 m_logger->debug( "[{} - full: {}] Set tx {} (nonce {}) to {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 tracked.tx->dag_st.data_hash(),
+                                 it->second.tx->dag_st.data_hash(),
                                  nonce,
                                  static_cast<int>( s ) );
                 return true;
@@ -2041,24 +2079,34 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ConfirmTransactions()
     {
-        std::vector<std::string> to_confirm;
+        // Fast path: check if there are any VERIFYING transactions
+        if ( verifying_count_.load( std::memory_order_relaxed ) == 0 )
+        {
+            m_logger->trace( "[{} - full: {}] No VERIFYING transactions, skipping nonce check in ConfirmTransactions",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+            return outcome::success();
+        }
 
-        // First pass: find VERIFYING transactions and store their keys
+        // Collect nonces of VERIFYING transactions using index
+        std::vector<uint64_t> verifying_nonces;
         {
             std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            for ( const auto &pair : outgoing_tx_processed_m )
+            // Use nonce index to check for VERIFYING transactions
+            for ( const auto &[nonce, key] : outgoing_nonce_to_key_m )
             {
-                if ( pair.second.status == TransactionStatus::VERIFYING )
+                auto it = outgoing_tx_processed_m.find( key );
+                if ( it != outgoing_tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
                 {
-                    to_confirm.push_back( pair.first );
+                    verifying_nonces.push_back( nonce );
                 }
             }
         }
 
-        // If nothing to confirm, skip
-        if ( to_confirm.empty() )
+        // If nothing to confirm after lock, skip
+        if ( verifying_nonces.empty() )
         {
-            m_logger->trace( "[{} - full: {}] No VERIFYING transactions, skipping nonce check in ConfirmTransactions",
+            m_logger->trace( "[{} - full: {}] No VERIFYING transactions after lock check",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
             return outcome::success();
@@ -2080,19 +2128,28 @@ namespace sgns
                          full_node_m,
                          confirmed_nonce );
 
-        // Second pass: update only the ones we collected
+        // Use nonce index for O(1) lookup and update
         {
             std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            for ( const auto &key : to_confirm )
+            for ( uint64_t nonce : verifying_nonces )
             {
-                auto it = outgoing_tx_processed_m.find( key );
-                if ( it != outgoing_tx_processed_m.end() && it->second.tx->dag_st.nonce() <= confirmed_nonce )
+                if ( nonce <= confirmed_nonce )
                 {
-                    it->second.status = TransactionStatus::CONFIRMED;
-                    m_logger->debug( "[{} - full: {}] Transaction {} set to CONFIRMED",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     key );
+                    auto nonce_it = outgoing_nonce_to_key_m.find( nonce );
+                    if ( nonce_it != outgoing_nonce_to_key_m.end() )
+                    {
+                        auto it = outgoing_tx_processed_m.find( nonce_it->second );
+                        if ( it != outgoing_tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                        {
+                            it->second.status = TransactionStatus::CONFIRMED;
+                            verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                            m_logger->debug( "[{} - full: {}] Transaction {} (nonce {}) set to CONFIRMED",
+                                             account_m->GetAddress().substr( 0, 8 ),
+                                             full_node_m,
+                                             nonce_it->second,
+                                             nonce );
+                        }
+                    }
                 }
             }
         }
@@ -2451,6 +2508,13 @@ namespace sgns
                     }
                     account_m->RollBackPeerConfirmedNonce( out_it->second.tx->dag_st.nonce(),
                                                            out_it->second.tx->dag_st.source_addr() );
+                    // Update verifying_count if this was VERIFYING
+                    if ( out_it->second.status == TransactionStatus::VERIFYING )
+                    {
+                        verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                    }
+                    // Remove from nonce index
+                    outgoing_nonce_to_key_m.erase( out_it->second.tx->dag_st.nonce() );
                 }
                 outgoing_tx_processed_m.erase( out_it );
                 found = true;
@@ -2565,8 +2629,10 @@ namespace sgns
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
 
-                account_m->SetLocalConfirmedNonce( new_tx->dag_st.nonce() );
-                outgoing_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED };
+                const auto nonce = new_tx->dag_st.nonce();
+                account_m->SetLocalConfirmedNonce( nonce );
+                outgoing_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
+                outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
             }
         }
         else
@@ -2625,8 +2691,9 @@ namespace sgns
             {
                 OUTCOME_TRY( ParseTransaction( new_tx ) );
 
-                account_m->SetPeerConfirmedNonce( new_tx->dag_st.nonce(), new_tx->dag_st.source_addr() );
-                incoming_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED };
+                const auto nonce = new_tx->dag_st.nonce();
+                account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
+                incoming_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
             }
         }
 

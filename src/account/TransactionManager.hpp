@@ -250,10 +250,13 @@ namespace sgns
         {
             std::shared_ptr<IGeniusTransactions> tx;
             TransactionStatus                    status;
+            uint64_t                             cached_nonce;  // Cache nonce to avoid dereferencing tx
         };
 
         mutable std::shared_mutex                  outgoing_tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> outgoing_tx_processed_m;
+        std::unordered_map<uint64_t, std::string> outgoing_nonce_to_key_m;  // nonce -> tx_key index
+        std::atomic<size_t>                        verifying_count_{ 0 };     // Count of VERIFYING transactions
         mutable std::shared_mutex                  incoming_tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
         std::function<void()>                      task_m;
