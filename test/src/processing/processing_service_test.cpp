@@ -226,10 +226,11 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
                 {
                     if ( auto result = pubs_future.get(); result )
                     {
-                       Color::PrintError("PubSub node ", i, " failed to start: ", result.message());
-                       return false;
-                   }
-                    Color::PrintInfo("PubSub node ", i, " started successfully");
+                        Color::PrintError( "PubSub node ", i, " failed to start: ", result.message() );
+                        return false;
+                    }
+                    Color::PrintInfo( "PubSub node ", i, " started successfully" );
+                }
                 catch ( const std::exception &e )
                 {
                     Color::PrintError( "PubSub node ", i, " start exception: ", e.what() );
