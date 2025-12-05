@@ -83,14 +83,40 @@ protected:
     {
         // Clean up any previous test runs
         std::string binaryPath = boost::dll::program_location().parent_path().string();
-        std::filesystem::remove_all( binaryPath + "/node_multi_account_0/" );
-        std::filesystem::remove_all( binaryPath + "/node_multi_account_1/" );
-        std::filesystem::remove_all( binaryPath + "/node_multi_account_2/" );
+        
+        // Helper to remove directory with retry on Windows (file locks may not be immediately released)
+        auto removeWithRetry = []( const std::string& path )
+        {
+            std::error_code ec;
+            std::filesystem::remove_all( path, ec );
+            
+            // On Windows, retry if removal fails due to file locks
+            if ( ec && std::filesystem::exists( path ) )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+                ec.clear();
+                std::filesystem::remove_all( path, ec );
+                
+                // Final attempt after longer delay
+                if ( ec && std::filesystem::exists( path ) )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+                    ec.clear();
+                    std::filesystem::remove_all( path, ec );
+                }
+            }
+        };
+        
+        removeWithRetry( binaryPath + "/node_multi_account_0/" );
+        removeWithRetry( binaryPath + "/node_multi_account_1/" );
+        removeWithRetry( binaryPath + "/node_multi_account_2/" );
     }
 
     void TearDown() override
     {
         // Cleanup is automatic when shared_ptrs go out of scope
+        // On Windows, give time for file handles to be released before next test
+        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
     }
 };
 
