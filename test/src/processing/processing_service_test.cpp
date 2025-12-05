@@ -211,7 +211,7 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
         m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( port, bootstrap_nodes ) );
         if ( i == 0 )
         {
-            bootstrap_nodes = { pubsub_node->GetLocalAddress() };
+            bootstrap_nodes = { pubsub_node->GetInterfaceAddress() };
         }
     }
 

@@ -79,11 +79,11 @@ protected:
                                             true );
 
         //Connect to each other
-        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                      node_proc2->GetPubSub()->GetLocalAddress() };
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
+                                      node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_proc2->GetPubSub()->GetLocalAddress() };
+        bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
 
         //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
@@ -155,9 +155,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 {
-    std::string address_main  = node_main->GetPubSub()->GetLocalAddress();
-    std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
-    std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
+    std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
