@@ -382,6 +382,28 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::Stop()
     {
+        std::lock_guard lock( subscriptionMutex_ );
+        // Wait for any pending futures to complete before clearing
+        for ( auto &future : subscriptionFutures_ )
+        {
+            if ( future.valid() )
+            {
+                try
+                {
+                    // Check if the future is ready without blocking indefinitely
+                    if ( future.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready )
+                    {
+                        // Future is ready, safe to access
+                        future.get();
+                    }
+                    // If not ready, just let it be destroyed naturally
+                }
+                catch ( ... )
+                {
+                    // Ignore any exceptions during cleanup
+                }
+            }
+        }
         subscriptionFutures_.clear(); // Clear all pending subscriptions
     }
 

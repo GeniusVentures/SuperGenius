@@ -52,10 +52,26 @@ namespace sgns
     {
         OUTCOME_TRY( auto &&target_db, InitTargetDb() );
         db_1_0_0_ = std::move( target_db );
-        OUTCOME_TRY( auto &&outDb, InitLegacyDb( "out" ) );
-        db_0_0_2_out_ = std::move( outDb );
-        OUTCOME_TRY( auto &&inDb, InitLegacyDb( "in" ) );
-        db_0_0_2_in_ = std::move( inDb );
+        
+        auto outDb_result = InitLegacyDb( "out" );
+        if ( !outDb_result.has_value() )
+        {
+            // Clean up target_db on failure
+            db_1_0_0_.reset();
+            return outDb_result.as_failure();
+        }
+        db_0_0_2_out_ = std::move( outDb_result.value() );
+        
+        auto inDb_result = InitLegacyDb( "in" );
+        if ( !inDb_result.has_value() )
+        {
+            // Clean up previously initialized databases on failure
+            db_0_0_2_out_.reset();
+            db_1_0_0_.reset();
+            return inDb_result.as_failure();
+        }
+        db_0_0_2_in_ = std::move( inDb_result.value() );
+        
         return outcome::success();
     }
 

@@ -11,6 +11,8 @@
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
+#include <rocksdb/db.h>
+
 #include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
@@ -105,8 +107,14 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
-        m_broadcaster->Stop();
-        m_crdtDatastore->Close();
+        if ( m_broadcaster )
+        {
+            m_broadcaster->Stop();
+        }
+        if ( m_crdtDatastore )
+        {
+            m_crdtDatastore->Close();
+        }
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -133,8 +141,30 @@ namespace sgns::crdt
             options.level_compaction_dynamic_level_bytes = false;
             try
             {
-                if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                     dataStoreResult.has_value() )
+                auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                
+                // If database open fails with corruption, try to repair it
+                if ( !dataStoreResult.has_value() )
+                {
+                    std::string errorMsg = dataStoreResult.error().message();
+                    if ( errorMsg.find( "corruption" ) != std::string::npos || 
+                         errorMsg.find( "Corruption" ) != std::string::npos )
+                    {
+                        m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
+                        auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
+                        if ( repairStatus.ok() )
+                        {
+                            m_logger->info( "Database repair successful, retrying open" );
+                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                        }
+                        else
+                        {
+                            m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
+                        }
+                    }
+                }
+                
+                if ( dataStoreResult.has_value() )
                 {
                     dataStore = std::move(dataStoreResult.value());
                 }
