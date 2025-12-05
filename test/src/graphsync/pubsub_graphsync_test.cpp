@@ -214,7 +214,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     gdb4->Start();
     gdb5->Start();
     gdb6->Start();
-    pubs1->AddPeers( { pubs2->GetLocalAddress() } );
+    pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     std::thread io_thread = std::thread( [io_context]() { io_context->run(); } );
     //Dummy Transaction Data

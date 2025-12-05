@@ -122,11 +122,11 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     );
 
     // Connect nodes to each other
-    std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                  node_full->GetPubSub()->GetLocalAddress() };
+    std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
+                                  node_full->GetPubSub()->GetInterfaceAddress() };
     node_main->GetPubSub()->AddPeers( bootstrappers );
 
-    bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(), node_main->GetPubSub()->GetLocalAddress() };
+    bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(), node_main->GetPubSub()->GetInterfaceAddress() };
     node_full->GetPubSub()->AddPeers( bootstrappers );
 
     // Allow time for connections to establish
@@ -283,8 +283,8 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateMint )
 
     // Add peers to each node
     node_same_addr_1->GetPubSub()->AddPeers(
-        { node_same_addr_2->GetPubSub()->GetLocalAddress(), node_full->GetPubSub()->GetLocalAddress() } );
-    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+        { node_same_addr_2->GetPubSub()->GetInterfaceAddress(), node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     // Allow significant time for CRDT synchronization and conflict resolution
     std::cout << "Waiting for CRDT synchronization and conflict resolution..." << std::endl;

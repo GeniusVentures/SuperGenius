@@ -156,8 +156,8 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers(
-            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+            { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
         test::assertWaitForCondition(
             [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -231,8 +231,8 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers(
-            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+            { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
         test::assertWaitForCondition(
             [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -337,8 +337,8 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers(
-            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+            { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
         test::assertWaitForCondition(
             [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -434,8 +434,8 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers(
-            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+            { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
         test::assertWaitForCondition(
             [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
