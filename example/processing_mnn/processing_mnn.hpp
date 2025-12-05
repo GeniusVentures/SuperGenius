@@ -13,8 +13,8 @@
 #include <boost/format.hpp>
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
-#include "processing/processing_subtask_state_storage.hpp"
 #include "processing/processing_imagesplit.hpp"
+#include "processing/proto/SGProcessing.pb.h"
 
 namespace
 {
@@ -100,17 +100,4 @@ namespace
         size_t m_nSubTasks;
         bool m_addValidationSubtask;
     };
-
-    using namespace sgns::processing;
-    class SubTaskStateStorageImpl : public SubTaskStateStorage
-    {
-    public:
-        void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
-        std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
-        {
-            return std::nullopt;
-        }
-    };
-
 }
-

@@ -97,18 +97,17 @@ namespace sgns
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
                                                  bool                is_full_node,
-                                                 bool                use_upnp ) 
+                                                 bool                use_upnp )
     {
         auto instance = std::shared_ptr<GeniusNode>(
             new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node, use_upnp ) );
 
         instance->processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
-            instance->pubsub_,                                                          //
-            MAX_NODES_COUNT,                                                            //
-            std::make_shared<processing::SubTaskEnqueuerImpl>( instance->task_queue_ ), //
-            std::make_shared<processing::ProcessSubTaskStateStorage>(),                 //
-            instance->task_result_storage_,                                             //
-            instance->processing_core_,                                                 //
+            instance->pubsub_,
+            MAX_NODES_COUNT,
+            std::make_shared<processing::SubTaskEnqueuerImpl>( instance->task_queue_ ),
+            instance->task_result_storage_,
+            instance->processing_core_,
             [wptr( std::weak_ptr<GeniusNode>( instance ) )]( const std::string              &var,
                                                              const SGProcessing::TaskResult &taskresult )
             {
@@ -142,7 +141,7 @@ namespace sgns
         {
             instance->DHTInit();
         }
-        if( use_upnp )
+        if ( use_upnp )
         {
             instance->RefreshUPNP( instance->pubsubport_ );
         }
@@ -196,17 +195,17 @@ namespace sgns
         pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
 
         std::vector<std::string> addresses;
-        std::string lanip;
-        std::string wanip;
-        if( use_upnp )
+        std::string              lanip;
+        std::string              wanip;
+        if ( use_upnp )
         {
             // UPNP
-            auto        upnp = std::make_shared<upnp::UPNP>();
-            
+            auto upnp = std::make_shared<upnp::UPNP>();
+
             if ( upnp->GetIGD() )
             {
-                wanip             = upnp->GetWanIP();
-                lanip             = upnp->GetLocalIP();
+                wanip = upnp->GetWanIP();
+                lanip = upnp->GetLocalIP();
                 node_logger_->info( "Wan IP: {}", wanip );
                 node_logger_->info( "Lan IP: {}", lanip );
 
@@ -221,7 +220,8 @@ namespace sgns
                     {
                         if ( owner == lanip )
                         {
-                            node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                            node_logger_->info( "Port {} is already mapped by this device. Try using it.",
+                                                candidate_port );
                             if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                             {
                                 addresses.push_back( wanip );
@@ -281,8 +281,9 @@ namespace sgns
         config.sign_messages           = false;
         config.seen_cache_limit        = 10;
         config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
-        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(), config );
+        pubsub_                        = std::make_shared<ipfs_pubsub::GossipPubSub>(
+            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
+            config );
         auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
         account_->InitMessenger( pubsub_ );
         pubs.wait();
@@ -293,9 +294,10 @@ namespace sgns
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
         }
-        else {
+        else
+        {
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = 400;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;          
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;
         }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();

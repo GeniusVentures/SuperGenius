@@ -9,13 +9,11 @@ namespace sgns::processing
     SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
-        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
         std::function<void( const std::string & )>              processingErrorSink ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) )
@@ -115,10 +113,6 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::AssignSubTasks( std::list<SGProcessing::SubTask> &subTasks )
     {
-        for ( const auto &subTask : subTasks )
-        {
-            m_subTaskStateStorage->ChangeSubTaskState( subTask.subtaskid(), SGProcessing::SubTaskState::ENQUEUED );
-        }
         return m_subTaskQueueManager->CreateQueue( subTasks );
     }
 
@@ -218,7 +212,6 @@ namespace sgns::processing
         }
 
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
-        m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
         // tell local queue manager we completed this task as well.
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
 

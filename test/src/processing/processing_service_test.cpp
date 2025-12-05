@@ -226,11 +226,10 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
                 {
                     if ( auto result = pubs_future.get(); result )
                     {
-                        Color::PrintError( "PubSub node ", i, " failed to start: ", result.message() );
-                        return false;
-                    }
-                    Color::PrintInfo( "PubSub node ", i, " started successfully" );
-                }
+                       Color::PrintError("PubSub node ", i, " failed to start: ", result.message());
+                       return false;
+                   }
+                    Color::PrintInfo("PubSub node ", i, " started successfully");
                 catch ( const std::exception &e )
                 {
                     Color::PrintError( "PubSub node ", i, " start exception: ", e.what() );
@@ -265,7 +264,6 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
         auto queueAccessor = m_processing_queues_accessors.emplace_back( std::make_shared<SubTaskQueueAccessorImpl>(
             pubsub_node,
             processingQueueManager,
-            std::make_shared<SubTaskStateStorageMock>(),
             std::make_shared<SubTaskResultStorageMock>(),
             [this, i, nodeId]( const SGProcessing::TaskResult & )
             {
@@ -294,9 +292,8 @@ TEST_F( ProcessingServiceTest, ProcessingSlotsAreAvailable )
     auto processingService = std::make_shared<ProcessingServiceImpl>( pubs1,
                                                                       1,
                                                                       enqueuer,
-                                                                      std::make_shared<SubTaskStateStorageMock>(),
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-                                                                      processingCore );
+        processingCore);
 
     m_processing_services.push_back( processingService );
 
@@ -338,9 +335,8 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
     auto processingService = std::make_shared<ProcessingServiceImpl>( pubs1,
                                                                       1,
                                                                       enqueuer,
-                                                                      std::make_shared<SubTaskStateStorageMock>(),
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-                                                                      processingCore );
+        processingCore);
 
     // Track the ProcessingServiceImpl for proper cleanup
     m_processing_services.push_back( processingService );

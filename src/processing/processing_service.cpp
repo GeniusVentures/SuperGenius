@@ -5,17 +5,15 @@
 
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                                  size_t                                     maximalNodesCount,
-                                                  std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                                                  std::shared_ptr<SubTaskStateStorage>       subTaskStateStorage,
-                                                  std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
-                                                  std::shared_ptr<ProcessingCore>            processingCore ) :
+    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
+                                                  size_t                                           maximalNodesCount,
+                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
+                                                  std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
+                                                  std::shared_ptr<ProcessingCore>                  processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
         m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
@@ -32,7 +30,6 @@ namespace sgns::processing
         std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
         size_t                                     maximalNodesCount,
         std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-        std::shared_ptr<SubTaskStateStorage>       subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
         std::shared_ptr<ProcessingCore>            processingCore,
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
@@ -43,7 +40,6 @@ namespace sgns::processing
         m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
         m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
@@ -333,7 +329,6 @@ namespace sgns::processing
 
             auto node = ProcessingNode::New(
                 m_gossipPubSub,
-                m_subTaskStateStorage,
                 m_subTaskResultStorage,
                 m_processingCore,
                 [weakSelf, channelId]( const SGProcessing::TaskResult &result )
@@ -673,7 +668,6 @@ namespace sgns::processing
 
             auto node = ProcessingNode::New(
                 m_gossipPubSub,
-                m_subTaskStateStorage,
                 m_subTaskResultStorage,
                 m_processingCore,
                 [weakSelf, subTaskQueueId]( const SGProcessing::TaskResult &result )

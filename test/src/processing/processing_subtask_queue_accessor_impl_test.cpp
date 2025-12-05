@@ -185,7 +185,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized.store(true); },
         [](const std::string &) {});
@@ -272,7 +271,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; },
         [](const std::string &) {});
@@ -285,7 +283,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager2,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized2]( const SGProcessing::TaskResult & ) { isTaskFinalized2 = true; },
         []( const std::string & ) {} );
@@ -509,7 +506,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) {
             isTaskFinalized1 = true;
@@ -520,7 +516,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs2,
         processingQueueManager2,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized2](const SGProcessing::TaskResult&) {
             isTaskFinalized2 = true;

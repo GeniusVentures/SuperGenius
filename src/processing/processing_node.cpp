@@ -9,7 +9,6 @@ namespace sgns::processing
 {
     std::shared_ptr<ProcessingNode> ProcessingNode::New(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::shared_ptr<ProcessingCore>                         processingCore,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -23,7 +22,6 @@ namespace sgns::processing
     {
         // Create the shared_ptr using the protected constructor
         auto node = std::shared_ptr<ProcessingNode>( new ProcessingNode( std::move( gossipPubSub ),
-                                                                         std::move( subTaskStateStorage ),
                                                                          std::move( subTaskResultStorage ),
                                                                          std::move( processingCore ),
                                                                          std::move( taskResultProcessingSink ),
@@ -53,7 +51,6 @@ namespace sgns::processing
     }
 
     ProcessingNode::ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-                                    std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
                                     std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                     std::shared_ptr<ProcessingCore>                         processingCore,
                                     std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -65,7 +62,6 @@ namespace sgns::processing
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_nodeId( std::move( node_id ) ),
         m_processingCore( std::move( processingCore ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) ),
@@ -121,7 +117,6 @@ namespace sgns::processing
 
         m_subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>( m_gossipPubSub,
                                                                              m_subtaskQueueManager,
-                                                                             m_subTaskStateStorage,
                                                                              m_subTaskResultStorage,
                                                                              m_taskResultProcessingSink,
                                                                              m_processingErrorSink );

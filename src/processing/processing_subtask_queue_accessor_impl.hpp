@@ -8,7 +8,6 @@
 
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
-#include "processing/processing_subtask_state_storage.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processing_validation_core.hpp"
 
@@ -27,15 +26,13 @@ namespace sgns::processing
     {
     public:
         /** Creates subtask queue accessor implementation object
-    * @param gossipPubSub pubsub host which is used to create subscriptions to result channel
-    * @param subTaskQueueManager - in-memory queue manager
-    * @param subTaskStateStorage - storage of subtask states
+        * @param gossipPubSub pubsub host which is used to create subscriptions to result channel
+        * @param subTaskQueueManager - in-memory queue manager
         * @param subTaskResultStorage - processing results storage
         * @param taskResultProcessingSink - a callback which is called when a task processing is completed
         */
-        SubTaskQueueAccessorImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+        SubTaskQueueAccessorImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
-                                  std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
                                   std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                   std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                                   std::function<void( const std::string & )>              processingErrorSink );
@@ -69,25 +66,24 @@ namespace sgns::processing
         FinalizationRetVal FinalizeQueueProcessing( const SGProcessing::SubTaskCollection &subTasks,
                                                     std::set<std::string>                 &invalidSubTaskIds );
 
-        static void OnResultChannelMessage( std::weak_ptr<SubTaskQueueAccessorImpl>                           weakThis,
-                                            boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );
+        static void OnResultChannelMessage( std::weak_ptr<SubTaskQueueAccessorImpl>                     weakThis,
+                                            boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
         void        StartPeriodicStateBroadcast();
         void        ScheduleStateBroadcast();
         void        PublishExistingResults();
         // Helper method to find a subtask by ID
         boost::optional<SGProcessing::SubTask> FindSubTaskById( const std::string &subTaskId ) const;
 
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        m_gossipPubSub;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>              m_gossipPubSub;
         std::shared_ptr<ProcessingSubTaskQueueManager>          m_subTaskQueueManager;
-        std::shared_ptr<SubTaskStateStorage>                    m_subTaskStateStorage;
         std::shared_ptr<SubTaskResultStorage>                   m_subTaskResultStorage;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
         std::shared_ptr<boost::asio::io_context>                m_localContext;
         using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-        std::optional<WorkGuard>                                m_localWorkGuard;
-        std::thread                                             m_localThread;
-        std::shared_ptr<boost::asio::steady_timer>              m_stateTimer;
+        std::optional<WorkGuard>                   m_localWorkGuard;
+        std::thread                                m_localThread;
+        std::shared_ptr<boost::asio::steady_timer> m_stateTimer;
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_resultChannel;
 
@@ -99,4 +95,4 @@ namespace sgns::processing
     };
 }
 
-#endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
+#endif

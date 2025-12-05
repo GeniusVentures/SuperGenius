@@ -7,7 +7,6 @@
 #include <utility>
 
 #include <libp2p/log/configurator.hpp>
-#include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/injector/host_injector.hpp>
@@ -30,12 +29,11 @@ namespace sgns::processing
             NO_BUFFER_FROM_JOB_DATA,
         };
         ProcessingCoreImpl(
-            std::shared_ptr<sgns::crdt::GlobalDB> db,
+            std::shared_ptr<crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
             size_t maximalProcessingSubTaskCount,
             TokenID tokenId)
             : m_db(std::move(db))
-            //, m_subTaskProcessingTime(subTaskProcessingTime)
             , m_tokenId(std::move(tokenId))
             , m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
@@ -43,9 +41,8 @@ namespace sgns::processing
         {
         }
 
-        ~ProcessingCoreImpl()
-        {
-        }
+        ~ProcessingCoreImpl() = default;
+
         /** Process a single subtask
         * @param subTask - subtask that needs to be processed
         * @param result - subtask result
@@ -97,7 +94,7 @@ namespace sgns::processing
         * @param CID - CID of directory to get settings.json from
         */
         std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override;
-        /** Get files from a set URL and insert them into pair reference 
+        /** Get files from a set URL and insert them into pair reference
         * @param ioc - IO context to run on
         * @param url - ipfs gateway url to get from
         * @param results - reference to data pair to insert into.
@@ -108,7 +105,7 @@ namespace sgns::processing
         std::vector<size_t> m_validationChunkHashes;
 
     private:
-        std::shared_ptr<sgns::crdt::GlobalDB> m_db;
+        std::shared_ptr<crdt::GlobalDB> m_db;
         TokenID                              m_tokenId;
         std::unique_ptr<ProcessingProcessor> m_processor;
         std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
@@ -121,7 +118,7 @@ namespace sgns::processing
 
 
         std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
-        
+
     };
 }
 

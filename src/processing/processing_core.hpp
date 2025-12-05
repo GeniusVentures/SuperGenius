@@ -13,7 +13,7 @@ namespace sgns::processing
 {
 /**
 * Processing core interface.
-* An implementatin of the interface depends on specific processing algorithm
+* An implementation of the interface depends on specific processing algorithm
 */
 class ProcessingCore
 {

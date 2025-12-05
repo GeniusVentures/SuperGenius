@@ -148,6 +148,8 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
     return output;
 }
 
+using namespace sgns::processing;
+
 int main( int argc, char *argv[] )
 {
     // prepare log system

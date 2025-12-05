@@ -95,13 +95,5 @@ namespace sgns
                 subTasks.push_back( std::move( *validationSubtask ) );
             }
         }
-
-        void ProcessSubTaskStateStorage::ChangeSubTaskState( const std::string &subTaskId, SGProcessing::SubTaskState::Type state )
-        {
-        }
-        std::optional<SGProcessing::SubTaskState> ProcessSubTaskStateStorage::GetSubTaskState( const std::string &subTaskId )
-        {
-            return std::nullopt;
-        }
     }
 }

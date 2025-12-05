@@ -30,7 +30,7 @@ namespace sgns::processing
         //Check if we're processing too much.
         std::scoped_lock<std::mutex> subTaskCountLock( m_subTaskCountMutex );
         ++m_processingSubTaskCount;
-        if ( ( m_maximalProcessingSubTaskCount > 0 ) && ( m_processingSubTaskCount > m_maximalProcessingSubTaskCount ) )
+        if ( m_maximalProcessingSubTaskCount > 0 && m_processingSubTaskCount > m_maximalProcessingSubTaskCount )
         {
             // Reset the counter to allow processing restart
             m_processingSubTaskCount = 0;
@@ -41,7 +41,6 @@ namespace sgns::processing
         if ( !queryTasks.has_value() )
         {
             return outcome::failure( Error::GLOBALDB_READ_ERROR );
-            //task.ParseFromArray(element, element.second.size());
         }
         SGProcessing::Task task;
 
@@ -60,9 +59,6 @@ namespace sgns::processing
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
 
-            //this->cidData_.insert( { subTask.subtaskid(), buffers } );
-            //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
-            //this->m_processor->SetData(buffers);
             auto        tempresult = this->m_processor->StartProcessing( result,
                                                                   task,
                                                                   subTask,
@@ -169,7 +165,6 @@ namespace sgns::processing
             }
         }
 
-        //std::vector<std::pair<std::string, std::string>> imageresults;
         std::string image = "";
         if ( document.HasMember( "image" ) && document["image"].IsString() )
         {
@@ -189,12 +184,6 @@ namespace sgns::processing
         GetSubCidForProc( ioc, modelURL, mainbuffers->first );
 
         //Get Image, TODO: Update to grab multiple files if needed
-        //string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
-        //for (const auto& result : imageresults) {
-        //    const auto& [url, image] = result;
-        //    std::string fullUrl = url + image;
-        //    GetSubCidForProc(ioc, fullUrl, mainbuffers);
-        //}
         string imageUrl = baseUrl + image;
         GetSubCidForProc( ioc, imageUrl, mainbuffers->second );
         //Run IO
@@ -208,7 +197,6 @@ namespace sgns::processing
                                                std::string                              url,
                                                std::shared_ptr<std::vector<char>>       results )
     {
-        //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(
             url,
             false,
@@ -218,8 +206,6 @@ namespace sgns::processing
                 outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>
                     buffers )
             {
-                //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
-                //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
                 if ( results && buffers )
                 {
                     results->insert( results->end(),
