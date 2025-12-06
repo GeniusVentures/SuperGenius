@@ -9,6 +9,7 @@
 
 #include "testutil/wait_condition.hpp"
 #include "base/logger.hpp"
+#include "base/sgns_version.hpp"
 
 using namespace sgns::processing;
 using namespace sgns::test;
@@ -303,7 +304,8 @@ TEST_F( SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResul
                                &resultTime );
 
     // Create external result publisher
-    GossipPubSubTopic externalResultChannel( pubs2, "RESULT_CHANNEL_ID_external_validation_test" );
+    std::string externalChannelId = "RESULT_CHANNEL_ID_external_validation_test" + sgns::version::GetNetAndVersionAppendix();
+    GossipPubSubTopic externalResultChannel( pubs2, externalChannelId );
     auto             &subscriptionFuture = externalResultChannel.Subscribe(
         []( const boost::optional<const GossipPubSub::Message &> &message ) {},
         false );
@@ -409,8 +411,8 @@ TEST_F( SubTaskValidationTest, OnResultReceived_InvalidExternalResult_RejectsRes
                                &resultTime );
 
     // Create external result publisher
-    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2,
-                                                                "RESULT_CHANNEL_ID_invalid_external_validation_test" );
+    std::string externalChannelId = "RESULT_CHANNEL_ID_invalid_external_validation_test" + sgns::version::GetNetAndVersionAppendix();
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, externalChannelId );
     auto                                &subscriptionFuture = externalResultChannel.Subscribe(
         []( const boost::optional<const GossipPubSub::Message &> &message ) {},
         false );

@@ -10,6 +10,7 @@
 #include "testutil/wait_condition.hpp"
 
 #include "base/logger.hpp"
+#include "base/sgns_version.hpp"
 
 using namespace sgns::processing;
 using namespace sgns::test;
@@ -59,14 +60,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     std::chrono::milliseconds            resultTime;
 
-    //sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test.3.4.963");
-    //resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
-    //    {
-    //    });
-
-    //sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "RESULT_CHANNEL_ID_test" );
-    //resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {} );
-
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
 
@@ -87,16 +80,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
             m_processing_engines[0]->StartQueueProcessing( m_processing_queues_accessors[0] );
         connectionEstablished = true;
     });
-    //m_processing_queues_accessors[1]->ConnectToSubTaskQueue(
-    //    [&]()
-    //    {
-    //        m_processing_engines[1]->StartQueueProcessing( m_processing_queues_accessors[1] );
-    //        connectionEstablished2 = true;
-    //    } );
-    //ASSERT_WAIT_FOR_CONDITION( [&connectionEstablished2]() { return connectionEstablished2.load(); },
-    //                           std::chrono::milliseconds( 2000 ),
-    //                           "Connection to subtask queue 2 was not established",
-    //                           &resultTime );
     ASSERT_WAIT_FOR_CONDITION( [&connectionEstablished]() { return connectionEstablished.load(); },
                                std::chrono::milliseconds( 2000 ),
                                "Connection to subtask queue was not established",
@@ -106,8 +89,8 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
      // Create external result publisher since echo messages are off
-    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2,
-                                                                "RESULT_CHANNEL_ID_test.3.4.963" );
+    std::string externalChannelId = "RESULT_CHANNEL_ID_test" + sgns::version::GetNetAndVersionAppendix();
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, externalChannelId );
     auto                                &subscriptionFuture = externalResultChannel.Subscribe(
         []( const boost::optional<const GossipPubSub::Message &> &message ) {},
         false );
