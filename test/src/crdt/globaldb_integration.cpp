@@ -177,7 +177,6 @@ public:
                 }
                 node.pubsub->Stop();
                 node.db.reset();
-                node.pubsub.reset();
                 node.io.reset();
             }
 
