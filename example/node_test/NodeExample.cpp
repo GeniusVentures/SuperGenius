@@ -406,6 +406,7 @@ int main( int argc, char *argv[] )
     bool        is_processor     = true;  // Default value for the last parameter
     bool        use_upnp         = true;  // Default UPNP usage
     bool        is_full_node     = false;
+    bool        terminal_mode    = false; // Enable terminal input mode
     std::string path_override    = "";    // Path override for DEV_CONFIG
 
     // Parse command-line arguments
@@ -439,6 +440,10 @@ int main( int argc, char *argv[] )
             {
                 path_override = argv[i + 1];
             }
+            else if ( current_arg == "--terminal" )
+            {
+                terminal_mode = true;
+            }
         }
     }
 
@@ -454,18 +459,36 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     std::cout << "Generated Ethereum Private Key: " << eth_private_key << std::endl;
 
-    std::thread input_thread( keyboard_input_thread );
+    std::thread input_thread;
+    if ( terminal_mode )
+    {
+        input_thread = std::thread( keyboard_input_thread );
+    }
 
     auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
-    std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
-    redraw_prompt();
+    if ( terminal_mode )
+    {
+        std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
+        redraw_prompt();
+    }
 
     if ( start_processing )
     {
         std::thread processing_thread( periodic_processing, std::ref( node_instance ) );
 
-        process_events( node_instance );
+        if ( terminal_mode )
+        {
+            process_events( node_instance );
+        }
+        else
+        {
+            // Just wait for the processing thread without processing terminal events
+            while ( !finished )
+            {
+                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+            }
+        }
 
         if ( processing_thread.joinable() )
         {
@@ -474,7 +497,18 @@ int main( int argc, char *argv[] )
     }
     else
     {
-        process_events( node_instance );
+        if ( terminal_mode )
+        {
+            process_events( node_instance );
+        }
+        else
+        {
+            // Just keep running without processing terminal events
+            while ( !finished )
+            {
+                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+            }
+        }
     }
 
     if ( input_thread.joinable() )

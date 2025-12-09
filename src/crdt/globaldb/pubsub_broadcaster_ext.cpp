@@ -297,10 +297,13 @@ namespace sgns::crdt
         for ( auto &topic : broadcastTopicsCopy )
         {
             pubSub_->PublishBuffered( topic, serialized_proto );
-            m_logger->debug( "CIDs broadcasted by {} to topic {}, at this {}",
-                             peer_id.toBase58(),
-                             topic,
-                             reinterpret_cast<size_t>( this ) );
+            if ( m_logger->level() <= spdlog::level::trace )
+            {
+                m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
+                                peer_id.toBase58(),
+                                topic,
+                                reinterpret_cast<size_t>( this ) );
+            }
         }
 
         return outcome::success();
