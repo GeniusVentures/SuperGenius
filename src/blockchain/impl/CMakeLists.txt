@@ -18,16 +18,3 @@ target_link_libraries(blockchain_common
     supergenius_trie
 )
 supergenius_install(blockchain_common)
-
-add_library(block_tree
-    block_tree_impl.cpp
-    block_tree_impl.hpp
-)
-target_link_libraries(block_tree
-    PUBLIC
-    block_tree_error
-    blockchain_common
-    block_header_repository
-    hasher
-)
-supergenius_install(block_tree)

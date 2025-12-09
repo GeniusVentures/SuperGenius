@@ -342,18 +342,6 @@ namespace sgns::crdt
         */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
 
-        /**
-         * @brief           Filter elements on Delta
-         * @param[in,out]   delta: The delta to be merged
-         */
-        void FilterElementsOnDelta( std::shared_ptr<Delta> &delta );
-
-        /**
-         * @brief           Filter tombstones on Delta
-         * @param[in,out]   delta: The delta to be merged
-         */
-        void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
-
         void PutElementsCallback( const std::string &key, const Buffer &value );
         void DeleteElementsCallback( const std::string &key );
 
