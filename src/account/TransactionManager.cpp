@@ -614,12 +614,12 @@ namespace sgns
             std::unique_lock out_lock( outgoing_tx_mutex_m );
             for ( auto &tx_pair : element.first )
             {
-                const auto &tx  = tx_pair.first;
-                const auto  key = GetTransactionPath( *tx );
-                const auto nonce = tx->dag_st.nonce();
+                const auto &tx    = tx_pair.first;
+                const auto  key   = GetTransactionPath( *tx );
+                const auto  nonce = tx->dag_st.nonce();
                 // tx visible to status queries immediately
-                outgoing_tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CREATED, nonce };
-                outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
+                outgoing_tx_processed_m[key]   = TrackedTx{ tx, TransactionStatus::CREATED, nonce };
+                outgoing_nonce_to_key_m[nonce] = key; // Add to nonce index
                 m_logger->debug( "[{} - full: {}] Setting {} to CREATED",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -785,8 +785,8 @@ namespace sgns
                 }
                 else
                 {
-                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, tx_state, nonce };
-                    outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
+                    outgoing_tx_processed_m[key]   = TrackedTx{ transaction_pair.first, tx_state, nonce };
+                    outgoing_nonce_to_key_m[nonce] = key; // Add to nonce index
                     if ( tx_state == TransactionStatus::VERIFYING )
                     {
                         verifying_count_.fetch_add( 1, std::memory_order_relaxed );
@@ -812,31 +812,29 @@ namespace sgns
                              full_node_m,
                              confirmed_nonce );
         }
-        else if ( ( !nonce_result.has_value() ) &&
-                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( !full_node_m ) )
+        else
         {
-            m_logger->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
-                             __func__,
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
-        else if ( ( !nonce_result.has_value() ) &&
-                  ( nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED ) && ( full_node_m ) )
-        {
-            m_logger->warn( "[{} - full: {}] Could not fetch nonce, but proceeding since full node",
+            m_logger->warn( "[{} - full: {}] {}: Could not fetch confirmed nonce ({}). Attempting rollback with "
+                            "local state",
+                            __func__,
                             account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m );
-            auto local_confirmed = account_m->GetLocalConfirmedNonce();
-            if ( local_confirmed.has_value() )
+                            full_node_m,
+                            nonce_result.error() );
+            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
+            if ( local_nonce_result.has_value() )
             {
-                confirmed_nonce = static_cast<int64_t>( local_confirmed.value() );
-
-                m_logger->debug( "[{} - full: {}] Using local confirmed nonce {}",
+                confirmed_nonce = static_cast<int64_t>( local_nonce_result.value() );
+                m_logger->debug( "[{} - full: {}] Falling back to local confirmed nonce {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 local_confirmed.value() );
-                expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
+                                 confirmed_nonce );
+            }
+            else
+            {
+                m_logger->warn( "[{} - full: {}] No local confirmed nonce available, rolling back assuming none",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m );
+                confirmed_nonce = -1;
             }
         }
 
@@ -862,16 +860,25 @@ namespace sgns
                 const auto                          key   = GetTransactionPath( *transaction );
                 const auto                          nonce = transaction->dag_st.nonce();
 
-                auto &t  = outgoing_tx_processed_m[key]; // create if missing
-                // Update verifying_count if status is changing from VERIFYING
-                if ( t.status == TransactionStatus::VERIFYING )
+                auto it = outgoing_tx_processed_m.find( key );
+                if ( it != outgoing_tx_processed_m.end() )
                 {
-                    verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                    // Update verifying_count if status is changing from VERIFYING
+                    if ( it->second.status == TransactionStatus::VERIFYING )
+                    {
+                        verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                    }
+                    it->second.tx          = transaction;
+                    it->second.status      = TransactionStatus::FAILED;
+                    it->second.cached_nonce = nonce;
                 }
-                t.tx           = transaction;
-                t.status       = TransactionStatus::FAILED;
-                t.cached_nonce = nonce;
-                outgoing_nonce_to_key_m[nonce] = key;  // Ensure nonce index is updated
+                else
+                {
+                    // New entry rolled back: start directly as FAILED
+                    outgoing_tx_processed_m.emplace( key,
+                                                     TrackedTx{ transaction, TransactionStatus::FAILED, nonce } );
+                }
+                outgoing_nonce_to_key_m[nonce] = key; // Ensure nonce index is updated
             }
             RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
             account_m->ReleaseNonce( transaction->dag_st.nonce() );
@@ -1180,7 +1187,7 @@ namespace sgns
                                      full_node_m,
                                      transaction_key.value() );
                     std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
-                    const auto nonce = maybe_transaction.value()->dag_st.nonce();
+                    const auto                          nonce        = maybe_transaction.value()->dag_st.nonce();
                     incoming_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
                                                                                   TransactionStatus::CONFIRMED,
                                                                                   nonce };
@@ -1263,11 +1270,11 @@ namespace sgns
                                      full_node_m,
                                      transaction_key.value() );
                     std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                    const auto nonce = maybe_transaction.value()->dag_st.nonce();
+                    const auto                          nonce        = maybe_transaction.value()->dag_st.nonce();
                     outgoing_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
                                                                                   TransactionStatus::CONFIRMED,
                                                                                   nonce };
-                    outgoing_nonce_to_key_m[nonce] = transaction_key.value();  // Add to nonce index
+                    outgoing_nonce_to_key_m[nonce]                   = transaction_key.value(); // Add to nonce index
                 }
             }
         }
@@ -2045,15 +2052,15 @@ namespace sgns
     bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
     {
         std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-        auto nonce_it = outgoing_nonce_to_key_m.find( nonce );
+        auto                                nonce_it = outgoing_nonce_to_key_m.find( nonce );
         if ( nonce_it != outgoing_nonce_to_key_m.end() )
         {
             auto it = outgoing_tx_processed_m.find( nonce_it->second );
             if ( it != outgoing_tx_processed_m.end() )
             {
-                auto old_status = it->second.status;
+                auto old_status   = it->second.status;
                 it->second.status = s;
-                
+
                 // Update verifying_count
                 if ( old_status == TransactionStatus::VERIFYING && s != TransactionStatus::VERIFYING )
                 {
@@ -2063,7 +2070,7 @@ namespace sgns
                 {
                     verifying_count_.fetch_add( 1, std::memory_order_relaxed );
                 }
-                
+
                 m_logger->debug( "[{} - full: {}] Set tx {} (nonce {}) to {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -2636,8 +2643,8 @@ namespace sgns
 
                 const auto nonce = new_tx->dag_st.nonce();
                 account_m->SetLocalConfirmedNonce( nonce );
-                outgoing_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
-                outgoing_nonce_to_key_m[nonce] = key;  // Add to nonce index
+                outgoing_tx_processed_m[key]   = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
+                outgoing_nonce_to_key_m[nonce] = key; // Add to nonce index
             }
         }
         else
