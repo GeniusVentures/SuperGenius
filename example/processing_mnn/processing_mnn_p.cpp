@@ -33,6 +33,8 @@ groups:
 # ----------------
   )" );
 
+using namespace sgns::processing;
+
 int main( int argc, char *argv[] )
 {
     // prepare log system
@@ -132,7 +134,6 @@ int main( int argc, char *argv[] )
     ProcessingServiceImpl processingService( pubs2,
                                              maximalNodesCount,
                                              enqueuer2,
-                                             std::make_shared<SubTaskStateStorageImpl>(),
                                              std::make_shared<SubTaskResultStorageImpl>( globalDB2, "test" ),
                                              processingCore2 );
 

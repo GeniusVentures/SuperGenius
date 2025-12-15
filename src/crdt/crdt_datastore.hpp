@@ -69,6 +69,7 @@ namespace sgns::crdt
             GET_NODE,
             INVALID_JOB,
         };
+
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -309,15 +310,17 @@ namespace sgns::crdt
          * @brief Broadcasts a set of CIDs.
          * Encodes and broadcasts the provided list of CIDs
          * @param[in] cids The list of CIDs to broadcast.
+         * @param[in] topic The topic to broadcast to.
+         * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic );
+        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
-        static outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+        outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
 
         /** PutBlock add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
@@ -341,18 +344,6 @@ namespace sgns::crdt
         */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
 
-        /**
-         * @brief           Filter elements on Delta
-         * @param[in,out]   delta: The delta to be merged
-         */
-        void FilterElementsOnDelta( std::shared_ptr<Delta> &delta );
-
-        /**
-         * @brief           Filter tombstones on Delta
-         * @param[in,out]   delta: The delta to be merged
-         */
-        void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
-
         void PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid );
         void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
@@ -370,9 +361,8 @@ namespace sgns::crdt
                        std::shared_ptr<Broadcaster> aBroadcaster,
                        std::shared_ptr<CrdtOptions> aOptions );
 
-        bool ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker );
-        bool ProcessSelfCreatedJobs();
-        bool ProcessExternalJobs();
+        bool ShouldContinueWorkerThread( DagWorker &dagWorker );
+        bool ProcessJobs(std::queue<RootCIDJob>& jobs);
         bool SeedNextExternalRoot();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
@@ -392,7 +382,7 @@ namespace sgns::crdt
         std::shared_ptr<DAGSyncer>   dagSyncer_   = nullptr;
         Logger                       logger_      = base::createLogger( "CrdtDatastore" );
 
-        static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 100 );
+        static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 500 );
         static constexpr std::string_view          headsNamespace_                = "h";
         static constexpr std::string_view          setsNamespace_                 = "s";
         int                                        numberOfDagWorkers             = 1;
@@ -403,7 +393,7 @@ namespace sgns::crdt
         std::future<void> rebroadcastFuture_;
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
-        std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
+        std::vector<std::unique_ptr<DagWorker>> dagWorkers_;
 
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;
@@ -431,6 +421,10 @@ namespace sgns::crdt
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );
+
+        // Cache for CID string representations to avoid repeated base58 encoding
+        mutable std::map<CID, std::string> cid_string_cache_;
+        mutable std::mutex                  cid_string_cache_mutex_;
     };
 
 }

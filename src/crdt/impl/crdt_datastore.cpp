@@ -1,5 +1,6 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -80,28 +81,29 @@ namespace sgns::crdt
         crdtInstance->dagWorkers_.reserve( crdtInstance->numberOfDagWorkers );
         for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
-            auto dagWorker                     = std::make_shared<DagWorker>();
+            auto &dagWorker = crdtInstance->dagWorkers_.emplace_back( std::make_unique<DagWorker>() );
+
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), dagWorker]
+                [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), &dagWorker]
                 {
                     auto dagThreadRunning = true;
                     while ( dagThreadRunning )
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            if ( !self->ShouldContinueWorkerThread( dagWorker ) )
+                            if ( !self->ShouldContinueWorkerThread( *dagWorker ) )
                             {
                                 dagThreadRunning = false;
                                 continue;
                             }
 
                             // Process jobs in priority order
-                            if ( self->ProcessSelfCreatedJobs() )
+                            if ( self->ProcessJobs( self->selfCreatedJobList_ ) )
                             {
                                 continue;
                             }
-                            if ( self->ProcessExternalJobs() )
+                            if ( self->ProcessJobs( self->rootCIDJobList_ ) )
                             {
                                 continue;
                             }
@@ -116,67 +118,38 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            crdtInstance->dagWorkers_.push_back( dagWorker );
         }
         return crdtInstance;
     }
 
-    bool CrdtDatastore::ShouldContinueWorkerThread( const std::shared_ptr<DagWorker> &dagWorker )
+    bool CrdtDatastore::ShouldContinueWorkerThread( DagWorker &dagWorker )
     {
         std::unique_lock lk( dagWorkerMutex_ );
         dagWorkerCv_.wait_for( lk,
                                threadSleepTimeInMilliseconds_,
                                [&]
                                {
-                                   return !dagWorker->dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
+                                   return !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
                                           !rootCIDJobList_.empty() ||
                                           ( !activeRootCID_.has_value() && !pendingRootQueue_.empty() );
                                } );
 
-        return dagWorker->dagWorkerThreadRunning_;
+        return dagWorker.dagWorkerThreadRunning_;
     }
 
-    bool CrdtDatastore::ProcessSelfCreatedJobs()
+    bool CrdtDatastore::ProcessJobs( std::queue<RootCIDJob> &jobs )
     {
         std::unique_lock lk( dagWorkerMutex_ );
-        if ( selfCreatedJobList_.empty() )
+        if ( jobs.empty() )
         {
             return false;
         }
 
-        RootCIDJob job_to_process = selfCreatedJobList_.front();
-        selfCreatedJobList_.pop();
+        RootCIDJob job_to_process = jobs.front();
+        jobs.pop();
         lk.unlock();
 
-        logger_->debug( "Processing HIGH-PRIORITY self-created job for CID {}",
-                        job_to_process.root_node_->getCID().toString().value() );
-
-        auto process_res = ProcessJobIteration( job_to_process );
-        if ( process_res.has_failure() )
-        {
-            HandleJobProcessingFailure( job_to_process );
-        }
-        else
-        {
-            HandleJobProcessingSuccess( job_to_process );
-        }
-
-        return true; // Processed a job
-    }
-
-    bool CrdtDatastore::ProcessExternalJobs()
-    {
-        std::unique_lock lk( dagWorkerMutex_ );
-        if ( rootCIDJobList_.empty() )
-        {
-            return false;
-        }
-
-        RootCIDJob job_to_process = rootCIDJobList_.front();
-        rootCIDJobList_.pop();
-        lk.unlock();
-
-        logger_->debug( "Processing external job for CID {}", job_to_process.root_node_->getCID().toString().value() );
+        logger_->debug( "Processing job for CID {}", job_to_process.root_node_->getCID().toString().value() );
 
         auto process_res = ProcessJobIteration( job_to_process );
         if ( process_res.has_failure() )
@@ -224,7 +197,7 @@ namespace sgns::crdt
             pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
         }
 
-        const std::string jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
+        const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
         logger_->error( "{} JOB PROCESSING ERROR: Failed to process CID {}",
                         jobType,
                         job.root_node_->getCID().toString().value() );
@@ -233,7 +206,9 @@ namespace sgns::crdt
 
         // Delete blocks
         (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+        if (job.node_ && job.node_->getCID() != job.root_node_->getCID()) {
+            (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+        }
 
         if ( !job.created_by_self_ )
         {
@@ -304,7 +279,7 @@ namespace sgns::crdt
         {
             return;
         }
-        //heads_->PrimeCache();
+
         handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         handleNextFuture_ = std::async(
@@ -445,20 +420,12 @@ namespace sgns::crdt
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
-            if ( handleNextFuture_.valid() )
-            {
-                handleNextFuture_.wait();
-            }
         }
 
         if ( rebroadcastThreadRunning_ )
         {
             rebroadcastThreadRunning_ = false;
             rebroadcastCv_.notify_all();
-            if ( rebroadcastFuture_.valid() )
-            {
-                rebroadcastFuture_.wait();
-            }
         }
 
         if ( dagWorkerJobListThreadRunning_ )
@@ -473,7 +440,6 @@ namespace sgns::crdt
                     dagWorker->dagWorkerFuture_.wait();
                 }
             }
-            dagWorkers_.clear();
 
             // Clear both job queues
             {
@@ -483,6 +449,16 @@ namespace sgns::crdt
                 std::swap( selfCreatedJobList_, empty2 );
                 pending_jobs_.clear();
             }
+        }
+
+        if ( handleNextFuture_.valid() )
+        {
+            handleNextFuture_.wait();
+        }
+
+        if ( rebroadcastFuture_.valid() )
+        {
+            rebroadcastFuture_.wait();
         }
     }
 
@@ -628,27 +604,36 @@ namespace sgns::crdt
 
                 for ( const auto &[cid, _dontcare] : known_cids )
                 {
-                    logger_->trace( "{}: known cid: {}, {}", __func__, cid.toString().value(), _dontcare );
+                    if ( logger_->level() <= spdlog::level::trace )
+                    {
+                        logger_->trace( "{}: known cid: {}, {}", __func__, cid.toString().value(), _dontcare );
+                    }
                     if ( heads_->IsHead( cid, _dontcare ) )
                     {
-                        logger_->debug( "{}: Recording replacement of {} with {} on topic {} ({}) ",
-                                        __func__,
-                                        cid.toString().value(),
-                                        job.root_node_->getCID().toString().value(),
-                                        topic,
-                                        _dontcare );
+                        if ( logger_->level() <= spdlog::level::debug )
+                        {
+                            logger_->debug( "{}: Recording replacement of {} with {} on topic {} ({}) ",
+                                            __func__,
+                                            cid.toString().value(),
+                                            job.root_node_->getCID().toString().value(),
+                                            topic,
+                                            _dontcare );
+                        }
                         if ( topic != _dontcare )
                         {
                             logger_->error( "{}: Topic {} different from known {} ", __func__, topic, _dontcare );
                         }
                         std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
                         pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( cid, topic );
-                        logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
-                                        __func__,
-                                        cid.toString().value(),
-                                        job.root_node_->getCID().toString().value(),
-                                        topic,
-                                        _dontcare );
+                        if ( logger_->level() <= spdlog::level::debug )
+                        {
+                            logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
+                                            __func__,
+                                            cid.toString().value(),
+                                            job.root_node_->getCID().toString().value(),
+                                            topic,
+                                            _dontcare );
+                        }
                     }
                 }
 
@@ -687,10 +672,13 @@ namespace sgns::crdt
 
         for ( const auto &cid : aLinks )
         {
-            logger_->debug( "{}: Trying to fetch node {} from Root Job {} ",
-                            __func__,
-                            cid.toString().value(),
-                            aRootJob.root_node_->getCID().toString().value() );
+            if ( logger_->level() <= spdlog::level::debug )
+            {
+                logger_->debug( "{}: Trying to fetch node {} from Root Job {} ",
+                                __func__,
+                                cid.toString().value(),
+                                aRootJob.root_node_->getCID().toString().value() );
+            }
 
             dagSyncer_->InitCIDBlock( cid );
             OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
@@ -701,10 +689,13 @@ namespace sgns::crdt
             newRootJob.node_            = node;
             newRootJob.created_by_self_ = false;
 
-            logger_->debug( "{}: Got the node {} sending to workers. Root Job {} ",
-                            __func__,
-                            cid.toString().value(),
-                            aRootJob.root_node_->getCID().toString().value() );
+            if ( logger_->level() <= spdlog::level::debug )
+            {
+                logger_->debug( "{}: Got the node {} sending to workers. Root Job {} ",
+                                __func__,
+                                cid.toString().value(),
+                                aRootJob.root_node_->getCID().toString().value() );
+            }
             {
                 std::unique_lock lock( dagWorkerMutex_ );
                 rootCIDJobList_.push( newRootJob );
@@ -775,6 +766,7 @@ namespace sgns::crdt
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
         OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+        const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
         {
@@ -786,7 +778,7 @@ namespace sgns::crdt
                 rootCIDJobList_.push( root_final_job );
             }
         }
-        else if ( !links.empty() )
+        else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
             OUTCOME_TRY( FetchNodes( job_to_process, links ) );
@@ -794,6 +786,13 @@ namespace sgns::crdt
         }
         else if ( is_root )
         {
+            if ( job_to_process.created_by_self_ && !links.empty() )
+            {
+                logger_->error( "{}: Self-created job {}, skipping fetch of {} links and finalizing heads",
+                                __func__,
+                                root_cid_string,
+                                links.size() );
+            }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
             UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
             {
@@ -863,14 +862,41 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
     {
         CRDTBroadcast bcastData;
+        
         for ( const auto &head : heads )
         {
-            auto encodedHead   = bcastData.add_heads();
-            auto strHeadResult = head.toString();
-            if ( !strHeadResult.has_failure() )
+            auto encodedHead = bcastData.add_heads();
+            
+            // Check cache first to avoid expensive base58 encoding
+            std::string cid_string;
             {
-                encodedHead->set_cid( strHeadResult.value() );
+                std::lock_guard<std::mutex> lock( cid_string_cache_mutex_ );
+                auto                        it = cid_string_cache_.find( head );
+                if ( it != cid_string_cache_.end() )
+                {
+                    cid_string = it->second;
+                    logger_->debug( "CID string cache hit for CID {}", cid_string );
+                }
             }
+            
+            // Cache miss - compute and cache the string
+            if ( cid_string.empty() )
+            {
+                auto strHeadResult = head.toString();
+                if ( !strHeadResult.has_failure() )
+                {
+                    cid_string = strHeadResult.value();
+                    std::lock_guard<std::mutex> lock( cid_string_cache_mutex_ );
+                    cid_string_cache_[head] = cid_string;
+                    logger_->debug( "CID string cache miss - cached CID {}", cid_string );
+                }
+                else
+                {
+                    continue; // Skip this CID if conversion fails
+                }
+            }
+            
+            encodedHead->set_cid( cid_string );
         }
 
         Buffer outputBuffer;
@@ -888,9 +914,29 @@ namespace sgns::crdt
         }
         auto [head_map, maxHeight] = getListResult.value();
 
+        // Get PeerInfo once before the loop to avoid repeated calls
+        boost::optional<libp2p::peer::PeerInfo> peerInfo;
+        if ( broadcaster_ )
+        {
+            // Cast the broadcaster's DAG syncer to GraphsyncDAGSyncer to get PeerInfo
+            auto dagSyncerPtr = std::static_pointer_cast<GraphsyncDAGSyncer>( broadcaster_->GetDagSyncer() );
+            if ( dagSyncerPtr )
+            {
+                auto peerInfoResult = dagSyncerPtr->GetPeerInfo();
+                if ( peerInfoResult.has_value() )
+                {
+                    peerInfo = peerInfoResult.value();
+                }
+                else
+                {
+                    logger_->warn( "RebroadcastHeads: Failed to get peer info, broadcasts will retry per-call" );
+                }
+            }
+        }
+
         for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            auto broadcastResult = Broadcast( cid_set, topic_name );
+            auto broadcastResult = Broadcast( cid_set, topic_name, peerInfo );
             if ( broadcastResult.has_failure() )
             {
                 logger_->error( "RebroadcastHeads: Broadcast failed" );
@@ -900,7 +946,10 @@ namespace sgns::crdt
                 logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
-                    logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                    if(logger_->level() == spdlog::level::trace)
+                    {
+                        logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                    }
                 }
             }
         }
@@ -982,7 +1031,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         if ( !broadcaster_ )
         {
@@ -1001,7 +1050,7 @@ namespace sgns::crdt
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic );
+        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic, peerInfo );
         if ( bcastResult.has_failure() )
         {
             logger_->error( "Broadcast: Broadcaster failed to broadcast" );
@@ -1025,7 +1074,12 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        logger_->info( "PutBlock: added destination for block {{ cid=\"{}\" }}", node->getCID().toString().value() );
+        //Log expensive toString only if trace enabled
+        if(logger_->level() == spdlog::level::trace)
+        {
+            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}", node->getCID().toString().value() );
+        }
+        
         for ( auto &topic : topics )
         {
             logger_->info( "Topics {{ name=\"{}\" }}", topic );
@@ -1040,11 +1094,15 @@ namespace sgns::crdt
             }
             ipfs_lite::ipld::IPLDLinkImpl link( head, topic, cidByte.value().size() );
             node->addLink( link );
+            //Log expensive toString only if trace enabled
+            if(logger_->level() == spdlog::level::trace)
+            {
+                logger_->trace( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                    link.getCID().toString().value(),
+                    link.getName(),
+                    link.getSize() );    
+            }
 
-            logger_->info( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                           link.getCID().toString().value(),
-                           link.getName(),
-                           link.getSize() );
         }
 
         return node;
@@ -1071,9 +1129,14 @@ namespace sgns::crdt
 
         OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
 
-        logger_->info( "AddDAGNode: Processing generated block {} from {}",
-                       node->getCID().toString().value(),
-                       reinterpret_cast<uint64_t>( this ) );
+        //Log expensive toString only if trace enabled
+        if(logger_->level() == spdlog::level::trace)
+        {
+            logger_->trace( "AddDAGNode: Processing generated block {} from {}",
+                node->getCID().toString().value(),
+                reinterpret_cast<uint64_t>( this ) );
+        }
+
 
         RootCIDJob rootJob{ nullptr, node, true };
 
@@ -1081,12 +1144,15 @@ namespace sgns::crdt
             MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
+            if(logger_->level() == spdlog::level::trace)
+            {
+                logger_->trace(
+                    "AddDAGNode: Added SELF-CREATED job for CID {}, self-queue size: {}, external-queue size: {}",
+                    node->getCID().toString().value(),
+                    selfCreatedJobList_.size(),
+                    rootCIDJobList_.size() );
+            }
 
-            logger_->debug(
-                "AddDAGNode: Added SELF-CREATED job for CID {}, self-queue size: {}, external-queue size: {}",
-                node->getCID().toString().value(),
-                selfCreatedJobList_.size(),
-                rootCIDJobList_.size() );
         }
 
         // Notify all workers to ensure immediate processing
@@ -1097,7 +1163,8 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::WaitForJob( const CID &cid )
     {
-        logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid.toString().value() );
+        auto cid_string_result = cid.toString();
+        logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid_string_result.value() );
 
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();
@@ -1113,19 +1180,19 @@ namespace sgns::crdt
                     if ( it->second == JobStatus::COMPLETED )
                     {
                         pending_jobs_.erase( it );
-                        logger_->debug( "WaitForJob: CID {} completed successfully", cid.toString().value() );
+                        logger_->debug( "WaitForJob: CID {} completed successfully", cid_string_result.value() );
                         return cid;
                     }
                     else if ( it->second == JobStatus::FAILED )
                     {
                         pending_jobs_.erase( it );
-                        logger_->error( "WaitForJob: CID {} processing failed", cid.toString().value() );
+                        logger_->error( "WaitForJob: CID {} processing failed", cid_string_result.value() );
                         return outcome::failure( Error::NODE_CREATION );
                     }
                 }
                 else
                 {
-                    logger_->error( "WaitForJob: CID {} not found in pending jobs", cid.toString().value() );
+                    logger_->error( "WaitForJob: CID {} not found in pending jobs", cid_string_result.value() );
                     return outcome::failure( Error::NODE_CREATION );
                 }
             }
@@ -1138,17 +1205,24 @@ namespace sgns::crdt
                 auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
                                            .count();
                 logger_->info( "WaitForJob: Still waiting for CID {} (elapsed: {}s)",
-                               cid.toString().value(),
+                               cid_string_result.value(),
                                elapsed_seconds );
                 last_log_time = current_time;
             }
 
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            // Sleep for the minimum of 500ms or remaining time to avoid tight loops near timeout
+            auto time_remaining = timeout_duration - ( current_time - start_time );
+            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ), 
+                                           std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
+            if ( sleep_duration.count() > 0 )
+            {
+                std::this_thread::sleep_for( sleep_duration );
+            }
         }
 
         // Timeout reached
         logger_->error( "WaitForJob: Timeout (20 minutes) waiting for CID {} - size of the rootCIDJobList_: {}",
-                        cid.toString().value(),
+                        cid_string_result.value(),
                         rootCIDJobList_.size() );
         // Clean up the pending job
         {
@@ -1394,31 +1468,47 @@ namespace sgns::crdt
                 auto resolve_result = dagSyncer_->markResolved( cid );
                 if ( resolve_result.has_failure() )
                 {
-                    logger_->error( "{}: error marking Root CID {} as resolved", __func__, cid.toString().value() );
+                    if ( logger_->level() <= spdlog::level::err )
+                    {
+                        logger_->error( "{}: error marking Root CID {} as resolved", __func__, cid.toString().value() );
+                    }
                 }
                 auto add_result = heads_->Add( rootCID, rootPriority, topic );
                 if ( add_result.has_failure() )
                 {
-                    logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
+                    if ( logger_->level() <= spdlog::level::err )
+                    {
+                        logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
+                    }
                 }
-                logger_->debug( "{}: Marking Head CID {} as resolved", __func__, rootCID.toString().value() );
+                if ( logger_->level() <= spdlog::level::debug )
+                {
+                    logger_->debug( "{}: Marking Head CID {} as resolved", __func__, rootCID.toString().value() );
+                }
             }
             else
             {
                 auto is_resolved_result = dagSyncer_->isResolved( cid );
                 if ( is_resolved_result.has_failure() )
                 {
-                    logger_->error( "{}: error checking if CID {} IS resolved", __func__, cid.toString().value() );
+                    if ( logger_->level() <= spdlog::level::err )
+                    {
+                        logger_->error( "{}: error checking if CID {} IS resolved", __func__, cid.toString().value() );
+                    }
                     continue;
                 }
                 if ( !is_resolved_result.value() )
                 {
-                    logger_->debug( "{}: Previous Head {} not resolved before replacement with {}",
-                                    __func__,
-                                    cid.toString().value(),
-                                    rootCID.toString().value() );
+                    //Log expensive toString only if trace enabled
+                    if(logger_->level() == spdlog::level::trace)
+                    {
+                        logger_->trace( "{}: Previous Head {} not resolved before replacement with {}",
+                                        __func__,
+                                        cid.toString().value(),
+                                        rootCID.toString().value() );
+                    }
                     auto resolve_result = dagSyncer_->markResolved( cid );
-                    if ( resolve_result.has_failure() )
+                    if ( resolve_result.has_failure() && logger_->level() <= spdlog::level::err )
                     {
                         logger_->error( "{}: error marking old Head CID {} as resolved",
                                         __func__,
@@ -1426,12 +1516,12 @@ namespace sgns::crdt
                     }
                 }
                 auto resolve_result = dagSyncer_->markResolved( rootCID );
-                if ( resolve_result.has_failure() )
+                if ( resolve_result.has_failure() && logger_->level() <= spdlog::level::err )
                 {
                     logger_->error( "{}: error marking new Head CID {} as resolved", __func__, cid.toString().value() );
                 }
                 auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
-                if ( replace_result.has_failure() )
+                if ( replace_result.has_failure() && logger_->level() <= spdlog::level::err )
                 {
                     logger_->error( "{}: error replacing head {} with {}",
                                     __func__,

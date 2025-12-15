@@ -69,9 +69,6 @@ namespace sgns
         std::vector<std::string> subtask_ids_;    ///< SubTask ID
         std::vector<std::string> node_addresses_; ///< Addresses/ID of processors
 
-        //uint256_t   hash_process_data; ///< Hash of the process data
-        //std::vector<uint8_t> raw_data;          ///<The data being processed
-
         /**
          * @brief       Registers the deserializer for the transfer transaction type.
          * @return      A boolean indicating successful registration.

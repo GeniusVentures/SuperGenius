@@ -11,23 +11,12 @@
 #include "processing/processing_engine.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
-#include "processing/processing_subtask_state_storage.hpp"
 
 using namespace sgns::base;
 using namespace sgns::processing;
 
 namespace sgns::test
 {
-    class SubTaskStateStorageMock: public SubTaskStateStorage
-    {
-    public:
-        void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
-        std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
-        {
-            return std::nullopt;
-        }
-    };
-
     class SubTaskResultStorageMock : public SubTaskResultStorage
     {
     public:
@@ -175,7 +164,7 @@ namespace sgns::test
         typedef std::function<void(const std::string& nodeId)> QueueOwnershipRequestSink;
         typedef std::function<void(std::shared_ptr<SGProcessing::SubTaskQueue> queue)> QueuePublishingSink;
 
-        ~ProcessingSubTaskQueueChannelImpl()
+        ~ProcessingSubTaskQueueChannelImpl() override
         {
             std::cout << "Destroy subtask channel" << std::endl;
         }

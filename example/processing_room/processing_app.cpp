@@ -13,17 +13,6 @@ using namespace sgns::processing;
 
 namespace
 {
-    class SubTaskStateStorageImpl : public SubTaskStateStorage
-    {
-    public:
-        void ChangeSubTaskState( const std::string &subTaskId, SGProcessing::SubTaskState::Type state ) override {}
-
-        std::optional<SGProcessing::SubTaskState> GetSubTaskState( const std::string &subTaskId ) override
-        {
-            return std::nullopt;
-        }
-    };
-
     class SubTaskResultStorageImpl : public SubTaskResultStorage
     {
     public:
@@ -344,7 +333,6 @@ int main( int argc, char *argv[] )
     ProcessingServiceImpl processingService( pubs,
                                              maximalNodesCount,
                                              enqueuer,
-                                             std::make_shared<SubTaskStateStorageImpl>(),
                                              std::make_shared<SubTaskResultStorageImpl>(),
                                              processingCore );
 

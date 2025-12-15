@@ -186,7 +186,6 @@ namespace sgns::crdt
                 m_logger->debug( "The peer {} is blacklisted", peerId.toBase58() );
                 break;
             }
-            //auto pi = PeerInfoFromString(bmsg.multiaddress());
             bool new_content = AddMultiCIDInfo( cids.value(), peerId, addrvector );
 
             if ( new_content )
@@ -201,7 +200,7 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         std::set<std::string> broadcastTopicsCopy;
         {
@@ -223,27 +222,35 @@ namespace sgns::crdt
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        auto peer_info_res = dagSyncer_->GetPeerInfo();
-        if ( !peer_info_res )
+        // Get peer_id - determine which branch to use first, then initialize
+        boost::optional<libp2p::peer::PeerId> peer_id_opt;
+        
+        if ( peerInfo )
         {
-            m_logger->error( "Dag syncer has no peer info." );
-            delete bpi;
-            return outcome::failure( boost::system::error_code{} );
+            peer_id_opt = peerInfo->id;
         }
-        auto peer_info = peer_info_res.value();
-        bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+        else
+        {
+            auto peer_id_res = dagSyncer_->GetId();
+            if ( !peer_id_res )
+            {
+                m_logger->error( "Dag syncer has no peer ID." );
+                delete bpi;
+                return outcome::failure( boost::system::error_code{} );
+            }
+            peer_id_opt = peer_id_res.value();
+        }
 
-        // Add observed addresses and the peer’s own addresses.
-        auto pubsubObserved = pubSub_->GetHost()->getObservedAddressesReal();
-        for ( auto &address : pubsubObserved )
+        auto& peer_id = peer_id_opt.value();
+        bpi->set_id( std::string( peer_id.toVector().begin(), peer_id.toVector().end() ) );
+
+        // Add addresses from PeerInfo (which already includes observed, interface, and relay addresses)
+        if ( peerInfo )
         {
-            bpi->add_addrs( address.getStringAddress() );
-        }
-        auto mas = peer_info.addresses;
-        for ( auto &address : mas )
-        {
-            bpi->add_addrs( address.getStringAddress() );
-            m_logger->info( "Address Broadcast: {}", address.getStringAddress() );
+            for ( auto &address : peerInfo->addresses )
+            {
+                bpi->add_addrs( address.getStringAddress() );
+            }
         }
 
         if ( bpi->addrs_size() <= 0 )
@@ -264,11 +271,14 @@ namespace sgns::crdt
 
         for ( auto &topic : broadcastTopicsCopy )
         {
-            pubSub_->Publish( topic, serialized_proto );
-            m_logger->debug( "CIDs broadcasted by {} to topic {}, at this {}",
-                             peer_info.id.toBase58(),
-                             topic,
-                             reinterpret_cast<size_t>( this ) );
+            pubSub_->PublishBuffered( topic, serialized_proto );
+            if ( m_logger->level() <= spdlog::level::trace )
+            {
+                m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
+                                peer_id.toBase58(),
+                                topic,
+                                reinterpret_cast<size_t>( this ) );
+            }
         }
 
         return outcome::success();
@@ -350,6 +360,28 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::Stop()
     {
+        std::lock_guard lock( subscriptionMutex_ );
+        // Wait for any pending futures to complete before clearing
+        for ( auto &future : subscriptionFutures_ )
+        {
+            if ( future.valid() )
+            {
+                try
+                {
+                    // Check if the future is ready without blocking indefinitely
+                    if ( future.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready )
+                    {
+                        // Future is ready, safe to access
+                        future.get();
+                    }
+                    // If not ready, just let it be destroyed naturally
+                }
+                catch ( ... )
+                {
+                    // Ignore any exceptions during cleanup
+                }
+            }
+        }
         subscriptionFutures_.clear(); // Clear all pending subscriptions
     }
 

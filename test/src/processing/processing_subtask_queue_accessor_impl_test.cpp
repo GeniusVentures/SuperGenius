@@ -10,6 +10,7 @@
 #include "testutil/wait_condition.hpp"
 
 #include "base/logger.hpp"
+#include "base/sgns_version.hpp"
 
 using namespace sgns::processing;
 using namespace sgns::test;
@@ -26,7 +27,7 @@ sinks:
 groups:
   - name: processing_subtask_queue_accessor_test
     sink: console
-    level: info
+    level: trace
     children:
       - name: libp2p
       - name: Gossip
@@ -59,11 +60,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     std::chrono::milliseconds            resultTime;
 
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
-        {
-        });
-
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
 
@@ -84,26 +80,17 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
             m_processing_engines[0]->StartQueueProcessing( m_processing_queues_accessors[0] );
         connectionEstablished = true;
     });
-    m_processing_queues_accessors[0]->ConnectToSubTaskQueue(
-        [&]()
-        {
-            m_processing_engines[1]->StartQueueProcessing( m_processing_queues_accessors[1] );
-            connectionEstablished2 = true;
-        } );
+    ASSERT_WAIT_FOR_CONDITION( [&connectionEstablished]() { return connectionEstablished.load(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Connection to subtask queue was not established",
+                               &resultTime );
 
-    // Wait for connection to be established
-   ASSERT_WAIT_FOR_CONDITION(
-        [&connectionEstablished]() { return connectionEstablished.load(); },
-        std::chrono::milliseconds(2000),
-        "Connection to subtask queue was not established",
-        &resultTime
-    );
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
      // Create external result publisher since echo messages are off
-    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2,
-                                                                "RESULT_CHANNEL_ID_test" );
+    std::string externalChannelId = "RESULT_CHANNEL_ID_test" + sgns::version::GetNetAndVersionAppendix();
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, externalChannelId );
     auto                                &subscriptionFuture = externalResultChannel.Subscribe(
         []( const boost::optional<const GossipPubSub::Message &> &message ) {},
         false );
@@ -114,6 +101,9 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
         std::chrono::milliseconds( 2000 ),
         "External result channel subscription was not established",
         &resultTime );
+
+    // Give time for pubsub mesh to propagate subscriptions between nodes
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
     // Publish result to the results channel
     SGProcessing::SubTaskResult result;
@@ -185,7 +175,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized.store(true); },
         [](const std::string &) {});
@@ -272,7 +261,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; },
         [](const std::string &) {});
@@ -285,7 +273,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager2,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized2]( const SGProcessing::TaskResult & ) { isTaskFinalized2 = true; },
         []( const std::string & ) {} );
@@ -509,7 +496,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) {
             isTaskFinalized1 = true;
@@ -520,7 +506,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs2,
         processingQueueManager2,
-        std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized2](const SGProcessing::TaskResult&) {
             isTaskFinalized2 = true;

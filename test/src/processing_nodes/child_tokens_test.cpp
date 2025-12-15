@@ -120,8 +120,9 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
     // Configure peer connections
-    node51->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress(), node52->GetPubSub()->GetLocalAddress() } );
-    node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
+    node51->GetPubSub()->AddPeers(
+        { node50->GetPubSub()->GetInterfaceAddress(), node52->GetPubSub()->GetInterfaceAddress() } );
+    node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
     test::assertWaitForCondition( [&]()
                                   { return node51->GetTransactionManagerState() == TransactionManager::State::READY; },
                                   std::chrono::milliseconds( 30000 ),
@@ -263,7 +264,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
         std::chrono::milliseconds( 30000 ),
         "nodefull not synched" );
     auto node = CreateNode( "0xdade", p.tokenValue, p.TokenID );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]()
                                   { return node->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -341,7 +342,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
         std::chrono::milliseconds( 30000 ),
         "nodefull not synched" );
     auto node = CreateNode( "0xfade", p.tokenValue, p.TokenID );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]()
                                   { return node->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -402,7 +403,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
         std::chrono::milliseconds( 30000 ),
         "nodefull not synched" );
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]()
                                   { return node->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -487,8 +488,8 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
 
     node_main->GetPubSub()->AddPeers(
-        { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
+    node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },

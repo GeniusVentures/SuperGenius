@@ -87,11 +87,12 @@ protected:
                                             40060,
                                             true );
 
-        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                      node_proc2->GetPubSub()->GetLocalAddress() };
+        //Connect to each other
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
+                                      node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_proc2->GetPubSub()->GetLocalAddress() };
+        bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
         test::assertWaitForCondition(
             [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -173,9 +174,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 {
-    std::string address_main  = node_main->GetPubSub()->GetLocalAddress();
-    std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
-    std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
+    std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -278,7 +279,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     bin_path += "../";
 #endif
     std::string json_data = R"(
@@ -335,8 +336,6 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
                TransactionManager::TransactionStatus::CONFIRMED );
-
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;

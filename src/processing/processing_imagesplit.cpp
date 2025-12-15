@@ -5,39 +5,6 @@
 
 namespace sgns::processing
 {
-    //ImageSplitter::ImageSplitter(
-    //    const char* filename,
-    //    uint32_t blockstride,
-    //    uint32_t blocklinestride,
-    //    uint32_t blocklen
-    //) : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
-    //    int originalWidth;
-    //    int originalHeight;
-    //    int originChannel;
-    //    inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
-    //    imageSize = originalWidth * originalHeight * 4;
-    //    //std::cout << " Image Size : " << imageSize << std::endl;
-    //    // Check if imageSize is evenly divisible by blocklen_
-    //    SplitImageData();
-    //}
-
-    //ImageSplitter::ImageSplitter(const std::vector<char>& buffer,
-    //    uint32_t blockstride,
-    //    uint32_t blocklinestride,
-    //    uint32_t blocklen)
-    //    : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
-    //    // Set inputImage and imageSize from the provided buffer
-    //    //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
-    //    int originalWidth;
-    //    int originalHeight;
-    //    int originChannel;
-    //    inputImage = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &originalWidth, &originalHeight, &originChannel, STBI_rgb_alpha);
-    //    imageSize = originalWidth * originalHeight * 4;
-
-    //    SplitImageData();
-    //}
-
-
     ImageSplitter::ImageSplitter(const std::vector<uint8_t>& buffer,
         uint64_t blockstride,
         uint64_t blocklinestride,
@@ -48,7 +15,6 @@ namespace sgns::processing
         blocklen_(blocklen), 
         channels_(channels) {
         // Set inputImage and imageSize from the provided buffer
-        //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
 
         inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
         imageSize = buffer.size();

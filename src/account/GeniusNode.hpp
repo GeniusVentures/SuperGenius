@@ -3,6 +3,9 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <vector>
+#include <thread>
+#include <optional>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -48,7 +51,8 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false );
+                                                bool                is_full_node = false,
+                                                bool                use_upnp     = true );
 
         ~GeniusNode() override;
 
@@ -273,13 +277,15 @@ namespace sgns
                     bool                autodht,
                     bool                isprocessor,
                     uint16_t            base_port,
-                    bool                is_full_node );
+                    bool                is_full_node,
+                    bool                use_upnp );
         void         InitOpenSSL();
         bool         InitLoggers( const std::string &base_path );
         base::Logger ConfigureLogger( const std::string        &tag,
                                       const std::string        &logdir,
                                       spdlog::level::level_enum level );
         bool         InitNetwork( uint16_t base_port, bool is_full_node );
+        bool         InitUPNP();
         bool         InitDatabase();
         bool         InitProcessingModules();
         void         BeginDBInitialization();
@@ -302,7 +308,11 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
-        std::thread                                                     io_thread;
+        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        static constexpr unsigned                                       DEFAULT_IO_THREADS = 4;
+        unsigned                                                        io_thread_count_{ DEFAULT_IO_THREADS };
+        std::optional<IoWorkGuard>                                      io_work_guard_;
+        std::vector<std::thread>                                        io_threads_;
         std::thread                                                     upnp_thread;
         std::atomic<bool>                                               stop_upnp{ false };
         std::string                                                     base58key_;

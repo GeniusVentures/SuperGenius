@@ -68,7 +68,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     auto originalNode =
         CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x00 } ), false, false, "node_original", sharedKey );
 
-    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
+    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
@@ -100,7 +100,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     std::cout << "****** Recovery node creation ****" << std::endl;
     auto recoveryNode =
         CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x01 } ), false, false, "node_recovery", sharedKey );
-    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
+    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },

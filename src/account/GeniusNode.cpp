@@ -124,10 +124,11 @@ namespace sgns
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
-                                                 bool                is_full_node )
+                                                 bool                is_full_node,
+                                                 bool                use_upnp )
     {
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node ) );
+            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node, use_upnp ) );
 
         instance->BeginDBInitialization();
         return instance;
@@ -138,7 +139,8 @@ namespace sgns
                             bool                autodht,
                             bool                isprocessor,
                             uint16_t            base_port,
-                            bool                is_full_node ) :
+                            bool                is_full_node,
+                            bool                use_upnp ) :
         account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
@@ -191,16 +193,16 @@ namespace sgns
                     {
                         if ( auto strong = weak_self.lock() )
                         {
-                        if ( result.has_error() )
-                        {
-                            strong->node_logger_->error( "Database migration error: {}", result.error().message() );
-                            if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                            if ( result.has_error() )
                             {
-                                strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                strong->ScheduleMigrationRetry();
+                                strong->node_logger_->error( "Database migration error: {}", result.error().message() );
+                                if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                                {
+                                    strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->ScheduleMigrationRetry();
+                                }
+                                return;
                             }
-                            return;
-                        }
                             strong->StateTransition( NodeState::INITIALIZING_DATABASE );
                         }
                     } );
@@ -304,10 +306,20 @@ namespace sgns
                 {
                     DHTInit();
                 }
-                RefreshUPNP( pubsubport_ );
-                if ( !io_thread.joinable() )
+                if ( use_upnp )
                 {
-                    io_thread = std::thread( [ctx = io_]() { ctx->run(); } );
+                    RefreshUPNP( pubsubport_ );
+                }
+                io_work_guard_.emplace( io_->get_executor() );
+                unsigned desired_threads = io_thread_count_;
+                if ( desired_threads == 0 )
+                {
+                    desired_threads = GeniusNode::DEFAULT_IO_THREADS;
+                }
+                io_threads_.reserve( desired_threads );
+                for ( unsigned i = 0; i < desired_threads; ++i )
+                {
+                    io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
                 }
                 StateTransition( NodeState::READY );
                 break;
@@ -381,7 +393,7 @@ namespace sgns
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
 #else
         // Release mode
-        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::err );
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
@@ -417,67 +429,18 @@ namespace sgns
 
     bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
     {
-        bool ret    = false;
+        bool ret    = true;
         pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
 
-        auto        upnp = std::make_shared<upnp::UPNP>();
-        std::string lanip;
+        std::string old_lanip;
         do
         {
-            if ( !upnp->GetIGD() )
+            if ( use_upnp )
             {
-                ret = true;
+                //ret = InitUPNP();
+                (void)InitUPNP(); // Ignore UPNP init result for now
             }
-            else
-            {
-                std::string wanip = upnp->GetWanIP();
-                lanip             = upnp->GetLocalIP();
-                node_logger_->info( "Wan IP: {}", wanip );
-                node_logger_->info( "Lan IP: {}", lanip );
 
-                std::string owner;
-
-                constexpr uint16_t MAX_ATTEMPTS = 10;
-                for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
-                {
-                    uint16_t candidate_port = pubsubport_ + i;
-                    if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
-                    {
-                        if ( owner == lanip )
-                        {
-                            node_logger_->info( "Port {} is already mapped by this device. Try using it.",
-                                                candidate_port );
-                            if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                            {
-                                ret         = true;
-                                pubsubport_ = candidate_port;
-                                break;
-                            }
-
-                            node_logger_->error(
-                                "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                                candidate_port );
-                            continue;
-                        }
-                        node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
-                        continue;
-                    }
-
-                    if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                    {
-                        node_logger_->info( "Successfully opened port {}", candidate_port );
-                        ret         = true;
-                        pubsubport_ = candidate_port;
-                        break;
-                    }
-                    node_logger_->warn( "Failed to open port {}", candidate_port );
-                }
-                if ( !ret )
-                {
-                    node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
-                    break;
-                }
-            }
             // Make a base58 out of our address
             std::string                tempaddress = account_->GetAddress();
             std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
@@ -500,18 +463,92 @@ namespace sgns
 
             auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
+            //Set a pubsub config, use no signing because we can verify with proof and dag structure
+            libp2p::protocol::gossip::Config config;
+            config.echo_forward_mode       = false;
+            config.sign_messages           = false;
+            config.seen_cache_limit        = 10;
+            config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
+
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-            auto pubs = pubsub_->Start( pubsubport_, {}, lanip, {} );
+                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
+                config );
+            auto pubs = pubsub_->Start( pubsubport_, {}, old_lanip, {} );
             pubs.wait();
             node_logger_->info( "PubSub started at address: {}", pubsub_->GetLocalAddress() );
+
             if ( !is_full_node )
             {
                 pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
                 pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
             }
+            else
+            {
+                pubsub_->GetHost()->getConnectionManagerConfig().high_water = 400;
+                pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;
+            }
             graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
         } while ( 0 );
+        return ret;
+    }
+
+    bool GeniusNode::InitUPNP()
+    {
+        bool ret  = false;
+        auto upnp = std::make_shared<upnp::UPNP>();
+        if ( !upnp->GetIGD() )
+        {
+            ret = true;
+        }
+        else
+        {
+            std::string wanip = upnp->GetWanIP();
+            std::string lanip = upnp->GetLocalIP();
+            node_logger_->info( "Wan IP: {}", wanip );
+            node_logger_->info( "Lan IP: {}", lanip );
+
+            std::string owner;
+
+            constexpr uint16_t MAX_ATTEMPTS = 10;
+            for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            {
+                uint16_t candidate_port = pubsubport_ + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                {
+                    if ( owner == lanip )
+                    {
+                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                        {
+                            ret         = true;
+                            pubsubport_ = candidate_port;
+                            break;
+                        }
+
+                        node_logger_->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
+                        continue;
+                    }
+                    node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+                    continue;
+                }
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                {
+                    node_logger_->info( "Successfully opened port {}", candidate_port );
+                    ret         = true;
+                    pubsubport_ = candidate_port;
+                    break;
+                }
+                node_logger_->warn( "Failed to open port {}", candidate_port );
+            }
+            if ( !ret )
+            {
+                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                break;
+            }
+        }
         return ret;
     }
 
@@ -621,10 +658,18 @@ namespace sgns
         {
             io_->stop(); // Stop our io_context
         }
-        if ( io_thread.joinable() )
+        if ( io_work_guard_ )
         {
-            io_thread.join();
+            io_work_guard_->reset();
         }
+        for ( auto &t : io_threads_ )
+        {
+            if ( t.joinable() )
+            {
+                t.join();
+            }
+        }
+        io_threads_.clear();
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
@@ -778,11 +823,9 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        // size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        // nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -796,11 +839,8 @@ namespace sgns
             std::string inputAsString = buffer.GetString();
             taskSplitter
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
-
-            //}
-            // imageindex++;
         }
-        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
+        auto cut = TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -1150,41 +1190,65 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}",
-                                                strong->account_->GetAddress(),
+                    strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
+                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                __func__,
                                                 task_id );
                     do
                     {
                         if ( strong->task_queue_->IsTaskCompleted( task_id ) )
                         {
-                            strong->node_logger_->info( "Task Already completed!" );
+                            strong->node_logger_->info( "[{}]{}: Task Already completed!",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
                             break;
                         }
                         if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
                         {
+                            strong->node_logger_->info( "[{}]{}: Transactions are not ready",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
                             break;
                         }
-
+                        strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__ );
                         auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
                         if ( maybe_escrow_path.has_failure() )
                         {
-                            strong->node_logger_->info( "No associated Escrow with the task id: {} ", task_id );
+                            strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__,
+                                                        task_id );
                             break;
                         }
                         auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
                         if ( complete_task_result.has_failure() )
                         {
-                            strong->node_logger_->error( "Unable to complete task: {} ", task_id );
+                            strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
+                                                         strong->account_->GetAddress().substr( 0, 8 ),
+                                                         __func__,
+                                                         task_id );
                             break;
                         }
+                        strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__ );
                         auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
                                                              taskresult,
                                                              std::move( complete_task_result.value() ) );
                         if ( pay_result.has_failure() )
                         {
-                            strong->node_logger_->error( "Invalid results for task: {} ", task_id );
+                            strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
+                                                         strong->account_->GetAddress().substr( 0, 8 ),
+                                                         __func__,
+                                                         task_id );
                             break;
                         }
+                        strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                    __func__,
+                                                    task_id );
 
                     } while ( 0 );
                 }
@@ -1199,7 +1263,7 @@ namespace sgns
                                if ( auto strong = weak_self.lock() )
                                {
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
-                                                                strong->account_->GetAddress(),
+                                                                strong->account_->GetAddress().substr( 0, 8 ),
                                                                 task_id );
                                }
                            } );

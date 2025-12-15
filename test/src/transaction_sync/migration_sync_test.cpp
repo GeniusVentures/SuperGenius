@@ -63,9 +63,18 @@ protected:
             if ( entry.is_directory() )
             {
                 auto name = entry.path().filename().string();
+                // Only remove new (01) database directories, preserving legacy (00) test data
                 if ( name.rfind( DB_PREFIX, 0 ) == 0 )
                 {
                     fs::remove_all( entry.path(), ec );
+                    // On Windows, file locks may not be immediately released
+                    // Retry removal if it fails
+                    if ( ec && fs::exists( entry.path() ) )
+                    {
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                        ec.clear();
+                        fs::remove_all( entry.path(), ec );
+                    }
                 }
             }
         }
