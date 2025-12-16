@@ -82,30 +82,37 @@ jobs:
     steps:
       - name: Clean workspace (self-hosted runners)
         if: ${{ runner.environment == 'self-hosted' }}
-        working-directory: ${{github.workspace}}
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Contents of workspace:"
-          ls -la
+          echo "Workspace: ${{github.workspace}}"
           
-          echo "Checking for SuperGenius directory..."
-          if [ -d "SuperGenius" ]; then
-            echo "SuperGenius directory exists, contents:"
-            ls -la SuperGenius/
-            if [ -d "SuperGenius/build" ]; then
-              echo "Build directory exists, checking permissions..."
-              ls -la SuperGenius/build/ || true
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Changed to workspace directory: $(pwd)"
+            echo "Contents:"
+            ls -la
+            
+            if [ -d ".git" ]; then
+              echo "Git repository detected, performing deep clean..."
+              git clean -xfd
+              git submodule foreach --recursive git clean -xfd
+              git reset --hard
+              git submodule foreach --recursive git reset --hard
+              echo "Git clean completed"
+            else
+              echo "Not a git repository, skipping git clean"
             fi
+          else
+            echo "Workspace directory does not exist yet, skipping cleanup"
           fi
           
-          # Remove directories if they exist
-          echo "Removing SuperGenius directory..."
-          rm -rf SuperGenius
-          
           echo "=== POST-CLEANUP DEBUG ==="
-          echo "Contents of workspace after cleanup:"
-          ls -la
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Final workspace contents:"
+            ls -la
+          fi
         shell: bash
 
       - name: Checkout SuperGenius repository
