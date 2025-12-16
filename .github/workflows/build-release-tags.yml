@@ -93,15 +93,18 @@ jobs:
             echo "Contents:"
             ls -la
             
-            if [ -d ".git" ]; then
-              echo "Git repository detected, performing deep clean..."
+            # Check for SuperGenius subdirectory and clean git repo
+            if [ -d "SuperGenius/.git" ]; then
+              echo "Git repository detected in SuperGenius/, performing deep clean..."
+              cd SuperGenius
               git clean -xfd
               git submodule foreach --recursive git clean -xfd
               git reset --hard
               git submodule foreach --recursive git reset --hard
               echo "Git clean completed"
+              cd "${{github.workspace}}"
             else
-              echo "Not a git repository, skipping git clean"
+              echo "No git repository found in SuperGenius/, skipping git clean"
             fi
             
             # Remove thirdparty and zkLLVM directories if they exist
