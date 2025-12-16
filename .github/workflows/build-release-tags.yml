@@ -55,7 +55,7 @@ jobs:
           - target: Windows
             host: windows-latest
           - target: OSX
-            host: gv-macOS-large
+            host: gv-OSX-Large
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
