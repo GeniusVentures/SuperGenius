@@ -103,6 +103,13 @@ jobs:
             else
               echo "Not a git repository, skipping git clean"
             fi
+            
+            # Remove thirdparty and zkLLVM directories if they exist
+            echo "Removing thirdparty directory..."
+            rm -rf thirdparty
+            
+            echo "Removing zkLLVM directory..."
+            rm -rf zkLLVM
           else
             echo "Workspace directory does not exist yet, skipping cleanup"
           fi
