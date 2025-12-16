@@ -206,7 +206,8 @@ namespace sgns::crdt
 
         // Delete blocks
         (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        if (job.node_ && job.node_->getCID() != job.root_node_->getCID()) {
+        if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+        {
             (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
         }
 
@@ -862,11 +863,11 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
     {
         CRDTBroadcast bcastData;
-        
+
         for ( const auto &head : heads )
         {
             auto encodedHead = bcastData.add_heads();
-            
+
             // Check cache first to avoid expensive base58 encoding
             std::string cid_string;
             {
@@ -878,7 +879,7 @@ namespace sgns::crdt
                     logger_->debug( "CID string cache hit for CID {}", cid_string );
                 }
             }
-            
+
             // Cache miss - compute and cache the string
             if ( cid_string.empty() )
             {
@@ -895,8 +896,26 @@ namespace sgns::crdt
                     continue; // Skip this CID if conversion fails
                 }
             }
-            
+
             encodedHead->set_cid( cid_string );
+        }
+
+        Buffer outputBuffer;
+        outputBuffer.put( bcastData.SerializeAsString() );
+        return outputBuffer;
+    }
+
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcastStatic( const std::set<CID> &heads )
+    {
+        CRDTBroadcast bcastData;
+        for ( const auto &head : heads )
+        {
+            auto encodedHead   = bcastData.add_heads();
+            auto strHeadResult = head.toString();
+            if ( !strHeadResult.has_failure() )
+            {
+                encodedHead->set_cid( strHeadResult.value() );
+            }
         }
 
         Buffer outputBuffer;
@@ -946,7 +965,7 @@ namespace sgns::crdt
                 logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
-                    if(logger_->level() == spdlog::level::trace)
+                    if ( logger_->level() == spdlog::level::trace )
                     {
                         logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
                     }
@@ -1031,7 +1050,9 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID>                    &cids,
+                                                    const std::string                      &topic,
+                                                    boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         if ( !broadcaster_ )
         {
@@ -1075,11 +1096,12 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         //Log expensive toString only if trace enabled
-        if(logger_->level() == spdlog::level::trace)
+        if ( logger_->level() == spdlog::level::trace )
         {
-            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}", node->getCID().toString().value() );
+            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}",
+                            node->getCID().toString().value() );
         }
-        
+
         for ( auto &topic : topics )
         {
             logger_->info( "Topics {{ name=\"{}\" }}", topic );
@@ -1095,14 +1117,13 @@ namespace sgns::crdt
             ipfs_lite::ipld::IPLDLinkImpl link( head, topic, cidByte.value().size() );
             node->addLink( link );
             //Log expensive toString only if trace enabled
-            if(logger_->level() == spdlog::level::trace)
+            if ( logger_->level() == spdlog::level::trace )
             {
                 logger_->trace( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                    link.getCID().toString().value(),
-                    link.getName(),
-                    link.getSize() );    
+                                link.getCID().toString().value(),
+                                link.getName(),
+                                link.getSize() );
             }
-
         }
 
         return node;
@@ -1130,13 +1151,12 @@ namespace sgns::crdt
         OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
-        if(logger_->level() == spdlog::level::trace)
+        if ( logger_->level() == spdlog::level::trace )
         {
             logger_->trace( "AddDAGNode: Processing generated block {} from {}",
-                node->getCID().toString().value(),
-                reinterpret_cast<uint64_t>( this ) );
+                            node->getCID().toString().value(),
+                            reinterpret_cast<uint64_t>( this ) );
         }
-
 
         RootCIDJob rootJob{ nullptr, node, true };
 
@@ -1144,7 +1164,7 @@ namespace sgns::crdt
             MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
-            if(logger_->level() == spdlog::level::trace)
+            if ( logger_->level() == spdlog::level::trace )
             {
                 logger_->trace(
                     "AddDAGNode: Added SELF-CREATED job for CID {}, self-queue size: {}, external-queue size: {}",
@@ -1152,7 +1172,6 @@ namespace sgns::crdt
                     selfCreatedJobList_.size(),
                     rootCIDJobList_.size() );
             }
-
         }
 
         // Notify all workers to ensure immediate processing
@@ -1212,8 +1231,8 @@ namespace sgns::crdt
 
             // Sleep for the minimum of 500ms or remaining time to avoid tight loops near timeout
             auto time_remaining = timeout_duration - ( current_time - start_time );
-            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ), 
-                                           std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
+            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ),
+                                            std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
             if ( sleep_duration.count() > 0 )
             {
                 std::this_thread::sleep_for( sleep_duration );
@@ -1500,7 +1519,7 @@ namespace sgns::crdt
                 if ( !is_resolved_result.value() )
                 {
                     //Log expensive toString only if trace enabled
-                    if(logger_->level() == spdlog::level::trace)
+                    if ( logger_->level() == spdlog::level::trace )
                     {
                         logger_->trace( "{}: Previous Head {} not resolved before replacement with {}",
                                         __func__,

@@ -314,13 +314,21 @@ namespace sgns::crdt
          * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
+        outcome::result<void> Broadcast( const std::set<CID>                    &cids,
+                                         const std::string                      &topic,
+                                         boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
         outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+
+        /** EncodeBroadcastStatic encodes list of CIDs to CRDT broadcast data
+        * @param heads list of CIDs
+        * @return data encoded into Buffer data or outcome::failure on error
+        */
+        static outcome::result<Buffer> EncodeBroadcastStatic( const std::set<CID> &heads );
 
         /** PutBlock add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
@@ -362,7 +370,7 @@ namespace sgns::crdt
                        std::shared_ptr<CrdtOptions> aOptions );
 
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
-        bool ProcessJobs(std::queue<RootCIDJob>& jobs);
+        bool ProcessJobs( std::queue<RootCIDJob> &jobs );
         bool SeedNextExternalRoot();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
@@ -424,7 +432,7 @@ namespace sgns::crdt
 
         // Cache for CID string representations to avoid repeated base58 encoding
         mutable std::map<CID, std::string> cid_string_cache_;
-        mutable std::mutex                  cid_string_cache_mutex_;
+        mutable std::mutex                 cid_string_cache_mutex_;
     };
 
 }

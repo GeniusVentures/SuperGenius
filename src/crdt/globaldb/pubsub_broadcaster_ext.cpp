@@ -416,7 +416,7 @@ namespace sgns::crdt
             {
                 break;
             }
-            auto cid_buffer = sgns::crdt::CrdtDatastore::EncodeBroadcast( { cidResult.value() } );
+            auto cid_buffer = sgns::crdt::CrdtDatastore::EncodeBroadcastStatic( { cidResult.value() } );
             if ( cid_buffer.has_error() )
             {
                 break;
