@@ -153,7 +153,8 @@ namespace sgns
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
-        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() )
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
+        use_upnp_( use_upnp )
 
     {
         // Rotate log files before initializing logging system
@@ -232,7 +233,6 @@ namespace sgns
                     pubsub_,
                     MAX_NODES_COUNT,
                     std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),
-                    std::make_shared<processing::ProcessSubTaskStateStorage>(),
                     task_result_storage_,
                     processing_core_,
                     [weak_self = weak_from_this()]( const std::string &var, const SGProcessing::TaskResult &taskresult )
@@ -306,7 +306,7 @@ namespace sgns
                 {
                     DHTInit();
                 }
-                if ( use_upnp )
+                if ( use_upnp_ )
                 {
                     RefreshUPNP( pubsubport_ );
                 }
@@ -435,7 +435,7 @@ namespace sgns
         std::string old_lanip;
         do
         {
-            if ( use_upnp )
+            if ( use_upnp_ )
             {
                 //ret = InitUPNP();
                 (void)InitUPNP(); // Ignore UPNP init result for now
@@ -496,59 +496,64 @@ namespace sgns
     {
         bool ret  = false;
         auto upnp = std::make_shared<upnp::UPNP>();
-        if ( !upnp->GetIGD() )
+        do
         {
-            ret = true;
-        }
-        else
-        {
-            std::string wanip = upnp->GetWanIP();
-            std::string lanip = upnp->GetLocalIP();
-            node_logger_->info( "Wan IP: {}", wanip );
-            node_logger_->info( "Lan IP: {}", lanip );
-
-            std::string owner;
-
-            constexpr uint16_t MAX_ATTEMPTS = 10;
-            for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            if ( !upnp->GetIGD() )
             {
-                uint16_t candidate_port = pubsubport_ + i;
-                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
-                {
-                    if ( owner == lanip )
-                    {
-                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                        {
-                            ret         = true;
-                            pubsubport_ = candidate_port;
-                            break;
-                        }
+                ret = true;
+            }
+            else
+            {
+                std::string wanip = upnp->GetWanIP();
+                std::string lanip = upnp->GetLocalIP();
+                node_logger_->info( "Wan IP: {}", wanip );
+                node_logger_->info( "Lan IP: {}", lanip );
 
-                        node_logger_->error(
-                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                            candidate_port );
+                std::string owner;
+
+                constexpr uint16_t MAX_ATTEMPTS = 10;
+                for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+                {
+                    uint16_t candidate_port = pubsubport_ + i;
+                    if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                    {
+                        if ( owner == lanip )
+                        {
+                            node_logger_->info( "Port {} is already mapped by this device. Try using it.",
+                                                candidate_port );
+                            if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                            {
+                                ret         = true;
+                                pubsubport_ = candidate_port;
+                                break;
+                            }
+
+                            node_logger_->error(
+                                "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                                candidate_port );
+                            continue;
+                        }
+                        node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
                         continue;
                     }
-                    node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
-                    continue;
-                }
 
-                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                    if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                    {
+                        node_logger_->info( "Successfully opened port {}", candidate_port );
+                        ret         = true;
+                        pubsubport_ = candidate_port;
+                        break;
+                    }
+                    node_logger_->warn( "Failed to open port {}", candidate_port );
+                }
+                if ( !ret )
                 {
-                    node_logger_->info( "Successfully opened port {}", candidate_port );
-                    ret         = true;
-                    pubsubport_ = candidate_port;
+                    node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
                     break;
                 }
-                node_logger_->warn( "Failed to open port {}", candidate_port );
             }
-            if ( !ret )
-            {
-                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
-                break;
-            }
-        }
+        } while ( 0 );
+
         return ret;
     }
 

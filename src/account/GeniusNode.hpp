@@ -323,6 +323,7 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
         std::atomic<NodeState> state_{ NodeState::CREATING };
+        bool                   use_upnp_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,
