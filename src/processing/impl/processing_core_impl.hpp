@@ -1,7 +1,6 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
 
-#include <cmath>
 #include <memory>
 #include <iostream>
 #include <utility>
@@ -27,10 +26,10 @@ namespace sgns::processing
             MAX_NUMBER_SUBTASKS = 1,
             GLOBALDB_READ_ERROR,
             NO_BUFFER_FROM_JOB_DATA,
+            DESSERIALIZE_ERROR,
         };
         ProcessingCoreImpl(
             std::shared_ptr<crdt::GlobalDB> db,
-            size_t subTaskProcessingTime,
             size_t maximalProcessingSubTaskCount,
             TokenID tokenId)
             : m_db(std::move(db))
@@ -41,13 +40,8 @@ namespace sgns::processing
         {
         }
 
-        ~ProcessingCoreImpl() = default;
+        ~ProcessingCoreImpl() override = default;
 
-        /** Process a single subtask
-        * @param subTask - subtask that needs to be processed
-        * @param result - subtask result
-        * @param initialHashCode - an initial hash code which is used to calculate result hash
-        */
         outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override;
 
@@ -75,14 +69,7 @@ namespace sgns::processing
        bool CheckRegisteredProcessor(const std::string& name)
         {
             auto factoryFunction = m_processorFactories.find(name);
-            if (factoryFunction == m_processorFactories.end())
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            return factoryFunction != m_processorFactories.end();
         }
 
         /** Get processing type from json data to set processor
@@ -90,18 +77,12 @@ namespace sgns::processing
         */
         bool SetProcessingTypeFromJson(std::string jsondata) override;
 
-        /** Get settings.json and then get data we need for processing based on parsing
-        * @param CID - CID of directory to get settings.json from
-        */
         std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override;
-        /** Get files from a set URL and insert them into pair reference
-        * @param ioc - IO context to run on
-        * @param url - ipfs gateway url to get from
-        * @param results - reference to data pair to insert into.
-        */
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::vector<char>> results) override;
 
-        std::vector<size_t> m_chunkResulHashes;
+        std::shared_ptr<std::vector<char>> GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
+                                                             std::string                              url ) override;
+
+        std::vector<size_t> m_chunkResultHashes;
         std::vector<size_t> m_validationChunkHashes;
 
     private:
@@ -109,21 +90,15 @@ namespace sgns::processing
         TokenID                              m_tokenId;
         std::unique_ptr<ProcessingProcessor> m_processor;
         std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
-        //size_t m_subTaskProcessingTime;
         size_t m_maximalProcessingSubTaskCount;
 
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
 
-
-
         std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
-
     };
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::processing, ProcessingCoreImpl::Error);
-
-
 
 #endif

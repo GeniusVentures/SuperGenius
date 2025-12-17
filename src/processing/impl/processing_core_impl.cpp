@@ -15,6 +15,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
             return "GlobaDB Read error ";
         case E::NO_BUFFER_FROM_JOB_DATA:
             return "No buffer from job data";
+        case E::DESSERIALIZE_ERROR:
+            return "Error desserializing structure";
     }
     return "Unknown error";
 }
@@ -28,7 +30,7 @@ namespace sgns::processing
         SGProcessing::SubTaskResult result;
 
         //Check if we're processing too much.
-        std::scoped_lock<std::mutex> subTaskCountLock( m_subTaskCountMutex );
+        std::scoped_lock subTaskCountLock( m_subTaskCountMutex );
         ++m_processingSubTaskCount;
         if ( m_maximalProcessingSubTaskCount > 0 && m_processingSubTaskCount > m_maximalProcessingSubTaskCount )
         {
@@ -42,12 +44,17 @@ namespace sgns::processing
         {
             return outcome::failure( Error::GLOBALDB_READ_ERROR );
         }
-        SGProcessing::Task task;
 
-        task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
+        SGProcessing::Task task;
+        if (!task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() )) {
+            return outcome::failure(Error::DESSERIALIZE_ERROR);
+        }
+
+        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>> buffers;
+
         if ( cidData_.find( subTask.subtaskid() ) == cidData_.end() )
         {
-            auto buffers = GetCidForProc( subTask.json_data(), task.json_data() );
+            buffers = GetCidForProc( subTask.json_data(), task.json_data() );
             if ( buffers == nullptr )
             {
                 --m_processingSubTaskCount;
@@ -58,20 +65,10 @@ namespace sgns::processing
                 --m_processingSubTaskCount;
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
-
-            auto        tempresult = this->m_processor->StartProcessing( result,
-                                                                  task,
-                                                                  subTask,
-                                                                  *buffers->second,
-                                                                  *buffers->first );
-            std::string hashString( tempresult.begin(), tempresult.end() );
-            result.set_result_hash( hashString );
-            result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
-            --m_processingSubTaskCount;
         }
         else
         {
-            auto buffers = cidData_.at( subTask.subtaskid() );
+            buffers = cidData_.at( subTask.subtaskid() );
             if ( buffers == nullptr )
             {
                 --m_processingSubTaskCount;
@@ -82,19 +79,18 @@ namespace sgns::processing
                 --m_processingSubTaskCount;
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
-
-            // Set data and process
-            //this->m_processor->SetData(buffers);
-            auto        tempresult = this->m_processor->StartProcessing( result,
-                                                                  task,
-                                                                  subTask,
-                                                                  *buffers->second,
-                                                                  *buffers->first );
-            std::string hashString( tempresult.begin(), tempresult.end() );
-            result.set_result_hash( hashString );
-            result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
-            --m_processingSubTaskCount;
         }
+
+        auto        tempresult = this->m_processor->StartProcessing( result,
+                                                              task,
+                                                              subTask,
+                                                              *buffers->second,
+                                                              *buffers->first );
+        std::string hashString( tempresult.begin(), tempresult.end() );
+        result.set_result_hash( hashString );
+        result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
+        --m_processingSubTaskCount;
+
         return result;
     }
 
@@ -147,9 +143,9 @@ namespace sgns::processing
                 return mainbuffers;
             }
         }
-        std::string modelFile = "";
 
         // Extract model name
+        std::string modelFile = "";
         if ( base_document.HasMember( "model" ) && base_document["model"].IsObject() )
         {
             const auto &model = base_document["model"];
@@ -179,13 +175,15 @@ namespace sgns::processing
 
         //Init Loaders
         FileManager::GetInstance().InitializeSingletons();
+
         //Get Model
         string modelURL = baseUrl + modelFile;
-        GetSubCidForProc( ioc, modelURL, mainbuffers->first );
+        mainbuffers->first = GetSubCidForProc( ioc, modelURL );
 
         //Get Image, TODO: Update to grab multiple files if needed
         string imageUrl = baseUrl + image;
-        GetSubCidForProc( ioc, imageUrl, mainbuffers->second );
+        mainbuffers->second = GetSubCidForProc( ioc, imageUrl );
+
         //Run IO
         ioc->reset();
         ioc->run();
@@ -193,10 +191,11 @@ namespace sgns::processing
         return mainbuffers;
     }
 
-    void ProcessingCoreImpl::GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
-                                               std::string                              url,
-                                               std::shared_ptr<std::vector<char>>       results )
+    shared_ptr<vector<char>> ProcessingCoreImpl::GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
+                                                                   std::string                              url )
     {
+        auto results = std::make_shared<std::vector<char>>();
+
         auto modeldata = FileManager::GetInstance().LoadASync(
             url,
             false,
@@ -218,6 +217,8 @@ namespace sgns::processing
                 }
             },
             "file" );
+
+        return results;
     }
 
     bool ProcessingCoreImpl::SetProcessingTypeFromJson( std::string jsondata )

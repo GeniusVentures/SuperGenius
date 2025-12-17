@@ -101,9 +101,10 @@ namespace
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url,std::shared_ptr<std::vector<char>> resultss) override
+        std::shared_ptr<std::vector<char>> GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
+                                                             std::string                              url ) override
         {
-            return;
+            return {};
         }
 
         outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(

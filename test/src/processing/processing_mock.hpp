@@ -65,8 +65,10 @@ namespace sgns::test
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::vector<char>> results) override
+        std::shared_ptr<std::vector<char>> GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
+                                                             std::string                              url ) override
         {
+            return {};
         }
 
         libp2p::outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
