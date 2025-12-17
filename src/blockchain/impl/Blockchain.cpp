@@ -323,7 +323,7 @@ namespace sgns
             return outcome::failure( put_result.error() );
         }
         cids_.account_ = cid;
-        logger_->debug( "[{}] Account creation CID stored: {}", account_->GetAddress().substr( 0, 8 ), cid );
+        logger_->debug( "[{}] Account creation CID saved: {}", account_->GetAddress().substr( 0, 8 ), cid );
         return outcome::success();
     }
 
@@ -375,23 +375,20 @@ namespace sgns
             logger_->debug( "[{}] Informing genesis result response with CID: {}",
                             account_->GetAddress().substr( 0, 8 ),
                             genesis_result.value() );
-            WatchCIDDownload( genesis_result.value(),
-                              Error::GENESIS_BLOCK_MISSING,
-                              TIMEOUT_GENESIS_BLOCK_MS );
+            WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK_MS );
         }
     }
 
     void Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
     {
-        if ( creation_result.has_error() ) 
+        if ( creation_result.has_error() )
         {
             logger_->debug( "[{}] Received empty account creation CID, no account created yet",
                             account_->GetAddress().substr( 0, 8 ) );
 
             auto account_creation_result = CreateAccountCreationBlock();
-            InformBlockchainResult( account_creation_result );
         }
-        else 
+        else
         {
             logger_->debug( "[{}] Informing account creation response with CID: {}",
                             account_->GetAddress().substr( 0, 8 ),
@@ -402,9 +399,7 @@ namespace sgns
         }
     }
 
-    void Blockchain::WatchCIDDownload( const std::string &cid,
-                                       Error               error_on_failure,
-                                       uint64_t            timeout_ms )
+    void Blockchain::WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms )
     {
         std::thread(
             [weakptr = weak_from_this(), cid, error_on_failure, timeout_ms]
@@ -430,15 +425,13 @@ namespace sgns
                     {
                         // Exit if block already processed via normal flow
                         if ( ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
-                             ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
-                               self->cids_.hasAccount() ) )
+                             ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING && self->cids_.hasAccount() ) )
                         {
                             return;
                         }
 
                         auto status = self->db_->GetCIDJobStatus( cid_result.value() );
-                        if ( status.has_value() &&
-                             status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED )
+                        if ( status.has_value() && status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED )
                         {
                             return;
                         }
@@ -457,11 +450,11 @@ namespace sgns
                 if ( auto self = weakptr.lock() )
                 {
                     auto status = self->db_->GetCIDJobStatus( cid_result.value() );
-                    bool done   = status.has_value() &&
-                                status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED;
-                    bool local_state =
-                        ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
-                        ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING && self->cids_.hasAccount() );
+                    bool done   = status.has_value() && status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED;
+                    bool local_state = ( error_on_failure == Error::GENESIS_BLOCK_MISSING &&
+                                         self->cids_.hasGenesis() ) ||
+                                       ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
+                                         self->cids_.hasAccount() );
 
                     if ( done || local_state )
                     {
@@ -524,40 +517,30 @@ namespace sgns
             return;
         }
 
-        std::thread(
-            [weakptr = weak_from_this()]
-            {
-                if ( auto self = weakptr.lock() )
-                {
-                    self->logger_->info( "[{}] Requesting account creation block via pubsub (async)",
-                                         self->account_->GetAddress().substr( 0, 8 ) );
+        logger_->info( "[{}] Requesting account creation block via pubsub (async)",
+                       account_->GetAddress().substr( 0, 8 ) );
 
-                    auto result = self->account_->RequestAccountCreation(
-                        TIMEOUT_ACC_CREATION_BLOCK_MS,
-                        [weakself = weakptr]( outcome::result<std::string> creation_cid_res )
-                        {
-                            if ( auto s = weakself.lock() )
-                            {
-                                s->InformAccountCreationResponse( creation_cid_res );
-                            }
-                        } );
-                    if ( result.has_error() )
-                    {
-                        self->logger_->error(
-                            "[{}] Account creation request failed asynchronously: {}. Creating account...",
-                            self->account_->GetAddress().substr( 0, 8 ),
-                            result.error().message() );
-                        self->InformAccountCreationResponse(
-                            outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED ) );
-                    }
-                    else
-                    {
-                        self->logger_->info( "[{}] Returned success (async)",
-                                             self->account_->GetAddress().substr( 0, 8 ) );
-                    }
+        auto result = account_->RequestAccountCreation(
+            TIMEOUT_ACC_CREATION_BLOCK_MS,
+            [weakself = weak_from_this()]( outcome::result<std::string> creation_cid_res )
+            {
+                if ( auto s = weakself.lock() )
+                {
+                    s->InformAccountCreationResponse( creation_cid_res );
                 }
-            } )
-            .detach();
+            } );
+        if ( result.has_error() )
+        {
+            logger_->error( "[{}] Account creation request failed {}. Creating account...",
+                            account_->GetAddress().substr( 0, 8 ),
+                            result.error().message() );
+            InformAccountCreationResponse( outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED ) );
+        }
+        else
+        {
+            logger_->info( "[{}] Triggered Request account creation successfully",
+                           account_->GetAddress().substr( 0, 8 ) );
+        }
     }
 
     outcome::result<void> Blockchain::CreateGenesisBlock()
@@ -842,19 +825,6 @@ namespace sgns
             return outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED );
         }
 
-        auto save_account_cid_result = SaveAccountCreationCID( put_res.value().toString().value() );
-
-        if ( save_account_cid_result.has_error() )
-        {
-            logger_->error( "[{}] Failed to store genesis CID, rolling back genesis block",
-                            account_->GetAddress().substr( 0, 8 ) );
-
-            (void)db_->Remove( crdt::HierarchicalKey( account_creation_key ),
-                               { std::string( BLOCKCHAIN_TOPIC ), account_->GetAddress() } );
-
-            return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
-        }
-
         logger_->info( "[{}] Account creation block created and stored successfully",
                        account_->GetAddress().substr( 0, 8 ) );
         return outcome::success();
@@ -978,7 +948,6 @@ namespace sgns
                 break;
             }
 
-            logger_->debug( "[{}] Account creation CID stored: {}", account_->GetAddress().substr( 0, 8 ), cid );
             logger_->info( "[{}] Account creation block processed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
 
@@ -1008,5 +977,4 @@ namespace sgns
         }
         return cids_.account_.value();
     }
-
 }
