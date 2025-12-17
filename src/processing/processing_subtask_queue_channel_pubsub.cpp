@@ -1,56 +1,54 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
-#include <thread>
 #include <base/util.hpp>
-
 
 namespace sgns::processing
 {
     ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-        const std::string                               &processingQueueChannelId ) :
+        std::shared_ptr<GossipPubSub> gossipPubSub,
+        const std::string            &processingQueueChannelId ) :
         m_gossipPubSub( std::move( gossipPubSub ) )
     {
-        using GossipPubSubTopic  = sgns::ipfs_pubsub::GossipPubSubTopic;
         auto processing_queue_topic = processingQueueChannelId + sgns::version::GetNetAndVersionAppendix();
-        m_processingQueueChannel = std::make_shared<GossipPubSubTopic>( m_gossipPubSub, processing_queue_topic );
+        m_processingQueueChannel    = std::make_shared<GossipPubSubTopic>( m_gossipPubSub, processing_queue_topic );
     }
 
     ProcessingSubTaskQueueChannelPubSub::~ProcessingSubTaskQueueChannelPubSub()
     {
-    m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
+        m_logger->debug( "[RELEASED] this: {}", reinterpret_cast<size_t>( this ) );
     }
 
-    outcome::result<std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>>
-    ProcessingSubTaskQueueChannelPubSub::Listen(std::chrono::milliseconds msSubscriptionWaitingDuration)
+    outcome::result<
+        std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>>
+    ProcessingSubTaskQueueChannelPubSub::Listen( std::chrono::milliseconds msSubscriptionWaitingDuration )
     {
         // Subscribe to the processing queue channel
         auto subscription_future = m_processingQueueChannel->Subscribe(
-            [weakSelf = weak_from_this()](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message)
+            [weakSelf = weak_from_this()]( boost::optional<const GossipPubSub::Message &> message )
             {
-                if (auto self = weakSelf.lock())
+                if ( auto self = weakSelf.lock() )
                 {
-                    self->OnProcessingChannelMessage(message);
+                    self->OnProcessingChannelMessage( message );
                 }
             },
-            msSubscriptionWaitingDuration.count() == 0  // If waiting duration is 0, subscribe now
+            msSubscriptionWaitingDuration.count() == 0 // If waiting duration is 0, subscribe now
         );
 
-        if (msSubscriptionWaitingDuration.count() > 0)
+        if ( msSubscriptionWaitingDuration.count() > 0 )
         {
             // If a waiting duration is provided, wait for the subscription to complete
             std::chrono::milliseconds resultTime;
-            bool success = waitForCondition(
-                [&subscription_future]() {
-                    return subscription_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-                },
+            bool                      success = waitForCondition(
+                [&subscription_future]()
+                { return subscription_future.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready; },
                 msSubscriptionWaitingDuration,
-                &resultTime
-            );
+                &resultTime );
 
-            if (success) {
-                m_logger->debug("Subscription established after {} ms", resultTime.count());
+            if ( success )
+            {
+                m_logger->debug( "Subscription established after {} ms", resultTime.count() );
                 // Fixed: Use consistent type (GossipPubSubTopic::Subscription)
-                return std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(resultTime);
+                return std::variant<std::chrono::milliseconds,
+                                    std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>( resultTime );
             }
             m_logger->error( "Subscription not established within the specified time ({} ms)",
                              msSubscriptionWaitingDuration.count() );
@@ -59,7 +57,9 @@ namespace sgns::processing
 
         // If no waiting requested, return the future
         // Fixed: Use std::move for efficiency (though not strictly required for shared_future)
-        return std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(std::move(subscription_future));
+        return std::variant<std::chrono::milliseconds,
+                            std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>(
+            std::move( subscription_future ) );
     }
 
     void ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership( const std::string &nodeId )
@@ -89,7 +89,7 @@ namespace sgns::processing
     }
 
     void ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage(
-        boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+        boost::optional<const GossipPubSub::Message &> message )
     {
         if ( message )
         {
@@ -114,12 +114,13 @@ namespace sgns::processing
         if ( m_queueRequestSink )
         {
             auto message = channelMesssage.subtask_queue_request();
-            if ( !m_queueRequestSink( message ))
+            if ( !m_queueRequestSink( message ) )
             {
-                m_logger->debug( "Queue request is pending for node {}", message.node_id()  );
-            } else
+                m_logger->debug( "Queue request is pending for node {}", message.node_id() );
+            }
+            else
             {
-                m_logger->debug( "Queue request was immediately fulfilled for node {}", message.node_id()  );
+                m_logger->debug( "Queue request was immediately fulfilled for node {}", message.node_id() );
             }
         }
     }
@@ -131,7 +132,7 @@ namespace sgns::processing
         if ( m_queueUpdateSink )
         {
             auto queueChanged = m_queueUpdateSink( message );
-            m_logger->debug( "Queue changed = {} during release for node",  queueChanged);
+            m_logger->debug( "Queue changed = {} during release for node", queueChanged );
         }
     }
 
@@ -141,7 +142,7 @@ namespace sgns::processing
         return m_processingQueueChannel->getPeerCount() + 1;
     }
 
-    std::vector<libp2p::peer::PeerId>  ProcessingSubTaskQueueChannelPubSub::GetActiveNodes() const
+    std::vector<libp2p::peer::PeerId> ProcessingSubTaskQueueChannelPubSub::GetActiveNodes() const
     {
         return m_processingQueueChannel->getAllPeers();
     }
