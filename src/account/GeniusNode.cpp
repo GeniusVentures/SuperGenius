@@ -338,7 +338,6 @@ namespace sgns
 
         task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
-                                                                             1000000,
                                                                              1,
                                                                              dev_config.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",

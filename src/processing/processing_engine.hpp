@@ -1,5 +1,5 @@
 /**
-* Header file for the distrubuted processing Room
+* Header file for the distributed processing Room
 * @author creativeid00
 */
 
