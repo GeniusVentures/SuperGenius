@@ -6,6 +6,8 @@
  */
 #include "Migration1_0_0To3_4_0.hpp"
 
+#include <filesystem>
+
 namespace sgns
 {
 
@@ -41,6 +43,12 @@ namespace sgns
 
     outcome::result<bool> Migration1_0_0To3_4_0::IsRequired() const
     {
+        if ( !db_1_0_0_ )
+        {
+            logger_->info( "Legacy 1.0.0 DB not found; skipping migration to {}", ToVersion() );
+            return false;
+        }
+
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         auto version_ret = db_3_4_0_->GetDataStore()->get( version_key );
@@ -62,8 +70,7 @@ namespace sgns
             return false; // Already at target version
         }
 
-        logger_->info( "GlobalDB at version {}, ",
-                       ToVersion() );
+        logger_->info( "GlobalDB at version {}, ", ToVersion() );
         return true; // Migration is not required, 1_0_0 is already fixed
     }
 
@@ -71,13 +78,22 @@ namespace sgns
     {
         OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
         db_1_0_0_ = std::move( legacy_db );
-        OUTCOME_TRY( auto &&new_db, InitTargetDb() );
-        db_3_4_0_ = std::move( new_db );
+        if ( db_1_0_0_ )
+        {
+            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            db_3_4_0_ = std::move( new_db );
+        }
         return outcome::success();
     }
 
     outcome::result<void> Migration1_0_0To3_4_0::Apply()
     {
+        if ( !db_1_0_0_ )
+        {
+            logger_->error( "Legacy 1.0.0 DB not initialized; nothing to migrate to {}", ToVersion() );
+            return outcome::success();
+        }
+
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
         auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
         std::set<std::string> topics_;
@@ -184,6 +200,12 @@ namespace sgns
 
         const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath              = ( boost::format( "%s%s" ) % writeBasePath_ % legacyNetworkFullPath ).str();
+
+        if ( !std::filesystem::exists( fullPath ) )
+        {
+            logger_->info( "Legacy 1.0.0 DB not found at {}; skipping initialization", fullPath );
+            return std::shared_ptr<crdt::GlobalDB>{};
+        }
 
         logger_->debug( "Initializing legacy DB at path {}", fullPath );
 

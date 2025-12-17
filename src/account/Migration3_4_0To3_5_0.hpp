@@ -73,7 +73,7 @@ namespace sgns
         };
         /**
          * @brief   Open a legacy GlobalDB from 1.0.0
-         * @return  opened DB or error.
+         * @return  Opened DB, nullptr if absent, or error.
          */
         outcome::result<std::shared_ptr<crdt::GlobalDB>>                InitLegacyDb();
         outcome::result<std::shared_ptr<crdt::GlobalDB>>                InitTargetDb();

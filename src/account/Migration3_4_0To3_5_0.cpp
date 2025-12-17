@@ -10,6 +10,7 @@
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
 
+#include <filesystem>
 #include <algorithm>
 #include <chrono>
 #include <vector>
@@ -52,6 +53,12 @@ namespace sgns
     {
         bool ret = false;
 
+        if ( !db_3_4_0_ )
+        {
+            logger_->info( "Legacy 3.4.0 DB not found; skipping migration to {}", ToVersion() );
+            return false;
+        }
+
         do
         {
             sgns::crdt::GlobalDB::Buffer version_key;
@@ -86,13 +93,22 @@ namespace sgns
     {
         OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
         db_3_4_0_ = std::move( legacy_db );
-        OUTCOME_TRY( auto &&new_db, InitTargetDb() );
-        db_3_5_0_ = std::move( new_db );
+        if ( db_3_4_0_ )
+        {
+            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            db_3_5_0_ = std::move( new_db );
+        }
         return outcome::success();
     }
 
     outcome::result<void> Migration3_4_0To3_5_0::Apply()
     {
+        if ( !db_3_4_0_ )
+        {
+            logger_->error( "Legacy 3.4.0 DB not initialized; nothing to migrate to {}", ToVersion() );
+            return outcome::success();
+        }
+
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
         account_->ConfigureBlockResponseHandler( db_3_5_0_->GetBroadcaster() );
@@ -374,6 +390,12 @@ namespace sgns
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_4_0 ) +
                          version::GetNetAndVersionAppendix( 3, 4, version::GetNetworkID() ) + base58key_;
+
+        if ( !std::filesystem::exists( full_path ) )
+        {
+            logger_->info( "Legacy 3.4.0 DB not found at {}; skipping initialization", full_path );
+            return std::shared_ptr<crdt::GlobalDB>{};
+        }
 
         logger_->debug( "Initializing legacy {} DB at path {}", ToVersion(), full_path );
 
