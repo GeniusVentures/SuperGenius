@@ -406,6 +406,10 @@ namespace sgns::processing
         m_channelListRequestTimeout = channelListRequestTimeout;
     }
 
+    ProcessingServiceImpl::Status ProcessingServiceImpl::GetProcessingStatus() const {
+        return m_isStopped ? Status::DISABLED : m_processingNodes.size() > 0 ? Status::PROCESSING : Status::IDLE;
+    }
+
     void ProcessingServiceImpl::HandleRequestTimeout()
     {
         m_waitingChannelRequest = false;
