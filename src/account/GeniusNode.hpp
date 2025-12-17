@@ -108,12 +108,13 @@ namespace sgns
             TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
-        void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( uint16_t pubsubport );
+        void AddPeer( const std::string &peer );
+        void RefreshUPNP( uint16_t pubsubport );
+
         uint64_t GetBalance();
-        uint64_t GetBalance( const TokenID token_id );
+        uint64_t GetBalance( TokenID token_id );
         uint64_t GetBalance( const std::string &address );
-        uint64_t GetBalance( const TokenID token_id, const std::string &address );
+        uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -133,6 +134,12 @@ namespace sgns
         TokenID GetTokenID() const
         {
             return dev_config_.TokenID;
+        }
+
+        [[nodiscard]] processing::ProcessingServiceImpl::Status GetProcessingStatus() const
+        {
+            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::Status::DISABLED
+                                                  : processing_service_->GetProcessingStatus();
         }
 
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
@@ -236,7 +243,9 @@ namespace sgns
                     bool                is_full_node,
                     bool                use_upnp );
         bool                  InitLoggers( const std::string &base_path );
-        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
+        base::Logger          ConfigureLogger( const std::string        &tag,
+                                               const std::string        &logdir,
+                                               spdlog::level::level_enum level );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
         void                  DHTInit();
 
@@ -252,12 +261,12 @@ namespace sgns
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
         using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-        static constexpr unsigned DEFAULT_IO_THREADS = 4;
-        unsigned                           io_thread_count_{ DEFAULT_IO_THREADS };
-        std::optional<IoWorkGuard>         io_work_guard_;
-        std::vector<std::thread>           io_threads_;
-        std::thread                        upnp_thread;
-        std::atomic<bool>                  stop_upnp{ false };
+        static constexpr unsigned  DEFAULT_IO_THREADS = 4;
+        unsigned                   io_thread_count_{ DEFAULT_IO_THREADS };
+        std::optional<IoWorkGuard> io_work_guard_;
+        std::vector<std::thread>   io_threads_;
+        std::thread                upnp_thread;
+        std::atomic<bool>          stop_upnp{ false };
 
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
@@ -278,8 +287,7 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        void TransactionStateChanged( TransactionManager::State old_state,
-                                      TransactionManager::State new_state );
+        void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
 
         static constexpr std::string_view db_path_        = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
