@@ -18,8 +18,9 @@ namespace sgns::processing
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
                                size_t                                     maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                               std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>                  processingCore );
+                               std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+                               std::shared_ptr<ProcessingCore>            processingCore );
+
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>                        gossipPubSub,
                                size_t                                                            maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>                                  subTaskEnqueuer,
@@ -33,6 +34,7 @@ namespace sgns::processing
         ~ProcessingServiceImpl();
 
         void StartProcessing( const std::string &processingGridChannelId );
+
         void StopProcessing();
 
         size_t GetProcessingNodesCount() const;
@@ -41,14 +43,16 @@ namespace sgns::processing
 
     private:
         /** Listen to data feed channel.
-    * @param dataChannelId - identifier of a data feed channel
-    */
+        * @param processingGridChannelId - identifier of a data feed channel
+        */
         void Listen( const std::string &processingGridChannelId );
+
         void SendChannelListRequest();
-        /** Asynschonous callback to process received messages other processing services.
-    * @param message - a message structure containing the messsage data and its sender peer information.
-    * @return None
-    */
+
+        /** Asynchronous callback to process received messages other processing services.
+        * @param message - a message structure containing the message data and its sender peer information.
+        * @return None
+        */
         void OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                          const SGProcessing::TaskResult &taskResult );

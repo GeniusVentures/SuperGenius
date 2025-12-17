@@ -6,8 +6,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_ENGINE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_ENGINE_HPP
 
-#include "processing/processing_core.hpp"
-#include "processing/processing_subtask_queue_accessor.hpp"
+#include "processing_core.hpp"
+#include "processing_subtask_queue_accessor.hpp"
 #include "base/logger.hpp"
 
 namespace sgns::processing
@@ -18,16 +18,15 @@ namespace sgns::processing
     {
     public:
         /** Create a processing engine object
-    * @param nodeId - current processing node ID
-    * @param processingCore specific processing core that process a subtask using specific algorithm
-    */
+        * @param nodeId - current processing node ID
+        * @param processingCore specific processing core that process a subtask using specific algorithm
+        */
         ProcessingEngine( std::string                                nodeId,
                           std::shared_ptr<ProcessingCore>            processingCore,
                           std::function<void( const std::string & )> processingErrorSink,
                           std::function<void( void )>                processingDoneSink );
         ~ProcessingEngine();
 
-        // @todo rename to StartProcessing
         void StartQueueProcessing( std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor );
 
         void StopQueueProcessing();
@@ -37,8 +36,8 @@ namespace sgns::processing
         void OnSubTaskGrabbed( boost::optional<const SGProcessing::SubTask &> subTask );
 
         /** Processes a subtask and send the processing result to corresponding result channel
-    * @param subTask - subtask that should be processed
-    */
+        * @param subTask - subtask that should be processed
+        */
         void ProcessSubTask( SGProcessing::SubTask subTask );
 
         std::string                                m_nodeId;
