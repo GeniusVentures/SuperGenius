@@ -281,6 +281,7 @@ namespace sgns
         config.sign_messages           = false;
         config.seen_cache_limit        = 10;
         config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
+        config.rw_timeout_msec         = std::chrono::seconds{ 30 };
         pubsub_                        = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
             config );
