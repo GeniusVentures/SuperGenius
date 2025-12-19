@@ -7,6 +7,7 @@
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <memory>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -167,7 +168,10 @@ namespace sgns
                             uint16_t            base_port,
                             bool                is_full_node,
                             bool                use_upnp ) :
-        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
+        account_( GeniusAccount::New( dev_config.TokenID,
+                                      std::make_shared<JSONSecureStorage>( dev_config.BaseWritePath ),
+                                      eth_private_key,
+                                      is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -338,9 +342,7 @@ namespace sgns
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
         task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
-                                                                             1,
-                                                                             dev_config.TokenID );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_, 1, dev_config.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 

@@ -12,8 +12,6 @@
 #include <string>
 #include <vector>
 #include <shared_mutex>
-#include <tuple>
-#include <optional>
 #include <set>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
@@ -23,6 +21,7 @@
 #include "account/UTXOTxParameters.hpp"
 #include "account/TokenID.hpp"
 #include "base/logger.hpp"
+#include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -43,14 +42,15 @@ namespace sgns
         /**
          * @brief       Factory constructor of new GeniusAccount
          * @param[in]   token_id Token ID of the account
-         * @param[in]   base_path Base path of the account
+         * @param[in]   storage Secure storage instance
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
          * @return      Valid pointer if succeeds, nullptr otherwise
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID          token_id,
-                                                   std::string_view base_path,
-                                                   const char      *eth_private_key,
-                                                   bool             full_node = false);
+        static std::shared_ptr<GeniusAccount> New( TokenID                         token_id,
+                                                   std::shared_ptr<ISecureStorage> storage,
+                                                   const char                     *eth_private_key,
+                                                   bool                            full_node = false );
+
         /**
          * @brief       Initialize the messenger for the account
          * @param[in]   pubsub pubsub instance
@@ -241,9 +241,10 @@ namespace sgns
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
-        std::unordered_map<std::string, uint64_t>       confirmed_nonces_;      ///< Map of the confirmed nonces from peers
-        mutable std::shared_mutex                       nonce_mutex_;           ///< Mutex for the nonce map
-        std::set<uint64_t>                              pending_nonces_;        ///< Reserved but not confirmed nonces
+        std::shared_ptr<ISecureStorage>                 storage_;          ///< Secure storage instance
+        std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
+        mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
+        std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
 
@@ -253,7 +254,7 @@ namespace sgns
          * @brief       Private constructor a new Genius Account object
          * @param[in]   token_id
          */
-        GeniusAccount( TokenID token_id, bool full_node );
+        GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
 
         /**
          * @brief       Derives a Genius address from a given Ethereum private key
@@ -262,8 +263,8 @@ namespace sgns
          * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
          */
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
-            std::string_view base_path,
-            const char      *eth_private_key );
+            ISecureStorage &storage,
+            const char     *eth_private_key );
     };
 }
 
