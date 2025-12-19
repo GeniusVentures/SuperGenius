@@ -252,51 +252,6 @@ namespace sgns
                     account_->GetAddress() );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
-                StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
-                break;
-            }
-            case NodeState::INITIALIZING_TRANSACTIONS:
-            {
-                transaction_manager_ = TransactionManager::New( tx_globaldb_,
-                                                                io_,
-                                                                account_,
-                                                                std::make_shared<crypto::HasherImpl>(),
-                                                                is_full_node_ );
-
-                transaction_manager_->RegisterStateChangeCallback(
-                    [weak_self = weak_from_this()]( TransactionManager::State old_state,
-                                                    TransactionManager::State new_state )
-                    {
-                        if ( auto strong = weak_self.lock() )
-                        {
-                            strong->TransactionStateChanged( old_state, new_state );
-                        }
-                    } );
-                StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
-                break;
-            }
-            case NodeState::INITIALIZING_BLOCKCHAIN:
-            {
-                auto weak_self = weak_from_this();
-                blockchain_    = Blockchain::New(
-                    tx_globaldb_,
-                    account_,
-                    [weak_self]( outcome::result<void> result )
-                    {
-                        if ( auto strong = weak_self.lock() )
-                        {
-                            if ( result.has_error() )
-                            {
-                                strong->node_logger_->error( "Error starting blockchain: {}",
-                                                             result.error().message() );
-                                return;
-                            }
-                            strong->node_logger_->debug(
-                                "Blockchain started successfully, starting transaction manager" );
-                            strong->transaction_manager_->Start();
-                        }
-                    } );
-                blockchain_->Start();
                 StateTransition( NodeState::INITIALIZING_DHT );
                 break;
             }
@@ -321,9 +276,64 @@ namespace sgns
                 {
                     io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
                 }
+                StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+                break;
+            }
+
+            case NodeState::INITIALIZING_BLOCKCHAIN:
+            {
+                auto weak_self = weak_from_this();
+                blockchain_    = Blockchain::New(
+                    tx_globaldb_,
+                    account_,
+                    [weak_self]( outcome::result<void> result )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            if ( result.has_error() )
+                            {
+                                strong->node_logger_->error( "Error starting blockchain: {}",
+                                                             result.error().message() );
+                                return;
+                            }
+                            strong->node_logger_->debug(
+                                "Blockchain started successfully, starting transaction manager" );
+                            if ( strong->is_full_node_ )
+                            {
+                                strong->node_logger_->debug(
+                                    "Full node: Setting blockchain to grab other account creation blocks" );
+                                strong->blockchain_->SetFullNodeMode();
+                            }
+                            strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                        }
+                    } );
+                blockchain_->Start();
+
+                break;
+            }
+
+            case NodeState::INITIALIZING_TRANSACTIONS:
+            {
+                transaction_manager_ = TransactionManager::New( tx_globaldb_,
+                                                                io_,
+                                                                account_,
+                                                                std::make_shared<crypto::HasherImpl>(),
+                                                                is_full_node_ );
+
+                transaction_manager_->RegisterStateChangeCallback(
+                    [weak_self = weak_from_this()]( TransactionManager::State old_state,
+                                                    TransactionManager::State new_state )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            strong->TransactionStateChanged( old_state, new_state );
+                        }
+                    } );
+                transaction_manager_->Start();
                 StateTransition( NodeState::READY );
                 break;
             }
+
             case NodeState::READY:
             {
                 node_logger_->info( "GeniusNode READY" );
@@ -368,14 +378,14 @@ namespace sgns
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
-        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::debug );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::trace );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
-        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::debug );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::debug );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -387,7 +397,7 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );

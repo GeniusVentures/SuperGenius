@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/GeniusAccount.hpp"
@@ -93,6 +94,8 @@ namespace sgns
         outcome::result<std::string> GetGenesisCID() const;
         outcome::result<std::string> GetAccountCreationCID() const;
 
+        void SetFullNodeMode();
+
     private:
         /// Make constructor private to force use of factory method
         Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
@@ -100,9 +103,9 @@ namespace sgns
                     BlockchainCallback              callback );
 
         outcome::result<void> InitGenesisCID();
-        outcome::result<void> InitAccountCreationCID();
+        outcome::result<void> InitAccountCreationCID( const std::string &address );
         outcome::result<void> SaveGenesisCID( const std::string &cid );
-        outcome::result<void> SaveAccountCreationCID( const std::string &cid );
+        outcome::result<void> SaveAccountCreationCID( const std::string &address, const std::string &cid );
 
         std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g );
         std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::AccountCreationBlock &ac );
@@ -144,21 +147,26 @@ namespace sgns
         struct BlockchainCIDs
         {
             std::optional<std::string> genesis_;
-            std::optional<std::string> account_;
+            std::unordered_map<std::string, std::string> account_creation_;
 
             bool hasGenesis() const
             {
                 return genesis_.has_value();
             }
 
-            bool hasAccount() const
+            bool hasAccount( const std::string &address ) const
             {
-                return account_.has_value();
+                return account_creation_.find( address ) != account_creation_.end();
             }
 
-            bool isComplete() const
+            bool hasAnyAccount() const
             {
-                return hasGenesis() && hasAccount();
+                return !account_creation_.empty();
+            }
+
+            bool isCompleteFor( const std::string &address ) const
+            {
+                return hasGenesis() && hasAccount( address );
             }
         };
 

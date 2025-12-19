@@ -68,10 +68,8 @@ namespace sgns
                 }
             } );
 
-        std::string account_creation_key = std::string( ACCOUNT_CREATION_KEY_PREFIX ) +
-                                           instance->account_->GetAddress();
         (void)instance->db_->RegisterNewElementCallback(
-            "/?" + account_creation_key,
+            "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
             {
@@ -95,15 +93,14 @@ namespace sgns
                             }
                             break;
                         case 1:
-                            if ( address != strong->account_->GetAddress() )
+                        {
+                            auto cid_it = strong->cids_.account_creation_.find( address );
+                            if ( cid_it != strong->cids_.account_creation_.end() )
                             {
-                                break;
-                            }
-                            if ( strong->cids_.hasAccount() )
-                            {
-                                return strong->cids_.account_.value();
+                                return cid_it->second;
                             }
                             break;
+                        }
                         default:
                             break;
                     }
@@ -154,8 +151,6 @@ namespace sgns
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
-        //TODO - Uncomment when a node wants to grab other node's account creation block (full node probably)
-        //db_->AddTopicName( std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
 
         auto get_account_creation_result = db_->Get(
             crdt::HierarchicalKey( std::string( ACCOUNT_CREATION_KEY_PREFIX ) + account_->GetAddress() ) );
@@ -176,7 +171,41 @@ namespace sgns
             OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
             OUTCOME_TRY( InitGenesisCID() );
             OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
-            OUTCOME_TRY( InitAccountCreationCID() );
+            OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
+
+            auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) );
+            if ( query_result.has_error() )
+            {
+                logger_->debug( "[{}] Could not query other account creation CIDs: {}",
+                                account_->GetAddress().substr( 0, 8 ),
+                                query_result.error().message() );
+            }
+            else
+            {
+                const auto prefix      = std::string( ACCOUNT_CREATION_CID_KEY_PREFIX );
+                const auto prefix_size = prefix.size();
+                for ( const auto &entry : query_result.value() )
+                {
+                    auto key_str_res = db_->KeyToString( entry.first );
+                    if ( key_str_res.has_error() )
+                    {
+                        logger_->debug( "[{}] Failed to convert account creation key to string",
+                                        account_->GetAddress().substr( 0, 8 ) );
+                        continue;
+                    }
+                    const auto &key_str = key_str_res.value();
+                    if ( key_str.rfind( prefix, 0 ) != 0 || key_str.size() <= prefix_size )
+                    {
+                        continue;
+                    }
+                    auto address = key_str.substr( prefix_size );
+                    if ( address == account_->GetAddress() )
+                    {
+                        continue;
+                    }
+                    (void)InitAccountCreationCID( address );
+                }
+            }
 
             logger_->info( "[{}] Account creation block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
@@ -271,14 +300,14 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    outcome::result<void> Blockchain::InitAccountCreationCID()
+    outcome::result<void> Blockchain::InitAccountCreationCID( const std::string &address )
     {
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_key;
-        account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) );
+        account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) + address );
         auto account_creation_cid = db_->GetDataStore()->get( account_creation_cid_buffer_key );
         if ( account_creation_cid.has_value() )
         {
-            cids_.account_ = std::string( account_creation_cid.value().toString() );
+            cids_.account_creation_[address] = std::string( account_creation_cid.value().toString() );
             return outcome::success();
         }
         return outcome::failure( std::errc::no_such_file_or_directory );
@@ -305,10 +334,10 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> Blockchain::SaveAccountCreationCID( const std::string &cid )
+    outcome::result<void> Blockchain::SaveAccountCreationCID( const std::string &address, const std::string &cid )
     {
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_key;
-        account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) );
+        account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) + address );
 
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_value;
         account_creation_cid_buffer_value.put( cid );
@@ -322,8 +351,11 @@ namespace sgns
                             put_result.error().message() );
             return outcome::failure( put_result.error() );
         }
-        cids_.account_ = cid;
-        logger_->debug( "[{}] Account creation CID saved: {}", account_->GetAddress().substr( 0, 8 ), cid );
+        cids_.account_creation_[address] = cid;
+        logger_->debug( "[{}] Account creation CID saved for {}: {}",
+                        account_->GetAddress().substr( 0, 8 ),
+                        address.substr( 0, 8 ),
+                        cid );
         return outcome::success();
     }
 
@@ -425,7 +457,8 @@ namespace sgns
                     {
                         // Exit if block already processed via normal flow
                         if ( ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
-                             ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING && self->cids_.hasAccount() ) )
+                             ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
+                               self->cids_.hasAccount( self->account_->GetAddress() ) ) )
                         {
                             return;
                         }
@@ -454,7 +487,7 @@ namespace sgns
                     bool local_state = ( error_on_failure == Error::GENESIS_BLOCK_MISSING &&
                                          self->cids_.hasGenesis() ) ||
                                        ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
-                                         self->cids_.hasAccount() );
+                                         self->cids_.hasAccount( self->account_->GetAddress() ) );
 
                     if ( done || local_state )
                     {
@@ -915,19 +948,34 @@ namespace sgns
                         account_->GetAddress().substr( 0, 8 ),
                         cid );
 
+        std::string           creation_address;
+        bool                  notify_blockchain  = false;
         outcome::result<void> new_account_return = outcome::success();
         do
         {
-            auto init_account_cid_result = InitAccountCreationCID();
-            if ( !init_account_cid_result.has_error() )
-            {
-                logger_->error( "[{}] Account already created, ignoring new account creation",
-                                account_->GetAddress().substr( 0, 8 ) );
-                break;
-            }
             logger_->info( "[{}] New account creation block CID received, processing",
                            account_->GetAddress().substr( 0, 8 ) );
             auto [account_creation_key, serialized_account_creation] = new_data;
+
+            std::string key_address = account_creation_key;
+            if ( !key_address.empty() && key_address.front() == '/' )
+            {
+                key_address.erase( key_address.begin() );
+            }
+            const std::string prefix = std::string( ACCOUNT_CREATION_KEY_PREFIX );
+            if ( key_address.rfind( prefix, 0 ) == 0 )
+            {
+                key_address = key_address.substr( prefix.size() );
+            }
+            else
+            {
+                key_address.clear();
+            }
+
+            if ( key_address == account_->GetAddress() )
+            {
+                notify_blockchain = true;
+            }
 
             auto account_creation_validation_result = OnAccountCreationBlockReceived( serialized_account_creation );
             if ( account_creation_validation_result.has_error() )
@@ -938,9 +986,38 @@ namespace sgns
                 break;
             }
 
+            creation_address = account_creation_block_.account_address();
+            if ( creation_address.empty() )
+            {
+                logger_->error( "[{}] Account creation block with empty address", account_->GetAddress().substr( 0, 8 ) );
+                new_account_return = outcome::failure( std::errc::invalid_argument );
+                break;
+            }
+
+            if ( !key_address.empty() && key_address != creation_address )
+            {
+                logger_->warn( "[{}] Account creation key address {} does not match block address {}",
+                               account_->GetAddress().substr( 0, 8 ),
+                               key_address.substr( 0, 8 ),
+                               creation_address.substr( 0, 8 ) );
+            }
+
+            if ( cids_.hasAccount( creation_address ) )
+            {
+                logger_->info( "[{}] Account creation already stored for {}, ignoring duplicate",
+                               account_->GetAddress().substr( 0, 8 ),
+                               creation_address.substr( 0, 8 ) );
+                break;
+            }
+
+            if ( creation_address == account_->GetAddress() )
+            {
+                notify_blockchain = true;
+            }
+
             logger_->info( "[{}] Account creation block validated", account_->GetAddress().substr( 0, 8 ) );
 
-            auto save_account_creation_result = SaveAccountCreationCID( cid );
+            auto save_account_creation_result = SaveAccountCreationCID( creation_address, cid );
             if ( save_account_creation_result.has_error() )
             {
                 logger_->error( "[{}] Failed to save account creation CID", account_->GetAddress().substr( 0, 8 ) );
@@ -953,7 +1030,10 @@ namespace sgns
 
         } while ( 0 );
 
-        InformBlockchainResult( new_account_return );
+        if ( notify_blockchain )
+        {
+            InformBlockchainResult( new_account_return );
+        }
     }
 
     outcome::result<std::string> Blockchain::GetGenesisCID() const
@@ -969,12 +1049,19 @@ namespace sgns
 
     outcome::result<std::string> Blockchain::GetAccountCreationCID() const
     {
-        if ( !cids_.hasAccount() )
+        auto it = cids_.account_creation_.find( account_->GetAddress() );
+        if ( it == cids_.account_creation_.end() )
         {
             logger_->error( "[{}] Trying to grab Account Creation, but no local information",
                             account_->GetAddress().substr( 0, 8 ) );
             return outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING );
         }
-        return cids_.account_.value();
+        return it->second;
+    }
+
+    void Blockchain::SetFullNodeMode()
+    {
+        db_->AddListenTopic(
+            std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
 }
