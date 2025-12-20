@@ -12,6 +12,9 @@
 #include <string>
 #include <vector>
 #include <shared_mutex>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 #include <tuple>
 #include <optional>
 #include <set>
@@ -39,6 +42,7 @@ namespace sgns
     {
     public:
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED; ///< Predefined ElGamal public key
+        static constexpr uint64_t NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
          * @brief       Factory constructor of new GeniusAccount
@@ -246,6 +250,13 @@ namespace sgns
         std::set<uint64_t>                              pending_nonces_;        ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
+        
+        // Nonce request tracking
+        mutable std::mutex                              nonce_request_mutex_;   ///< Mutex for nonce request tracking
+        mutable std::condition_variable                 nonce_request_cv_;      ///< Condition variable for waiting on nonce requests
+        mutable bool                                    nonce_request_in_progress_; ///< Flag indicating if a nonce request is in progress
+        mutable std::optional<outcome::result<uint64_t>> cached_nonce_result_;  ///< Cached result from in-progress request
+        mutable std::chrono::steady_clock::time_point   cached_nonce_timestamp_; ///< Timestamp when cached nonce was obtained
 
         uint64_t GetNextNonceLocked() const;
 

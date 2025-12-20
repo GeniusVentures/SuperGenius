@@ -109,7 +109,7 @@ namespace sgns
     }
 
     GeniusAccount::GeniusAccount( TokenID token_id, bool full_node ) :
-        token( token_id ), is_full_node_( std::move( full_node ) )
+        token( token_id ), is_full_node_( std::move( full_node ) ), nonce_request_in_progress_( false )
     {
     }
 
@@ -556,25 +556,83 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
-        uint64_t result = 0;
-        genius_account_logger()->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
-
+        std::unique_lock<std::mutex> lock( nonce_request_mutex_ );
+        
+        // Check if we have a fresh cached result (within 5 seconds)
+        if ( cached_nonce_result_.has_value() )
+        {
+            auto now = std::chrono::steady_clock::now();
+            auto cache_age_ms = std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ ).count();
+            
+            if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
+            {
+                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
+                return cached_nonce_result_.value();
+            }
+            else
+            {
+                genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age_ms );
+            }
+        }
+        
+        // If a request is already in progress, wait for it
+        if ( nonce_request_in_progress_ )
+        {
+            genius_account_logger()->debug( "Nonce request already in progress, waiting for result..." );
+            
+            // Wait for the in-progress request to complete
+            nonce_request_cv_.wait( lock, [this]() { return !nonce_request_in_progress_; } );
+            
+            // Return the cached result if available
+            if ( cached_nonce_result_.has_value() )
+            {
+                genius_account_logger()->debug( "Returning cached nonce result from completed request" );
+                return cached_nonce_result_.value();
+            }
+        }
+        
+        // Mark that we're starting a request
+        nonce_request_in_progress_ = true;
+        cached_nonce_result_.reset();
+        
+        // Release lock while making the network call
+        lock.unlock();
+        
+        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout_ms );
+        
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
+        
+        outcome::result<uint64_t> result = outcome::failure( std::errc::io_error );
         if ( latest_nonce_result.has_value() )
         {
             result = latest_nonce_result.value();
-            genius_account_logger()->debug( "Nonce replied with value {}", result );
+            genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
         }
         else if ( latest_nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED )
         {
-            genius_account_logger()->debug( "Network didn't answer nonce request " );
-            return latest_nonce_result;
+            genius_account_logger()->debug( "Network didn't answer nonce request" );
+            result = latest_nonce_result;
         }
         else if ( latest_nonce_result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
         {
-            genius_account_logger()->debug( "No nonce information on the network, get local data " );
-            return GetLocalConfirmedNonce();
+            genius_account_logger()->debug( "No nonce information on the network, get local data" );
+            result = GetLocalConfirmedNonce();
         }
+        else
+        {
+            result = latest_nonce_result;
+        }
+        
+        // Re-acquire lock to update state
+        lock.lock();
+        nonce_request_in_progress_ = false;
+        cached_nonce_result_ = result;
+        cached_nonce_timestamp_ = std::chrono::steady_clock::now();
+        
+        // Notify all waiting threads
+        lock.unlock();
+        nonce_request_cv_.notify_all();
+        
         return result;
     }
 }

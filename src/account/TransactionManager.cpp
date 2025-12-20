@@ -666,7 +666,7 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->GetConfirmedNonce( 10000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
         uint64_t expected_next_nonce = 0;
         int64_t  confirmed_nonce     = -1;
 
@@ -804,7 +804,7 @@ namespace sgns
     {
         int64_t confirmed_nonce = -1;
 
-        if ( auto nonce_result = account_m->GetConfirmedNonce( 10000 ); nonce_result.has_value() )
+        if ( auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS ); nonce_result.has_value() )
         {
             confirmed_nonce = static_cast<int64_t>( nonce_result.value() );
             m_logger->debug( "[{} - full: {}] Set nonce to {}",
@@ -1746,7 +1746,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
 
-        auto nonce_result = account_m->GetConfirmedNonce( timeout_ms );
+        auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
         if ( nonce_result.has_value() )
         {
             auto network_confirmed_nonce = nonce_result.value();
@@ -1789,7 +1789,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
 
-        auto     nonce_result    = account_m->GetConfirmedNonce( 3000 );
+        auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
         uint64_t confirmed_nonce = 0;
         if ( nonce_result.has_value() )
         {
@@ -2113,7 +2113,7 @@ namespace sgns
         }
 
         // Fetch confirmed nonce only if we have VERIFYING transactions
-        auto nonce_result = account_m->GetConfirmedNonce( 4000 );
+        auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
         if ( !nonce_result.has_value() )
         {
             m_logger->debug( "[{} - full: {}] Can't fetch nonce from the network in ConfirmTransactions",
