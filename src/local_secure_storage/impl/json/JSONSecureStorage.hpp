@@ -16,11 +16,11 @@ namespace sgns
     class JSONSecureStorage : public ISecureStorage
     {
     public:
+        JSONSecureStorage( std::string directory ) : directory_( std::move( directory ) ) {}
+
         ~JSONSecureStorage() override = default;
-        outcome::result<SecureBufferType> Load( const std::string &key, const std::string directory = "" ) override;
-        outcome::result<void>             Save( const std::string      &key,
-                                                const SecureBufferType &buffer,
-                                                const std::string       directory = "" ) override;
+        outcome::result<SecureBufferType> Load( const std::string &key ) override;
+        outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) override;
 
         std::string GetName() override
         {
@@ -30,21 +30,8 @@ namespace sgns
         static JSONSecureStorage &GetInstance();
 
     private:
-        friend struct JSONRegister;
-        static void RegisterComponent();
-        JSONSecureStorage() = default;
-        static JSONSecureStorage Create();
+        std::string directory_;
     };
-
-    struct JSONRegister
-    {
-        JSONRegister()
-        {
-            JSONSecureStorage::RegisterComponent();
-        }
-    };
-
-    static JSONRegister JSONRegister;
 }
 
 #endif

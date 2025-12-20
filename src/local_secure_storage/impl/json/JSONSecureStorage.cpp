@@ -16,10 +16,9 @@
 
 namespace sgns
 {
-    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key,
-                                                                                  const std::string  directory )
+    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key )
     {
-        auto fullpath = directory + "secure_storage.json";
+        auto fullpath = directory_ + "secure_storage.json";
         auto file     = std::fopen( fullpath.data(), "r" );
         if ( !file )
         {
@@ -56,60 +55,39 @@ namespace sgns
         return result;
     }
 
-    outcome::result<void> JSONSecureStorage::Save( const std::string      &key,
-                                                const SecureBufferType &buffer,
-                                                const std::string       directory )
+    outcome::result<void> JSONSecureStorage::Save( const std::string &key, const SecureBufferType &buffer )
     {
-        auto fullpath = directory + "/secure_storage.json";
+        auto fullpath = directory_ + "/secure_storage.json";
 
         // Ensure the directory exists (create it if necessary)
         boost::system::error_code ec;
-        boost::filesystem::create_directories(directory, ec);
-        if (ec) // Check for errors during directory creation
+        boost::filesystem::create_directories( directory_, ec );
+        if ( ec ) // Check for errors during directory creation
         {
-            return outcome::failure(ec);
+            return outcome::failure( ec );
         }
 
-        auto file = std::fopen(fullpath.c_str(), "w");
-        if (!file)
+        auto file = std::fopen( fullpath.c_str(), "w" );
+        if ( !file )
         {
             // Return a meaningful error code for file opening failure
-            return outcome::failure(boost::system::error_code(errno, boost::system::generic_category()));
+            return outcome::failure( boost::system::error_code( errno, boost::system::generic_category() ) );
         }
 
         // Proceed with writing JSON data
         std::array<char, 512>                         buff{};
-        rapidjson::FileWriteStream                    output_stream(file, buff.data(), buff.size());
-        rapidjson::Writer<rapidjson::FileWriteStream> writer(output_stream);
+        rapidjson::FileWriteStream                    output_stream( file, buff.data(), buff.size() );
+        rapidjson::Writer<rapidjson::FileWriteStream> writer( output_stream );
         writer.StartObject();
-        writer.Key("GeniusAccount");
+        writer.Key( "GeniusAccount" );
         writer.StartObject();
-        writer.Key(key.c_str());
-        writer.String(buffer.data());
+        writer.Key( key.c_str() );
+        writer.String( buffer.data() );
         writer.EndObject();
         writer.EndObject();
 
-        std::fclose(file);
+        std::fclose( file );
 
         return outcome::success();
-    }
-
-    JSONSecureStorage JSONSecureStorage::Create()
-    {
-        JSONSecureStorage new_instance;
-        auto              component_factory = SINGLETONINSTANCE( CComponentFactory );
-        component_factory->Register( std::make_shared<JSONSecureStorage>( new_instance ), "LocalSecureStorage" );
-        return new_instance;
-    }
-
-    JSONSecureStorage &JSONSecureStorage::GetInstance()
-    {
-        static JSONSecureStorage instance = Create();
-        return instance;
-    }
-
-    void JSONSecureStorage::RegisterComponent()
-    {
-        (void)GetInstance();
     }
 }
