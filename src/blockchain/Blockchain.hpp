@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "crdt/proto/delta.pb.h"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/impl/proto/SGBlockchain.pb.h"
 #include "base/buffer.hpp"
@@ -117,6 +118,13 @@ namespace sgns
 
         outcome::result<void> CreateAccountCreationBlock();
         outcome::result<void> VerifyAccountCreationBlock( const std::string &serialized_account_creation );
+
+        std::optional<std::vector<crdt::pb::Element>> FilterGenesis( const crdt::pb::Element &element );
+        std::optional<std::vector<crdt::pb::Element>> FilterAccountCreation( const crdt::pb::Element &element );
+        bool ShouldReplaceGenesis( const sgns::blockchain::GenesisBlock &existing,
+                                   const sgns::blockchain::GenesisBlock &candidate ) const;
+        bool ShouldReplaceAccountCreation( const sgns::blockchain::AccountCreationBlock &existing,
+                                           const sgns::blockchain::AccountCreationBlock &candidate ) const;
 
         void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         void AccountCreationReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );

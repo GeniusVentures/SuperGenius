@@ -57,6 +57,31 @@ namespace sgns
                                  instance->account_->GetAddress().substr( 0, 8 ),
                                  GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
+        const bool genesis_filter_initialized = instance->db_->RegisterElementFilter(
+            "/?" + std::string( GENESIS_KEY ),
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->FilterGenesis( element );
+                }
+                return std::nullopt;
+            } );
+        const bool account_creation_filter_initialized = instance->db_->RegisterElementFilter(
+            "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->FilterAccountCreation( element );
+                }
+                return std::nullopt;
+            } );
+        (void)genesis_filter_initialized;
+        (void)account_creation_filter_initialized;
+
         (void)instance->db_->RegisterNewElementCallback(
             "/?" + std::string( GENESIS_KEY ),
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
@@ -173,7 +198,7 @@ namespace sgns
             OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
             OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
 
-            auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) );
+            auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_KEY_PREFIX ) );
             if ( query_result.has_error() )
             {
                 logger_->debug( "[{}] Could not query other account creation CIDs: {}",
@@ -182,8 +207,10 @@ namespace sgns
             }
             else
             {
-                const auto prefix      = std::string( ACCOUNT_CREATION_CID_KEY_PREFIX );
+                const auto prefix      = std::string( ACCOUNT_CREATION_KEY_PREFIX );
                 const auto prefix_size = prefix.size();
+                logger_->debug( "[{}] Found account creation CIDS for other accounts",
+                                account_->GetAddress().substr( 0, 8 ) );
                 for ( const auto &entry : query_result.value() )
                 {
                     auto key_str_res = db_->KeyToString( entry.first );
@@ -194,13 +221,23 @@ namespace sgns
                         continue;
                     }
                     const auto &key_str = key_str_res.value();
-                    if ( key_str.rfind( prefix, 0 ) != 0 || key_str.size() <= prefix_size )
+                    logger_->debug( "[{}] Creation CID key found: {}", account_->GetAddress().substr( 0, 8 ), key_str );
+
+                    if ( key_str.size() <= prefix_size + 1 || key_str.front() != '/' ||
+                         key_str.rfind( prefix, 1 ) != 1 )
                     {
+                        logger_->error( "[{}] Creation CID key INVALID: {}",
+                                        account_->GetAddress().substr( 0, 8 ),
+                                        key_str );
+
                         continue;
                     }
-                    auto address = key_str.substr( prefix_size );
+                    auto address = key_str.substr( prefix_size + 1 );
                     if ( address == account_->GetAddress() )
                     {
+                        logger_->error( "[{}] Creation CID key same as OWN: {}",
+                                        account_->GetAddress().substr( 0, 8 ),
+                                        key_str );
                         continue;
                     }
                     (void)InitAccountCreationCID( address );
@@ -304,9 +341,14 @@ namespace sgns
     {
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_key;
         account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) + address );
+        logger_->debug( "[{}] Init account creation CID for {}", account_->GetAddress().substr( 0, 8 ), address );
         auto account_creation_cid = db_->GetDataStore()->get( account_creation_cid_buffer_key );
         if ( account_creation_cid.has_value() )
         {
+            logger_->debug( "[{}] Account creation CID for {}: {}",
+                            account_->GetAddress().substr( 0, 8 ),
+                            address,
+                            account_creation_cid.value().toString() );
             cids_.account_creation_[address] = std::string( account_creation_cid.value().toString() );
             return outcome::success();
         }
@@ -513,13 +555,6 @@ namespace sgns
 
         do
         {
-            auto init_genesis_cid_result = InitGenesisCID();
-            if ( !init_genesis_cid_result.has_error() )
-            {
-                logger_->error( "[{}] Genesis CID already initialized, ignoring new Genesis block",
-                                account_->GetAddress().substr( 0, 8 ) );
-                break;
-            }
             logger_->info( "[{}] New genesis block CID received, processing", account_->GetAddress().substr( 0, 8 ) );
             auto [genesis_key, serialized_genesis] = new_data;
 
@@ -934,6 +969,223 @@ namespace sgns
         return outcome::success();
     }
 
+    std::optional<std::vector<crdt::pb::Element>> Blockchain::FilterGenesis( const crdt::pb::Element &element )
+    {
+        bool reject = false;
+
+        do
+        {
+            sgns::blockchain::GenesisBlock new_genesis;
+            if ( !new_genesis.ParseFromArray(
+                     reinterpret_cast<const uint8_t *>( element.value().data() ),
+                     static_cast<int>( element.value().size() ) ) )
+            {
+                logger_->warn( "[{}] Failed to parse incoming genesis block, rejecting: {}",
+                               account_->GetAddress().substr( 0, 8 ),
+                               element.key() );
+                reject = true;
+                break;
+            }
+
+            if ( VerifyGenesisBlock( element.value() ).has_error() )
+            {
+                logger_->warn( "[{}] Incoming genesis block failed verification, rejecting",
+                               account_->GetAddress().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            auto maybe_existing_value = db_->Get( element.key() );
+            if ( !maybe_existing_value.has_value() )
+            {
+                break; // no existing genesis locally, accept the new one
+            }
+
+            std::string existing_serialized( maybe_existing_value.value().toString() );
+            if ( existing_serialized == element.value() )
+            {
+                logger_->debug( "[{}] Duplicate genesis block with identical content, ignoring new value",
+                                account_->GetAddress().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            sgns::blockchain::GenesisBlock existing_genesis;
+            if ( !existing_genesis.ParseFromArray(
+                     reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
+                     static_cast<int>( existing_serialized.size() ) ) )
+            {
+                logger_->warn( "[{}] Stored genesis block is not parsable, accepting new candidate",
+                               account_->GetAddress().substr( 0, 8 ) );
+                break;
+            }
+
+            if ( VerifyGenesisBlock( existing_serialized ).has_error() )
+            {
+                logger_->warn( "[{}] Stored genesis block failed verification, accepting replacement",
+                               account_->GetAddress().substr( 0, 8 ) );
+                break;
+            }
+
+            const bool replace = ShouldReplaceGenesis( existing_genesis, new_genesis );
+            if ( !replace )
+            {
+                logger_->info( "[{}] Keeping existing genesis (ts: {}) over new candidate (ts: {})",
+                               account_->GetAddress().substr( 0, 8 ),
+                               existing_genesis.timestamp(),
+                               new_genesis.timestamp() );
+                reject = true;
+            }
+            else
+            {
+                logger_->info( "[{}] Replacing stored genesis (ts: {}) with earlier candidate (ts: {})",
+                               account_->GetAddress().substr( 0, 8 ),
+                               existing_genesis.timestamp(),
+                               new_genesis.timestamp() );
+            }
+
+        } while ( 0 );
+
+        if ( reject )
+        {
+            return std::vector<crdt::pb::Element>{};
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::vector<crdt::pb::Element>> Blockchain::FilterAccountCreation(
+        const crdt::pb::Element &element )
+    {
+        bool reject = false;
+
+        do
+        {
+            sgns::blockchain::AccountCreationBlock new_block;
+            if ( !new_block.ParseFromArray(
+                     reinterpret_cast<const uint8_t *>( element.value().data() ),
+                     static_cast<int>( element.value().size() ) ) )
+            {
+                logger_->warn( "[{}] Failed to parse incoming account creation block, rejecting: {}",
+                               account_->GetAddress().substr( 0, 8 ),
+                               element.key() );
+                reject = true;
+                break;
+            }
+
+            if ( new_block.account_address().empty() )
+            {
+                logger_->warn( "[{}] Account creation block without address, rejecting",
+                               account_->GetAddress().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            const bool genesis_known = cids_.hasGenesis();
+            if ( genesis_known && new_block.genesis_block_cid() != cids_.genesis_.value() )
+            {
+                logger_->warn( "[{}] Account creation genesis CID mismatch ({} vs {}), rejecting",
+                               account_->GetAddress().substr( 0, 8 ),
+                               new_block.genesis_block_cid().substr( 0, 8 ),
+                               cids_.genesis_.value().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            if ( !VerifySignature( new_block ) )
+            {
+                logger_->warn( "[{}] Account creation block failed signature verification, rejecting",
+                               account_->GetAddress().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            auto maybe_existing_value = db_->Get( element.key() );
+            if ( !maybe_existing_value.has_value() )
+            {
+                break; // no existing block for this account yet
+            }
+
+            std::string existing_serialized( maybe_existing_value.value().toString() );
+            if ( existing_serialized == element.value() )
+            {
+                logger_->debug( "[{}] Duplicate account creation block for {}, ignoring identical value",
+                                account_->GetAddress().substr( 0, 8 ),
+                                new_block.account_address().substr( 0, 8 ) );
+                reject = true;
+                break;
+            }
+
+            sgns::blockchain::AccountCreationBlock existing_block;
+            if ( !existing_block.ParseFromArray(
+                     reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
+                     static_cast<int>( existing_serialized.size() ) ) )
+            {
+                logger_->warn( "[{}] Stored account creation block for {} is not parsable, accepting new candidate",
+                               account_->GetAddress().substr( 0, 8 ),
+                               new_block.account_address().substr( 0, 8 ) );
+                break;
+            }
+
+            const bool existing_genesis_ok =
+                !genesis_known || existing_block.genesis_block_cid() == cids_.genesis_.value();
+            const bool existing_signature_ok = VerifySignature( existing_block );
+
+            if ( !( existing_genesis_ok && existing_signature_ok ) )
+            {
+                logger_->info( "[{}] Existing account creation for {} is invalid, accepting new candidate",
+                               account_->GetAddress().substr( 0, 8 ),
+                               new_block.account_address().substr( 0, 8 ) );
+                break;
+            }
+
+            const bool replace = ShouldReplaceAccountCreation( existing_block, new_block );
+            if ( !replace )
+            {
+                logger_->info( "[{}] Keeping existing account creation for {} (ts: {}) over new (ts: {})",
+                               account_->GetAddress().substr( 0, 8 ),
+                               new_block.account_address().substr( 0, 8 ),
+                               existing_block.timestamp(),
+                               new_block.timestamp() );
+                reject = true;
+            }
+            else
+            {
+                logger_->info( "[{}] Replacing account creation for {} (ts: {} -> ts: {})",
+                               account_->GetAddress().substr( 0, 8 ),
+                               new_block.account_address().substr( 0, 8 ),
+                               existing_block.timestamp(),
+                               new_block.timestamp() );
+            }
+
+        } while ( 0 );
+
+        if ( reject )
+        {
+            return std::vector<crdt::pb::Element>{};
+        }
+        return std::nullopt;
+    }
+
+    bool Blockchain::ShouldReplaceGenesis( const sgns::blockchain::GenesisBlock &existing,
+                                           const sgns::blockchain::GenesisBlock &candidate ) const
+    {
+        if ( candidate.timestamp() == existing.timestamp() )
+        {
+            return candidate.SerializeAsString() < existing.SerializeAsString();
+        }
+        return candidate.timestamp() < existing.timestamp();
+    }
+
+    bool Blockchain::ShouldReplaceAccountCreation( const sgns::blockchain::AccountCreationBlock &existing,
+                                                   const sgns::blockchain::AccountCreationBlock &candidate ) const
+    {
+        if ( candidate.timestamp() == existing.timestamp() )
+        {
+            return candidate.SerializeAsString() < existing.SerializeAsString();
+        }
+        return candidate.timestamp() < existing.timestamp();
+    }
+
     outcome::result<void> Blockchain::Stop()
     {
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
@@ -989,7 +1241,8 @@ namespace sgns
             creation_address = account_creation_block_.account_address();
             if ( creation_address.empty() )
             {
-                logger_->error( "[{}] Account creation block with empty address", account_->GetAddress().substr( 0, 8 ) );
+                logger_->error( "[{}] Account creation block with empty address",
+                                account_->GetAddress().substr( 0, 8 ) );
                 new_account_return = outcome::failure( std::errc::invalid_argument );
                 break;
             }
@@ -1000,14 +1253,6 @@ namespace sgns
                                account_->GetAddress().substr( 0, 8 ),
                                key_address.substr( 0, 8 ),
                                creation_address.substr( 0, 8 ) );
-            }
-
-            if ( cids_.hasAccount( creation_address ) )
-            {
-                logger_->info( "[{}] Account creation already stored for {}, ignoring duplicate",
-                               account_->GetAddress().substr( 0, 8 ),
-                               creation_address.substr( 0, 8 ) );
-                break;
             }
 
             if ( creation_address == account_->GetAddress() )
