@@ -607,8 +607,18 @@ namespace sgns
         // Re-acquire lock to update state
         lock.lock();
         nonce_request_in_progress_ = false;
-        cached_nonce_result_ = result;
-        cached_nonce_timestamp_ = std::chrono::steady_clock::now();
+        
+        // Only cache successful results
+        if ( result.has_value() )
+        {
+            cached_nonce_result_ = result;
+            cached_nonce_timestamp_ = std::chrono::steady_clock::now();
+            genius_account_logger()->debug( "Cached successful nonce result: {}", result.value() );
+        }
+        else
+        {
+            genius_account_logger()->debug( "Not caching failed nonce request" );
+        }
         
         // Notify all waiting threads
         lock.unlock();
