@@ -103,7 +103,11 @@ namespace sgns
     }
 
     GeniusAccount::GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node ) :
-        token( token_id ), storage_( std::move( storage ) ), is_full_node_( full_node )
+        token( token_id ),
+        storage_( std::move( storage ) ),
+        is_full_node_( full_node ),
+        nonce_request_in_progress_( false ),
+        cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
     {
     }
 
