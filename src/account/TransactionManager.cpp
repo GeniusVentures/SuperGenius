@@ -2665,10 +2665,6 @@ namespace sgns
             }
         }
 
-        m_logger->debug( "[{} - full: {}] Finalized adding of new tx",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m );
-
         return outcome::success();
     }
 
