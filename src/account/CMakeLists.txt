@@ -107,15 +107,9 @@ target_link_libraries(genius_node
     rapidjson
     coinprices
     ${WIN_CRYPT_LIBRARY}
-)
-
-if (BUILD_WITH_PROOFS)
-    target_link_libraries(genius_node
-    PRIVATE
     transfer_proof
     processing_proof
-    )
-endif()
+)
 
 target_include_directories(
     genius_node
