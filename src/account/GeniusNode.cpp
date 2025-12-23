@@ -296,6 +296,13 @@ namespace sgns
                                                              result.error().message() );
                                 return;
                             }
+                            auto current_state = strong->state_.load();
+                            if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                            {
+                                strong->node_logger_->debug( "Skipping transaction initialization, unexpected state: {}",
+                                                            NodeStateToString( current_state ) );
+                                return;
+                            }
                             strong->node_logger_->debug(
                                 "Blockchain started successfully, starting transaction manager" );
                             if ( strong->is_full_node_ )
@@ -304,6 +311,7 @@ namespace sgns
                                     "Full node: Setting blockchain to grab other account creation blocks" );
                                 strong->blockchain_->SetFullNodeMode();
                             }
+
                             strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
                         }
                     } );
@@ -378,12 +386,12 @@ namespace sgns
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::debug );
-        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::trace );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
-        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
@@ -1108,6 +1116,22 @@ namespace sgns
 
         node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
+    }
+
+    outcome::result<std::string> GeniusNode::TransferFunds( uint64_t           amount,
+                                                            const std::string &destination,
+                                                            TokenID            token_id )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+
+        node_logger_->debug( "TransferFunds transaction {} sent", tx_id );
+        return tx_id;
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,

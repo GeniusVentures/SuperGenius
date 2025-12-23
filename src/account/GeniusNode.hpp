@@ -160,11 +160,12 @@ namespace sgns
             return dev_config_.TokenID;
         }
 
-        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
-            uint64_t                  amount,
-            const std::string        &destination,
-            TokenID                   token_id,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,
+                                                                         const std::string        &destination,
+                                                                         TokenID                   token_id,
+                                                                         std::chrono::milliseconds timeout );
+
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
