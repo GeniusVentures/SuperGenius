@@ -45,7 +45,7 @@ namespace sgns
     public:
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS     = 30000; ///< Unified timeout for all nonce requests (30 seconds)
+        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS     = 10000; ///< Unified timeout for all nonce requests (10 seconds)
 
         /**
          * @brief       State of the Transaction Manager
