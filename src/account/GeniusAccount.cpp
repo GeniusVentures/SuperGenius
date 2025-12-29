@@ -36,20 +36,20 @@ namespace sgns
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID          token_id,
-                                                       std::string_view base_path,
-                                                       const char      *eth_private_key,
-                                                       bool             full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                         token_id,
+                                                       std::shared_ptr<ISecureStorage> storage,
+                                                       const char                     *eth_private_key,
+                                                       bool                            full_node )
     {
         std::shared_ptr<GeniusAccount> instance;
 
-        if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
+        if ( auto maybe_address = GenerateGeniusAddress( *storage, eth_private_key ); maybe_address.has_value() )
         {
             genius_account_logger()->debug( "Generated a Genius Address from private key" );
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
             instance = std::shared_ptr<GeniusAccount>(
-                new GeniusAccount( std::move( token_id ), std::move( full_node ) ) );
+                new GeniusAccount( std::move( token_id ), std::move( storage ), full_node ) );
 
             instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
             instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
@@ -69,10 +69,8 @@ namespace sgns
             {
                 return self->Sign( std::move( data ) );
             }
-            else
-            {
-                return outcome::failure( std::errc::owner_dead );
-            }
+
+            return outcome::failure( std::errc::owner_dead );
         };
         methods.verify_signature_ = [weakptr( weak_from_this() )]( std::string          address,
                                                                    std::string          sig,
@@ -82,10 +80,8 @@ namespace sgns
             {
                 return self->VerifySignature( std::move( address ), std::move( sig ), std::move( data ) );
             }
-            else
-            {
-                return outcome::failure( std::errc::owner_dead );
-            }
+
+            return outcome::failure( std::errc::owner_dead );
         };
         methods.get_local_nonce_ = [weakptr( weak_from_this() )]( std::string address ) -> outcome::result<uint64_t>
         {
@@ -93,10 +89,8 @@ namespace sgns
             {
                 return self->GetPeerNonce( address );
             }
-            else
-            {
-                return outcome::failure( std::errc::owner_dead );
-            }
+
+            return outcome::failure( std::errc::owner_dead );
         };
         methods.get_block_cid_ = [weakptr( weak_from_this() )](
                                      uint8_t            block_index,
@@ -109,15 +103,11 @@ namespace sgns
                 {
                     return self->get_cids_method_( block_index, address );
                 }
-                else
-                {
-                    return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
-                }
+
+                return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
             }
-            else
-            {
-                return outcome::failure( std::errc::owner_dead );
-            }
+
+            return outcome::failure( std::errc::owner_dead );
         };
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
@@ -153,8 +143,12 @@ namespace sgns
         return ret;
     }
 
-    GeniusAccount::GeniusAccount( TokenID token_id, bool full_node ) :
-        token( token_id ), is_full_node_( std::move( full_node ) )
+    GeniusAccount::GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node ) :
+        token( token_id ),
+        storage_( std::move( storage ) ),
+        is_full_node_( full_node ),
+        nonce_request_in_progress_( false ),
+        cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
     {
     }
 
@@ -167,18 +161,17 @@ namespace sgns
 
     uint64_t GeniusAccount::GetBalance( const std::string &address ) const
     {
-        uint64_t retval         = 0;
-        auto     target_address = address;
+        uint64_t retval = 0;
 
         // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->error( "Non-full node cannot get balance for other addresses" );
             return 0;
         }
 
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( target_address ); it != utxos_.end() )
+        if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
             for ( const auto &curr : it->second )
             {
@@ -209,17 +202,15 @@ namespace sgns
 
     bool GeniusAccount::PutUTXO( const GeniusUTXO &new_utxo, const std::string &address )
     {
-        auto target_address = address;
-
         // If not a full node and trying to store UTXOs for other addresses, reject
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->debug( "Non-full node cannot store UTXOs for other addresses" );
             return false;
         }
 
         std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[target_address];
+        auto            &utxo_list = utxos_[address];
 
         bool is_new = true;
         for ( auto &curr : utxo_list )
@@ -245,17 +236,15 @@ namespace sgns
 
     void GeniusAccount::DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address )
     {
-        auto target_address = address;
-
         // If not a full node and trying to delete UTXOs for other addresses, reject
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->warn( "Non-full node cannot delete UTXOs for other addresses" );
             return;
         }
 
         std::unique_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( target_address ); it != utxos_.end() )
+        if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
             auto &utxo_list = it->second;
             for ( auto utxo_it = utxo_list.begin(); utxo_it != utxo_list.end(); )
@@ -301,17 +290,15 @@ namespace sgns
 
     std::vector<GeniusUTXO> GeniusAccount::GetUTXOs( const std::string &address ) const
     {
-        auto target_address = address;
-
         // If not a full node and trying to get UTXOs for other addresses, return empty
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->warn( "Non-full node cannot get UTXOs for other addresses" );
             return {};
         }
 
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( target_address ); it != utxos_.end() )
+        if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
             return it->second;
         }
@@ -320,19 +307,17 @@ namespace sgns
 
     void GeniusAccount::SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address )
     {
-        auto target_address = address;
-
         // If not a full node and trying to set UTXOs for other addresses, reject
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->warn( "Non-full node cannot set UTXOs for other addresses" );
             return;
         }
 
         std::unique_lock lock( utxos_mutex_ );
-        utxos_[target_address] = utxos;
+        utxos_[address] = utxos;
 
-        genius_account_logger()->debug( "Set {} UTXOs for address {}", utxos.size(), target_address.substr( 0, 8 ) );
+        genius_account_logger()->debug( "Set {} UTXOs for address {}", utxos.size(), address.substr( 0, 8 ) );
     }
 
     bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
@@ -398,13 +383,9 @@ namespace sgns
     }
 
     outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GeniusAccount::
-        GenerateGeniusAddress( std::string_view base_path, const char *eth_private_key )
+        GenerateGeniusAddress( ISecureStorage &storage, const char *eth_private_key )
     {
-        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
-        OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
-
-        auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
-        auto load_res       = secure_storage->Load( "sgns_key", std::string( base_path ) );
+        auto load_res = storage.Load( "sgns_key" );
 
         nil::crypto3::multiprecision::uint256_t key_seed;
         if ( load_res )
@@ -436,8 +417,7 @@ namespace sgns
 
             key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
 
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 secure_storage->Save( "sgns_key", key_seed.str(), std::string( base_path ) ) );
+            BOOST_OUTCOME_TRYV2( auto &&, storage.Save( "sgns_key", key_seed.str() ) );
         }
 
         KeyGenerator::ElGamal          elgamal_key( key_seed );
@@ -448,18 +428,17 @@ namespace sgns
 
     uint64_t GeniusAccount::GetBalance( const TokenID token_id, const std::string &address ) const
     {
-        uint64_t balance        = 0;
-        auto     target_address = address;
+        uint64_t balance = 0;
 
         // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && target_address != GetAddress() )
+        if ( !is_full_node_ && address != GetAddress() )
         {
             genius_account_logger()->warn( "Non-full node cannot get balance for other addresses" );
             return 0;
         }
 
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( target_address ); it != utxos_.end() )
+        if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
             for ( const auto &utxo : it->second )
             {
@@ -588,10 +567,8 @@ namespace sgns
         {
             return it->second;
         }
-        else
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
+
+        return outcome::failure( std::errc::invalid_argument );
     }
 
     outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
@@ -605,30 +582,101 @@ namespace sgns
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        uint64_t result = 0;
-        genius_account_logger()->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
+        std::unique_lock<std::mutex> lock( nonce_request_mutex_ );
+
+        // Check if we have a fresh cached result (within 5 seconds)
+        if ( cached_nonce_result_.has_value() )
+        {
+            auto now          = std::chrono::steady_clock::now();
+            auto cache_age_ms = std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ )
+                                    .count();
+
+            if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
+            {
+                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
+                return cached_nonce_result_.value();
+            }
+            else
+            {
+                genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce",
+                                                cache_age_ms );
+            }
+        }
+
+        // If a request is already in progress, wait for it
+        if ( nonce_request_in_progress_ )
+        {
+            genius_account_logger()->debug( "Nonce request already in progress, waiting for result..." );
+
+            // Wait for the in-progress request to complete
+            nonce_request_cv_.wait( lock, [this]() { return !nonce_request_in_progress_; } );
+
+            // Return the cached result if available
+            if ( cached_nonce_result_.has_value() )
+            {
+                genius_account_logger()->debug( "Returning cached nonce result from completed request" );
+                return cached_nonce_result_.value();
+            }
+        }
+
+        // Mark that we're starting a request
+        nonce_request_in_progress_ = true;
+        cached_nonce_result_.reset();
+
+        // Release lock while making the network call
+        lock.unlock();
+
+        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout_ms );
 
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
+
+        outcome::result<uint64_t> result = outcome::failure( std::errc::io_error );
         if ( latest_nonce_result.has_value() )
         {
             result = latest_nonce_result.value();
-            genius_account_logger()->debug( "Nonce replied with value {}", result );
+            genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
         }
         else if ( latest_nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED )
         {
-            genius_account_logger()->debug( "Network didn't answer nonce request " );
-            return latest_nonce_result;
+            genius_account_logger()->debug( "Network didn't answer nonce request" );
+            result = latest_nonce_result;
         }
         else if ( latest_nonce_result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
         {
-            genius_account_logger()->debug( "No nonce information on the network, get local data " );
-            return GetLocalConfirmedNonce();
+            genius_account_logger()->debug( "No nonce information on the network, get local data" );
+            result = GetLocalConfirmedNonce();
         }
+        else
+        {
+            result = latest_nonce_result;
+        }
+
+        // Re-acquire lock to update state
+        lock.lock();
+        nonce_request_in_progress_ = false;
+
+        // Only cache successful results
+        if ( result.has_value() )
+        {
+            cached_nonce_result_    = result;
+            cached_nonce_timestamp_ = std::chrono::steady_clock::now();
+            genius_account_logger()->debug( "Cached successful nonce result: {}", result.value() );
+        }
+        else
+        {
+            genius_account_logger()->debug( "Not caching failed nonce request" );
+        }
+
+        // Notify all waiting threads
+        lock.unlock();
+        nonce_request_cv_.notify_all();
+
         return result;
     }
 
     outcome::result<void> GeniusAccount::RequestGenesis(
-        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback ) const
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
         {
@@ -640,7 +688,8 @@ namespace sgns
     }
 
     outcome::result<void> GeniusAccount::RequestAccountCreation(
-        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback ) const
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
         {

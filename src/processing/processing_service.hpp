@@ -1,7 +1,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 
-#include <map>
+#include <unordered_map>
 
 #include "processing/processing_node.hpp"
 #include "processing/processing_subtask_enqueuer.hpp"
@@ -11,6 +11,12 @@ namespace sgns::processing
     class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
     {
     public:
+        enum class Status {
+            DISABLED,
+            IDLE,
+            PROCESSING,
+        };
+
         /** Constructs a processing service.
          * @param gossipPubSub - pubsub service
          * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
@@ -18,8 +24,9 @@ namespace sgns::processing
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
                                size_t                                     maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                               std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>                  processingCore );
+                               std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+                               std::shared_ptr<ProcessingCore>            processingCore );
+
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>                        gossipPubSub,
                                size_t                                                            maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>                                  subTaskEnqueuer,
@@ -33,22 +40,27 @@ namespace sgns::processing
         ~ProcessingServiceImpl();
 
         void StartProcessing( const std::string &processingGridChannelId );
+
         void StopProcessing();
 
         size_t GetProcessingNodesCount() const;
 
         void SetChannelListRequestTimeout( boost::posix_time::time_duration channelListRequestTimeout );
 
+        [[nodiscard]] Status GetProcessingStatus() const;
+
     private:
         /** Listen to data feed channel.
-    * @param dataChannelId - identifier of a data feed channel
-    */
+        * @param processingGridChannelId - identifier of a data feed channel
+        */
         void Listen( const std::string &processingGridChannelId );
+
         void SendChannelListRequest();
-        /** Asynschonous callback to process received messages other processing services.
-    * @param message - a message structure containing the messsage data and its sender peer information.
-    * @return None
-    */
+
+        /** Asynchronous callback to process received messages other processing services.
+        * @param message - a message structure containing the message data and its sender peer information.
+        * @return None
+        */
         void OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                          const SGProcessing::TaskResult &taskResult );
@@ -77,7 +89,7 @@ namespace sgns::processing
         std::shared_ptr<SubTaskResultStorage>                  m_subTaskResultStorage;
         std::shared_ptr<ProcessingCore>                        m_processingCore;
         std::unique_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>  m_gridChannel;
-        std::map<std::string, std::shared_ptr<ProcessingNode>> m_processingNodes;
+        std::unordered_map<std::string, std::shared_ptr<ProcessingNode>> m_processingNodes;
         boost::asio::deadline_timer                            m_timerChannelListRequestTimeout;
         boost::posix_time::time_duration                       m_channelListRequestTimeout;
         bool                                                   m_waitingChannelRequest = false;

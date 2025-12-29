@@ -123,12 +123,13 @@ namespace sgns
             TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
-        void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( uint16_t pubsubport );
+        void AddPeer( const std::string &peer );
+        void RefreshUPNP( uint16_t pubsubport );
+
         uint64_t GetBalance();
-        uint64_t GetBalance( const TokenID token_id );
+        uint64_t GetBalance( TokenID token_id );
         uint64_t GetBalance( const std::string &address );
-        uint64_t GetBalance( const TokenID token_id, const std::string &address );
+        uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -158,6 +159,12 @@ namespace sgns
         TokenID GetTokenID() const
         {
             return dev_config_.TokenID;
+        }
+
+        [[nodiscard]] processing::ProcessingServiceImpl::Status GetProcessingStatus() const
+        {
+            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::Status::DISABLED
+                                                  : processing_service_->GetProcessingStatus();
         }
 
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,

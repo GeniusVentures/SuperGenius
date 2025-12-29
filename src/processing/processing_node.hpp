@@ -26,7 +26,7 @@ namespace sgns::processing
     {
     public:
         static std::shared_ptr<ProcessingNode> New(
-            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+            std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
             std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
             std::shared_ptr<ProcessingCore>                         processingCore,
             std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -37,19 +37,16 @@ namespace sgns::processing
             std::list<SGProcessing::SubTask>                        subTasks = {},
             std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
             std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
+
         ~ProcessingNode();
 
-        /** Attaches the node to the processing channel
-        * @param processingQueueChannelId - identifier of a processing queue channel
-        * @return flag indicating if the room is joined for block data processing
-        */
         bool HasQueueOwnership() const;
 
     private:
         /** Constructs a processing node
-    * @param gossipPubSub - pubsub service
-    */
-        ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+        * @param gossipPubSub - pubsub service
+        */
+        ProcessingNode( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                         std::shared_ptr<ProcessingCore>                         processingCore,
                         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -58,7 +55,7 @@ namespace sgns::processing
                         std::string                                             node_id,
                         std::chrono::seconds                                    ttl );
 
-        bool AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
+        bool AttachTo( const std::string &processingQueueChannelId );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
         void Initialize( const std::string        &processingQueueChannelId,
                          std::chrono::milliseconds msSubscriptionWaitingDuration );
@@ -89,8 +86,8 @@ namespace sgns::processing
 
         std::shared_ptr<boost::asio::io_context> m_localContext;
         using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-        std::optional<WorkGuard>                 m_localWorkGuard;
-        std::thread                              m_localIoThread;
+        std::optional<WorkGuard> m_localWorkGuard;
+        std::thread              m_localIoThread;
 
         base::Logger m_logger = base::createLogger( "ProcessingNode" );
     };

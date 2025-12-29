@@ -5,11 +5,11 @@
 
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                                  size_t                                           maximalNodesCount,
-                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
-                                                  std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                                                  std::shared_ptr<ProcessingCore>                  processingCore ) :
+    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
+                                                  size_t                                     maximalNodesCount,
+                                                  std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
+                                                  std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+                                                  std::shared_ptr<ProcessingCore>            processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
@@ -22,7 +22,6 @@ namespace sgns::processing
         node_address_( m_gossipPubSub->GetLocalAddress() ),
         m_nodeCreationTimer( *m_context ),
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
-
     {
     }
 
@@ -94,7 +93,7 @@ namespace sgns::processing
             m_gridChannel->Unsubscribe();
         }
 
-        //Cancel timers before stopping context!
+        // Cancel timers before stopping context!
         boost::system::error_code ec;
         m_timerChannelListRequestTimeout.cancel( ec );
         m_nodeCreationTimer.cancel( ec );
@@ -153,30 +152,36 @@ namespace sgns::processing
     void ProcessingServiceImpl::OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         m_logger->trace( "[{}] On Message.", node_address_ );
-        if ( message )
+        if ( !message )
         {
-            m_logger->trace( "[{}] Valid message.", node_address_ );
-            SGProcessing::GridChannelMessage gridMessage;
-            if ( gridMessage.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
-            {
-                if ( gridMessage.has_processing_channel_response() )
-                {
-                    auto response = gridMessage.processing_channel_response();
-                    m_logger->trace( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
-                    AcceptProcessingChannel( response.channel_id() );
-                }
-                else if ( gridMessage.has_processing_channel_request() )
-                {
-                    m_logger->trace( "[{}] PUBLISH.", node_address_ );
-                    PublishLocalChannelList();
-                }
-                else if ( gridMessage.has_node_creation_intent() )
-                {
-                    // Handle intent from another peer
-                    auto intent = gridMessage.node_creation_intent();
-                    OnNodeCreationIntent( intent.peer_address(), intent.subtask_queue_id() );
-                }
-            }
+            m_logger->trace( "[{}] Invalid message.", node_address_ );
+            return;
+        }
+
+        m_logger->trace( "[{}] Valid message.", node_address_ );
+        SGProcessing::GridChannelMessage gridMessage;
+        if ( !gridMessage.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
+        {
+            m_logger->error( "[{}] Could not deserialize message", node_address_ );
+            return;
+        }
+
+        if ( gridMessage.has_processing_channel_response() )
+        {
+            auto response = gridMessage.processing_channel_response();
+            m_logger->trace( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
+            AcceptProcessingChannel( response.channel_id() );
+        }
+        else if ( gridMessage.has_processing_channel_request() )
+        {
+            m_logger->trace( "[{}] PUBLISH.", node_address_ );
+            PublishLocalChannelList();
+        }
+        else if ( gridMessage.has_node_creation_intent() )
+        {
+            // Handle intent from another peer
+            auto intent = gridMessage.node_creation_intent();
+            OnNodeCreationIntent( intent.peer_address(), intent.subtask_queue_id() );
         }
     }
 
@@ -199,8 +204,6 @@ namespace sgns::processing
         {
             SendChannelListRequest();
         }
-        // @todo finalize task
-        // @todo Add notification of finished task
     }
 
     void ProcessingServiceImpl::OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage )
@@ -403,6 +406,10 @@ namespace sgns::processing
         m_channelListRequestTimeout = channelListRequestTimeout;
     }
 
+    ProcessingServiceImpl::Status ProcessingServiceImpl::GetProcessingStatus() const {
+        return m_isStopped ? Status::DISABLED : m_processingNodes.size() > 0 ? Status::PROCESSING : Status::IDLE;
+    }
+
     void ProcessingServiceImpl::HandleRequestTimeout()
     {
         m_waitingChannelRequest = false;
@@ -513,7 +520,7 @@ namespace sgns::processing
             [instance = shared_from_this()]( const boost::system::error_code &error )
             {
                 if ( !error )
-                { // Only proceed if not cancelled
+                { // Only proceed if not canceled
                     instance->HandleNodeCreationTimeout();
                 }
             } );
@@ -565,7 +572,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::CancelPendingCreation( const std::string &reason )
     {
-        std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+        std::lock_guard lockCreation( m_mutexPendingCreation );
 
         if ( !m_pendingSubTaskQueueId.empty() )
         {
@@ -593,24 +600,21 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::HandleNodeCreationTimeout()
     {
-        std::string                         subTaskQueueId;
-        std::list<SGProcessing::SubTask>    subTasks;
-        boost::optional<SGProcessing::Task> task;
-        bool                                shouldCreate = false;
+        std::string                      subTaskQueueId;
+        std::list<SGProcessing::SubTask> subTasks;
 
         {
-            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            std::lock_guard lockCreation( m_mutexPendingCreation );
 
             if ( m_pendingSubTaskQueueId.empty() )
             {
-                // Creation was already cancelled
+                // Creation was already canceled
                 m_logger->debug( "[{}] Node creation attempt was already cancelled", node_address_ );
                 return;
             }
 
             subTaskQueueId = m_pendingSubTaskQueueId;
             subTasks       = m_pendingSubTasks;
-            task           = m_pendingTask;
 
             // Check if we still have the lowest address
             if ( !HasLowestAddress() )
@@ -634,82 +638,78 @@ namespace sgns::processing
             m_pendingSubTasks.clear();
             m_pendingTask.reset();
             m_competingPeers.clear();
-            shouldCreate = true;
         }
 
-        if ( shouldCreate )
+        m_logger->debug( "[{}] Timeout elapsed, creating node for queue {} as we have lowest address",
+                         node_address_,
+                         subTaskQueueId );
+
+        // Check if we can still add more nodes
+        std::unique_lock lock( m_mutexNodes );
+
+        // Check if we already have this node (could have been created passively)
+        if ( m_processingNodes.find( subTaskQueueId ) != m_processingNodes.end() )
         {
-            m_logger->debug( "[{}] Timeout elapsed, creating node for queue {} as we have lowest address",
+            m_logger->debug( "[{}] Not creating node for queue {} as it already exists",
                              node_address_,
                              subTaskQueueId );
-
-            // Check if we can still add more nodes
-            std::unique_lock lock( m_mutexNodes );
-
-            // Check if we already have this node (could have been created passively)
-            if ( m_processingNodes.find( subTaskQueueId ) != m_processingNodes.end() )
-            {
-                m_logger->debug( "[{}] Not creating node for queue {} as it already exists",
-                                 node_address_,
-                                 subTaskQueueId );
-                return;
-            }
-
-            if ( m_processingNodes.size() >= m_maximalNodesCount )
-            {
-                m_logger->debug( "[{}] Cannot create node for queue {} as maximum nodes limit reached",
-                                 node_address_,
-                                 subTaskQueueId );
-                return;
-            }
-
-            // Create the ProcessingNode
-            auto weakSelf = weak_from_this();
-
-            auto node = ProcessingNode::New(
-                m_gossipPubSub,
-                m_subTaskResultStorage,
-                m_processingCore,
-                [weakSelf, subTaskQueueId]( const SGProcessing::TaskResult &result )
-                {
-                    if ( auto self = weakSelf.lock() )
-                    {
-                        self->OnQueueProcessingCompleted( subTaskQueueId, result );
-                    }
-                },
-                [weakSelf, subTaskQueueId]( const std::string &error )
-                {
-                    if ( auto self = weakSelf.lock() )
-                    {
-                        self->OnProcessingError( subTaskQueueId, error );
-                    }
-                },
-                [weakSelf, subTaskQueueId]()
-                {
-                    if ( auto self = weakSelf.lock() )
-                    {
-                        self->OnProcessingDone( subTaskQueueId );
-                    }
-                },
-                node_address_,
-                subTaskQueueId,
-                subTasks );
-
-            if ( node != nullptr )
-            {
-                m_processingNodes[subTaskQueueId] = node;
-            }
-
-            lock.unlock(); // Release the mutex before potentially long operations
-
-            m_logger->debug( "[{}] New processing channel created: {}", node_address_, subTaskQueueId );
-
-            // Notify other peers that this channel is now available
-            PublishLocalChannelList();
-
-            // Send a new channel list request to continue processing
-            SendChannelListRequest();
+            return;
         }
+
+        if ( m_processingNodes.size() >= m_maximalNodesCount )
+        {
+            m_logger->debug( "[{}] Cannot create node for queue {} as maximum nodes limit reached",
+                             node_address_,
+                             subTaskQueueId );
+            return;
+        }
+
+        // Create the ProcessingNode
+        auto weakSelf = weak_from_this();
+
+        auto node = ProcessingNode::New(
+            m_gossipPubSub,
+            m_subTaskResultStorage,
+            m_processingCore,
+            [weakSelf, subTaskQueueId]( const SGProcessing::TaskResult &result )
+            {
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->OnQueueProcessingCompleted( subTaskQueueId, result );
+                }
+            },
+            [weakSelf, subTaskQueueId]( const std::string &error )
+            {
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->OnProcessingError( subTaskQueueId, error );
+                }
+            },
+            [weakSelf, subTaskQueueId]()
+            {
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->OnProcessingDone( subTaskQueueId );
+                }
+            },
+            node_address_,
+            subTaskQueueId,
+            subTasks );
+
+        if ( node != nullptr )
+        {
+            m_processingNodes[subTaskQueueId] = node;
+        }
+
+        lock.unlock(); // Release the mutex before potentially long operations
+
+        m_logger->debug( "[{}] New processing channel created: {}", node_address_, subTaskQueueId );
+
+        // Notify other peers that this channel is now available
+        PublishLocalChannelList();
+
+        // Send a new channel list request to continue processing
+        SendChannelListRequest();
     }
 
     bool ProcessingServiceImpl::IsPendingCreationStale() const
@@ -718,5 +718,4 @@ namespace sgns::processing
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - m_pendingCreationTimestamp );
         return elapsed > m_pendingCreationTimeout;
     }
-
 }

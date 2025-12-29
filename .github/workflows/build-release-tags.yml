@@ -55,7 +55,7 @@ jobs:
           - target: Windows
             host: windows-latest
           - target: OSX
-            host: macos-latest
+            host: gv-OSX-Large
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
@@ -80,6 +80,51 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      - name: Clean workspace (self-hosted runners)
+        if: ${{ runner.environment == 'self-hosted' }}
+        run: |
+          echo "=== PRE-CLEANUP DEBUG ==="
+          echo "Current working directory: $(pwd)"
+          echo "Workspace: ${{github.workspace}}"
+          
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Changed to workspace directory: $(pwd)"
+            echo "Contents:"
+            ls -la
+            
+            # Check for SuperGenius subdirectory and clean git repo
+            if [ -d "SuperGenius/.git" ]; then
+              echo "Git repository detected in SuperGenius/, performing deep clean..."
+              cd SuperGenius
+              git clean -xfd
+              git submodule foreach --recursive git clean -xfd
+              git reset --hard
+              git submodule foreach --recursive git reset --hard
+              echo "Git clean completed"
+              cd "${{github.workspace}}"
+            else
+              echo "No git repository found in SuperGenius/, skipping git clean"
+            fi
+            
+            # Remove thirdparty and zkLLVM directories if they exist
+            echo "Removing thirdparty directory..."
+            rm -rf thirdparty
+            
+            echo "Removing zkLLVM directory..."
+            rm -rf zkLLVM
+          else
+            echo "Workspace directory does not exist yet, skipping cleanup"
+          fi
+          
+          echo "=== POST-CLEANUP DEBUG ==="
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Final workspace contents:"
+            ls -la
+          fi
+        shell: bash
+
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
         with:
@@ -188,9 +233,18 @@ jobs:
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
         run: |
-          brew install ccache ninja bash
-          PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
-          echo "PATH=$PATH" >> $GITHUB_ENV
+          brew install ccache ninja bash gnu-tar
+          # Ensure GNU tar is first in PATH - check both possible Homebrew locations
+          if [ -d "/opt/homebrew/opt/gnu-tar/libexec/gnubin" ]; then
+            echo "PATH=/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+            echo "Using GNU tar from /opt/homebrew"
+          elif [ -d "/usr/local/opt/gnu-tar/libexec/gnubin" ]; then
+            echo "PATH=/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+            echo "Using GNU tar from /usr/local"
+          else
+            echo "WARNING: GNU tar installation not found in expected locations"
+            echo "Available tar: $(which tar)"
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain

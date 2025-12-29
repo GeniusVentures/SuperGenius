@@ -37,11 +37,12 @@ protected:
 
 TEST_F( AccountCreationTest, AccountCreationAddress )
 {
+    auto        storage       = std::make_shared<JSONSecureStorage>( "." );
     auto        account       = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                       ".",
+                                       storage,
                                        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
     auto        account2      = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                        ".",
+                                        storage,
                                         "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
     std::string address_main  = account->GetAddress();
     std::string address_main2 = account2->GetAddress();

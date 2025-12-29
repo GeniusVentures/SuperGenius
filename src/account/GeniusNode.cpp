@@ -7,6 +7,7 @@
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <memory>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -141,7 +142,10 @@ namespace sgns
                             uint16_t            base_port,
                             bool                is_full_node,
                             bool                use_upnp ) :
-        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key, is_full_node ) ),
+        account_( GeniusAccount::New( dev_config.TokenID,
+                                      std::make_shared<JSONSecureStorage>( dev_config.BaseWritePath ),
+                                      eth_private_key,
+                                      is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -299,8 +303,9 @@ namespace sgns
                             auto current_state = strong->state_.load();
                             if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
                             {
-                                strong->node_logger_->debug( "Skipping transaction initialization, unexpected state: {}",
-                                                            NodeStateToString( current_state ) );
+                                strong->node_logger_->debug(
+                                    "Skipping transaction initialization, unexpected state: {}",
+                                    NodeStateToString( current_state ) );
                                 return;
                             }
                             strong->node_logger_->debug(
@@ -487,6 +492,7 @@ namespace sgns
             config.sign_messages           = false;
             config.seen_cache_limit        = 10;
             config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
+            config.rw_timeout_msec         = std::chrono::seconds{ 30 };
 
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
                 crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
@@ -606,10 +612,7 @@ namespace sgns
         bool ret = true;
 
         task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
-                                                                             1000000,
-                                                                             1,
-                                                                             dev_config_.TokenID );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_, 1, dev_config_.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
