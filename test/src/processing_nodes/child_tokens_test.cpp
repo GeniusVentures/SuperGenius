@@ -11,6 +11,8 @@
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+
 
 using namespace sgns::test;
 using boost::multiprecision::cpp_dec_float_50;
@@ -57,9 +59,11 @@ namespace
                              return hexChars[dist( rng )];
                          } );
 
+        const auto STORAGE = std::make_shared<JSONSecureStorage>( outPath );
+
         if ( setAsAuthorized )
         {
-            auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( outPath, key.c_str() );
+            auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( *STORAGE, key.c_str() );
             if ( !maybe_address.has_value() )
             {
                 ADD_FAILURE() << "Failed to generate full-node address for authorization";

@@ -8,6 +8,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/wait_condition.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 
@@ -41,9 +42,11 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
     devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
+    const auto STORAGE = std::make_shared<JSONSecureStorage>( outPath );
+
     if ( isFullNode )
     {
-        auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( outPath, privKey.c_str() );
+        auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( *STORAGE, privKey.c_str() );
         if ( !maybe_address.has_value() )
         {
             ADD_FAILURE() << "Failed to generate full-node address for authorization";
