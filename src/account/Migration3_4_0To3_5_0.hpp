@@ -67,9 +67,9 @@ namespace sgns
     private:
         enum class Status
         {
-            INIT = 0,
-            ERROR,
-            SUCCESS,
+            ST_INIT = 0,
+            ST_ERROR,
+            ST_SUCCESS,
         };
         /**
          * @brief   Open a legacy GlobalDB from 1.0.0
@@ -89,7 +89,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> db_3_4_0_;                                       ///< Legacy DB
         std::shared_ptr<Blockchain>     blockchain_;
         std::shared_ptr<GeniusAccount>  account_;
-        std::atomic<Status>             blockchain_status_{ Status::INIT };
+        std::atomic<Status>             blockchain_status_{ Status::ST_INIT };
     };
 
 }

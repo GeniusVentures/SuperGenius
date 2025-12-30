@@ -127,11 +127,11 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
-                            strong->blockchain_status_.store( Status::ERROR );
+                            strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
                         strong->logger_->debug( "Blockchain started successfully, starting transaction manager" );
-                        strong->blockchain_status_.store( Status::SUCCESS );
+                        strong->blockchain_status_.store( Status::ST_SUCCESS );
                     }
                 } );
             blockchain_->Start();
@@ -144,10 +144,10 @@ namespace sgns
         while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
         {
             auto current_time = std::chrono::steady_clock::now();
-            if ( blockchain_status_.load( std::memory_order_acquire ) != Status::INIT )
+            if ( blockchain_status_.load( std::memory_order_acquire ) != Status::ST_INIT )
             {
                 // spin or sleep
-                if ( blockchain_status_.load( std::memory_order_acquire ) == Status::SUCCESS )
+                if ( blockchain_status_.load( std::memory_order_acquire ) == Status::ST_SUCCESS )
                 {
                     auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
                                                .count();
