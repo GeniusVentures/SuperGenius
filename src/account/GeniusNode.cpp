@@ -286,40 +286,45 @@ namespace sgns
 
             case NodeState::INITIALIZING_BLOCKCHAIN:
             {
-                auto weak_self = weak_from_this();
-                blockchain_    = Blockchain::New(
-                    tx_globaldb_,
-                    account_,
-                    [weak_self]( outcome::result<void> result )
-                    {
-                        if ( auto strong = weak_self.lock() )
+                if ( !blockchain_ )
+                {
+                    auto weak_self = weak_from_this();
+                    blockchain_    = Blockchain::New(
+                        tx_globaldb_,
+                        account_,
+                        [weak_self]( outcome::result<void> result )
                         {
-                            if ( result.has_error() )
+                            if ( auto strong = weak_self.lock() )
                             {
-                                strong->node_logger_->error( "Error starting blockchain: {}",
-                                                             result.error().message() );
-                                return;
-                            }
-                            auto current_state = strong->state_.load();
-                            if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
-                            {
+                                if ( result.has_error() )
+                                {
+                                    strong->node_logger_->error( "Error starting blockchain: {}",
+                                                                 result.error().message() );
+                                    strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->ScheduleBlockchainRetry();
+                                    return;
+                                }
+                                auto current_state = strong->state_.load();
+                                if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                {
+                                    strong->node_logger_->debug(
+                                        "Skipping transaction initialization, unexpected state: {}",
+                                        NodeStateToString( current_state ) );
+                                    return;
+                                }
                                 strong->node_logger_->debug(
-                                    "Skipping transaction initialization, unexpected state: {}",
-                                    NodeStateToString( current_state ) );
-                                return;
-                            }
-                            strong->node_logger_->debug(
-                                "Blockchain started successfully, starting transaction manager" );
-                            if ( strong->is_full_node_ )
-                            {
-                                strong->node_logger_->debug(
-                                    "Full node: Setting blockchain to grab other account creation blocks" );
-                                strong->blockchain_->SetFullNodeMode();
-                            }
+                                    "Blockchain started successfully, starting transaction manager" );
+                                if ( strong->is_full_node_ )
+                                {
+                                    strong->node_logger_->debug(
+                                        "Full node: Setting blockchain to grab other account creation blocks" );
+                                    strong->blockchain_->SetFullNodeMode();
+                                }
 
-                            strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
-                        }
-                    } );
+                                strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                            }
+                        } );
+                }
                 blockchain_->Start();
 
                 break;
@@ -654,6 +659,27 @@ namespace sgns
                 if ( auto strong = weak_self.lock() )
                 {
                     strong->StateTransition( NodeState::MIGRATING_DATABASE );
+                }
+            } )
+            .detach();
+    }
+
+    void GeniusNode::ScheduleBlockchainRetry()
+    {
+        std::thread(
+            [weak_self = weak_from_this()]
+            {
+                std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+                if ( auto strong = weak_self.lock() )
+                {
+                    auto current_state = strong->state_.load();
+                    if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                    {
+                        strong->node_logger_->debug( "Skipping blockchain retry, unexpected state: {}",
+                                                     NodeStateToString( current_state ) );
+                        return;
+                    }
+                    strong->StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 }
             } )
             .detach();
