@@ -617,15 +617,11 @@ namespace sgns
         const auto start_time        = std::chrono::steady_clock::now();
         const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
         const auto silent_time       = std::chrono::milliseconds( silent_time_ms );
-        const auto resend_interval   = std::chrono::milliseconds( 500 );
-        auto       last_request_sent = start_time;
 
         bool first_seen = false;
 
         while ( true )
         {
-            const auto now = std::chrono::steady_clock::now();
-
             {
                 std::lock_guard lock( nonce_responses_mutex_ );
                 auto            nonce_it    = nonce_responses_.find( req_id );
@@ -653,23 +649,7 @@ namespace sgns
                 }
             }
 
-            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
-            {
-                auto resend_result = RequestNonce( req_id );
-                if ( resend_result.has_error() )
-                {
-                    logger_->warn( "[{}] Failed to resend nonce request for req_id {}",
-                                   address_.substr( 0, 8 ),
-                                   req_id );
-                }
-                else
-                {
-                    logger_->trace( "[{}] Resent nonce request for req_id {}", address_.substr( 0, 8 ), req_id );
-                    last_request_sent = now;
-                }
-            }
-
-            if ( now - start_time >= full_timeout )
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 break; // total timeout reached
             }
@@ -759,8 +739,6 @@ namespace sgns
         const auto start_time        = std::chrono::steady_clock::now();
         const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
         const auto silent_time       = std::chrono::milliseconds( 150 );
-        const auto resend_interval   = std::chrono::milliseconds( 500 );
-        auto       last_request_sent = start_time;
 
         bool first_seen = false;
 
@@ -789,27 +767,8 @@ namespace sgns
                 }
             }
 
-            if ( !first_seen && ( now - last_request_sent >= resend_interval ) )
-            {
-                auto resend_result = RequestBlock( req_id, block_index );
-                if ( resend_result.has_error() )
-                {
-                    logger_->warn( "[{}] Failed to resend block {} request for req_id {}",
-                                   address_.substr( 0, 8 ),
-                                   block_index,
-                                   req_id );
-                }
-                else
-                {
-                    logger_->trace( "[{}] Resent block {} request for req_id {}",
-                                    address_.substr( 0, 8 ),
-                                    block_index,
-                                    req_id );
-                    last_request_sent = now;
-                }
-            }
 
-            if ( now - start_time >= full_timeout )
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
                                 address_.substr( 0, 8 ),
