@@ -510,8 +510,29 @@ namespace sgns::crdt
             if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
             {
                 // If the CID request was already triggered but node didn't finish processing
-                logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
-                continue;
+                bool retry_failed = false;
+                {
+                    std::lock_guard lock( dagWorkerMutex_ );
+                    auto            it = pending_jobs_.find( bCastHeadCID );
+                    if ( it != pending_jobs_.end() && it->second == JobStatus::FAILED )
+                    {
+                        pending_jobs_.erase( it );
+                        retry_failed = true;
+                    }
+                }
+
+                if ( retry_failed )
+                {
+                    logger_->warn( "{}: Clearing failed job for CID {}, allowing retry",
+                                   __func__,
+                                   bCastHeadCID.toString().value() );
+                    (void)dagSyncer_->DeleteCIDBlock( bCastHeadCID );
+                }
+                else
+                {
+                    logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
+                    continue;
+                }
             }
 
             if ( IsRootCIDPendingOrActive( bCastHeadCID ) )

@@ -423,6 +423,7 @@ namespace sgns::crdt
             }
             std::lock_guard<std::mutex> lock( queueMutex_ );
             messageQueue_.emplace( peer_id_res.value(), std::string( cid_buffer.value().toString() ) );
+            ret = true;
         } while ( 0 );
 
         return ret;
@@ -442,20 +443,31 @@ namespace sgns::crdt
                 continue;
             }
 
-            if ( hb.value() || dagSyncer_->IsCIDInCache( cid ) )
+            if ( hb.value() )
             {
-                m_logger->trace( "{}: Not adding route node {} from {}",
+                m_logger->trace( "{}: Not adding route node {} from {} (already have block)",
                                  __func__,
                                  cid.toString().value(),
                                  addr_vector[0].getStringAddress() );
                 continue;
             }
             new_content = true;
-            m_logger->debug( "{}: Request node {} from {} {}",
-                             __func__,
-                             cid.toString().value(),
-                             addr_vector[0].getStringAddress(),
-                             peer_id.toBase58() );
+            if ( dagSyncer_->IsCIDInCache( cid ) )
+            {
+                m_logger->debug( "{}: CID {} already cached without data, refreshing route from {} {}",
+                                 __func__,
+                                 cid.toString().value(),
+                                 addr_vector[0].getStringAddress(),
+                                 peer_id.toBase58() );
+            }
+            else
+            {
+                m_logger->debug( "{}: Request node {} from {} {}",
+                                 __func__,
+                                 cid.toString().value(),
+                                 addr_vector[0].getStringAddress(),
+                                 peer_id.toBase58() );
+            }
             dagSyncer_->AddRoute( cid, peer_id, addr_vector );
         }
         return new_content;
