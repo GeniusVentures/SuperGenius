@@ -45,7 +45,7 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
           - target: Linux
-            host: ubuntu-22.04
+            host: gv-Linux-large
             abi: "x86_64"
             build-type: "Debug"
           - target: Linux

@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <tuple>
+#include <functional>
 #include <optional>
 #include <set>
 
@@ -36,6 +37,11 @@ namespace sgns
     namespace ipfs_pubsub
     {
         class GossipPubSub;
+    }
+
+    namespace crdt
+    {
+        class PubSubBroadcasterExt;
     }
     class AccountMessenger;
 
@@ -64,6 +70,13 @@ namespace sgns
          * @return      true if succeeds, false otherwise
          */
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
+
+        /**
+         * @brief       Configures the block response handler
+         * @param[in]   broadcaster: the pubsub broadcaster which adds the block CID to be fetched
+         * @return      true if successfully configured, false otherwise
+         */
+        bool ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -236,6 +249,27 @@ namespace sgns
          */
         void ReleaseNonce( uint64_t nonce );
 
+        outcome::result<void> RequestGenesis(
+            uint64_t                                            timeout_ms = 8000,
+            std::function<void( outcome::result<std::string> )> callback   = nullptr ) const;
+        outcome::result<void> RequestAccountCreation(
+            uint64_t                                            timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback ) const;
+        /**
+         * @brief       Derives a Genius address from a given Ethereum private key
+         * @param[in]   base_path The base path to store/retrieve the key
+         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
+         * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
+         */
+        static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
+            ISecureStorage &storage,
+            const char     *eth_private_key );
+    protected:
+        friend class Blockchain;
+        void SetGetBlockChainCIDMethod(
+            std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
+        void ClearGetBlockChainCIDMethod();
+
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 
@@ -260,6 +294,9 @@ namespace sgns
         mutable bool                                    nonce_request_in_progress_; ///< Flag indicating if a nonce request is in progress
         mutable std::optional<outcome::result<uint64_t>> cached_nonce_result_;  ///< Cached result from in-progress request
         mutable std::chrono::steady_clock::time_point   cached_nonce_timestamp_; ///< Timestamp when cached nonce was obtained
+        std::mutex                                      get_cids_mutex_;        ///< Mutex for the genesis method
+        std::function<outcome::result<std::string>( uint8_t, const std::string & )>
+            get_cids_method_; ///< Function to get blockchain CIDs
 
         uint64_t GetNextNonceLocked() const;
 
@@ -268,16 +305,6 @@ namespace sgns
          * @param[in]   token_id
          */
         GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
-
-        /**
-         * @brief       Derives a Genius address from a given Ethereum private key
-         * @param[in]   base_path The base path to store/retrieve the key
-         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
-         * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
-         */
-        static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
-            ISecureStorage &storage,
-            const char     *eth_private_key );
     };
 }
 

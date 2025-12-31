@@ -92,7 +92,7 @@ namespace sgns
         /**
          * @brief   Open a legacy GlobalDB given a suffix ("out" or "in").
          * @param   suffix  Suffix string for legacy path.
-         * @return  opened DB or error.
+         * @return  Opened DB, nullptr if the legacy path is absent, or error.
          */
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb( const std::string &suffix );
 

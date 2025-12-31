@@ -12,6 +12,9 @@
 #include <vector>
 #include <cstdlib>
 #include <future>
+#include <condition_variable>
+#include <queue>
+#include <atomic>
 #include <mutex>
 #include <unordered_map>
 #include <set>
@@ -38,6 +41,7 @@ namespace sgns
             NONCE_GET_ERROR,           ///< Nonce couldn't be fetched
             NO_RESPONSE_RECEIVED,      ///< No response received from network
             RESPONSE_WITHOUT_NONCE,    ///< Response received but without nonce data
+            GENESIS_REQUEST_ERROR,     ///< Genesis request failed
         };
 
         /**
@@ -54,7 +58,15 @@ namespace sgns
 
             /// @brief Get local nonce method
             std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
+
+            /// @brief Get local genesis block method
+            std::function<outcome::result<std::string>( uint8_t block_index, const std::string &address )>
+                get_block_cid_;
         };
+
+        // Global block response handler type
+        using BlockResponseHandler =
+            std::function<bool( const std::string &cid, const std::string &peer_id, const std::string &address )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -78,6 +90,37 @@ namespace sgns
          */
         outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms = 150 );
 
+        /**
+         * @brief       Request genesis block from the network (retries until timeout)
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   callback Function to be called for each CID found (empty string if none)
+         * @return      success if at least one response arrives before timeout, error otherwise
+         */
+        outcome::result<void> RequestGenesis(
+            uint64_t timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback = nullptr );
+
+        /**
+         * @brief       Request account creation from the network and invoke callback with found CIDs
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   callback Function to be called for each CID found (signature: void(std::string))
+         * @return      success on scheduled request, error otherwise
+         */
+        outcome::result<void> RequestAccountCreation(
+            uint64_t timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback );
+
+        /**
+         * @brief       Register global block response handler
+         * @param[in]   handler Function to call for all block responses
+         */
+        void RegisterBlockResponseHandler( BlockResponseHandler handler );
+
+        /**
+         * @brief      Clears the block response handler
+         */
+        void ClearBlockResponseHandler();
+
     private:
         /// Basis of the account receiving topic
         static constexpr std::string_view ACCOUNT_COMM = ".comm";
@@ -95,13 +138,54 @@ namespace sgns
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> subs_requests_future_;
 
         std::unordered_map<uint64_t, std::set<uint64_t>> nonce_responses_; ///< All current nonce responses
-        std::unordered_map<uint64_t, std::set<std::string>> no_nonce_responses_; ///< Addresses that responded with no nonce
+        std::unordered_map<uint64_t, std::set<std::string>>
+            no_nonce_responses_; ///< Addresses that responded with no nonce
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
-                         first_response_time_;   ///< Timestamp of the first response
-        std::mutex       nonce_responses_mutex_; ///< Mutex of the nonce_responses_
-        InterfaceMethods methods_;               ///< Interface methods
+                   first_response_time_;   ///< Timestamp of the first response
+        std::mutex nonce_responses_mutex_; ///< Mutex of the nonce_responses_
+
+        // Block responses storage for account/genesis requests
+        std::unordered_map<uint64_t, std::set<std::string>> block_responses_; ///< collected block CIDs per req_id
+        std::unordered_map<uint64_t, std::chrono::steady_clock::time_point>
+                   block_first_response_time_; ///< Timestamp of the first block response
+        std::mutex block_responses_mutex_;     ///< Mutex protecting block_responses_
+
+        InterfaceMethods methods_; ///< Interface methods
 
         std::random_device rd_; ///< Random device for request IDs
+
+        /// Global block response handler
+        BlockResponseHandler global_block_handler_;
+        std::mutex           global_handler_mutex_;
+
+        // Worker thread state
+        enum class RequestType
+        {
+            Nonce,
+            Genesis,
+            AccountCreation
+        };
+
+        struct RequestTask
+        {
+            RequestType                                         type;
+            uint64_t                                            timeout_ms;
+            uint64_t                                            silent_time_ms{ 150 };
+            uint8_t                                             block_index{ 0 };
+            std::function<void( outcome::result<std::string> )> callback;
+            std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
+        };
+
+        std::thread                     worker_thread_;
+        std::mutex                      queue_mutex_;
+        std::condition_variable         queue_cv_;
+        std::queue<RequestTask>         request_queue_;
+        std::atomic<bool>               stop_worker_{ false };
+
+        void WorkerLoop();
+        void EnqueueTask( RequestTask task );
+        outcome::result<uint64_t> PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
+        outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, uint8_t block_index );
 
         /**
          * @brief       Private constructor of the Account Messenger 
@@ -118,6 +202,13 @@ namespace sgns
          * @return      Success if requested, error otherwise
          */
         outcome::result<void> RequestNonce( uint64_t req_id );
+
+        /**
+         * @brief       Request a block (by index) from the network (no callback)
+         * @param[in]   block_index index of the requested block (0 = genesis, 1 = account, ...)
+         */
+        outcome::result<void> RequestBlock( uint64_t req_id, uint8_t block_index );
+
         /**
          * @brief       Callback of pubsub message when a response was received
          * @param[in]   message Pubsub messaged to be parsed to proto data type
@@ -147,6 +238,17 @@ namespace sgns
          * @param[in]   req The proto nonce response package
          */
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
+
+        /**
+         * @brief       Handles the Genesis request package
+         * @param[in]   req The proto genesis request package
+         */
+        void HandleBlockRequest( const accountComm::SignedBlockRequest &req );
+        /**
+         * @brief       Handles the Block response package (calls global handler)
+         * @param[in]   resp The proto block response package
+         */
+        void HandleBlockResponse( const accountComm::SignedBlockResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

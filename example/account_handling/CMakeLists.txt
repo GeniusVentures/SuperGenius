@@ -15,7 +15,7 @@ target_link_libraries(account_handling PRIVATE
 #    ipfs-lite-cpp::ipld_node
 #    ipfs-lite-cpp::ipfs_merkledag_service
 #    ipfs-lite-cpp::graphsync
-    sgns_account
+    genius_node
     blockchain_common
     block_header_repository
     block_storage

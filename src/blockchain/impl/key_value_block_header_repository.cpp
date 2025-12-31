@@ -72,8 +72,8 @@ namespace sgns::blockchain
     outcome::result<void> KeyValueBlockHeaderRepository::removeBlockHeader( const BlockId &id )
     {
         OUTCOME_TRY( ( auto &&, header_string_val ), idToStringKey( *db_, id ) );
-
-        return db_->Remove( { block_header_key_prefix + header_string_val }, { "topic" } );
+        OUTCOME_TRY( db_->Remove( { block_header_key_prefix + header_string_val }, { "topic" } ) );
+        return outcome::success();
     }
 
     outcome::result<BlockStatus> KeyValueBlockHeaderRepository::getBlockStatus( const primitives::BlockId &id ) const

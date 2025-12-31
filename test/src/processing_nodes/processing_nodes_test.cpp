@@ -43,7 +43,11 @@ protected:
 
     static void SetUpTestSuite()
     {
+        std::string full_node_pub_address =
+            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
         std::string binary_path = boost::dll::program_location().parent_path().string();
+        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node1/" ).c_str(),
                       sizeof( DEV_CONFIG.BaseWritePath ) );
@@ -59,18 +63,23 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
                                             true,
                                             40054,
                                             true );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc1 not ready" );
+
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           false );
+
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
@@ -85,6 +94,16 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        test::assertWaitForCondition(
+            [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_main not ready" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc2 not ready" );
+
+        //Connect to each other
 
         //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
         //node_proc2->GetPubSub()->AddPeers( bootstrappers );

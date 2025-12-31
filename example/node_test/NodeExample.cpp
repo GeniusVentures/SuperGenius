@@ -134,8 +134,7 @@ void PrintNodeBalance( const std::vector<std::string> &args, std::shared_ptr<sgn
         std::cerr << "Invalid balance command format.\n";
         return;
     }
-    std::cout << "Balance: " << genius_node->GetBalance(std::string( args[1] ) ) << std::endl;
-
+    std::cout << "Balance: " << genius_node->GetBalance( std::string( args[1] ) ) << std::endl;
 }
 
 void PrintDataStore( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
@@ -165,7 +164,10 @@ void TransferTokens( const std::vector<std::string> &args, std::shared_ptr<sgns:
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node->TransferFunds( std::stoull( args[1] ), args[2], sgns::TokenID::FromBytes( { 0x00 } ) );
+    genius_node->TransferFunds( std::stoull( args[1] ),
+                                args[2],
+                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_TRANSFER ) );
 }
 
 void GetCoinPrice( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
@@ -189,7 +191,7 @@ void GetCoinPrice( const std::vector<std::string> &args, std::shared_ptr<sgns::G
     }
 }
 
-void CreateProcessingTransaction( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node)
+void CreateProcessingTransaction( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     std::string json_data = R"(
         {
@@ -417,17 +419,17 @@ int main( int argc, char *argv[] )
         {
             start_processing = false;
             is_processor     = false;
-            use_upnp         = false;   
+            use_upnp         = false;
             is_full_node     = true;
         }
-        else if(arg == "jobposter")
+        else if ( arg == "jobposter" )
         {
             start_processing = true;
             is_processor     = false;
-            use_upnp         = true;   
+            use_upnp         = true;
             is_full_node     = false;
         }
-        
+
         // Check for path override argument (e.g., --path=/custom/path or -p /custom/path)
         for ( int i = 1; i < argc; ++i )
         {
@@ -465,7 +467,8 @@ int main( int argc, char *argv[] )
         input_thread = std::thread( keyboard_input_thread );
     }
 
-    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+    auto node_instance =
+        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
     if ( terminal_mode )
     {

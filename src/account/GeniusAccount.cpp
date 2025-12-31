@@ -10,6 +10,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 
 namespace
 {
@@ -86,7 +87,24 @@ namespace sgns
         {
             if ( auto self = weakptr.lock() )
             {
-                return self->GetPeerNonce( std::move( address ) );
+                return self->GetPeerNonce( address );
+            }
+
+            return outcome::failure( std::errc::owner_dead );
+        };
+        methods.get_block_cid_ = [weakptr( weak_from_this() )](
+                                     uint8_t            block_index,
+                                     const std::string &address ) -> outcome::result<std::string>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->get_cids_method_ )
+                {
+                    return self->get_cids_method_( block_index, address );
+                }
+
+                return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
             }
 
             return outcome::failure( std::errc::owner_dead );
@@ -94,9 +112,32 @@ namespace sgns
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
+
         if ( messenger_ )
         {
             genius_account_logger()->debug( "Created AccountMessenger" );
+            ret = true;
+        }
+        return ret;
+    }
+
+    bool GeniusAccount::ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster )
+    {
+        bool ret = false;
+        if ( messenger_ )
+        {
+            //messenger_->ClearBlockResponseHandler();
+            messenger_->RegisterBlockResponseHandler(
+                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>(
+                    broadcaster ) }]( const std::string &cid, const std::string &peer_id, const std::string &address )
+                {
+                    if ( auto strong = weakptr.lock() )
+                    {
+                        return strong->AddSingleCIDInfo( cid, peer_id, address );
+                    }
+                    return false;
+                } );
+            genius_account_logger()->debug( "Registered block response handler" );
             ret = true;
         }
         return ret;
@@ -537,14 +578,19 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
         std::unique_lock<std::mutex> lock( nonce_request_mutex_ );
-        
+
         // Check if we have a fresh cached result (within 5 seconds)
         if ( cached_nonce_result_.has_value() )
         {
-            auto now = std::chrono::steady_clock::now();
-            auto cache_age_ms = std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ ).count();
-            
+            auto now          = std::chrono::steady_clock::now();
+            auto cache_age_ms = std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ )
+                                    .count();
+
             if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
             {
                 genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
@@ -552,18 +598,19 @@ namespace sgns
             }
             else
             {
-                genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age_ms );
+                genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce",
+                                                cache_age_ms );
             }
         }
-        
+
         // If a request is already in progress, wait for it
         if ( nonce_request_in_progress_ )
         {
             genius_account_logger()->debug( "Nonce request already in progress, waiting for result..." );
-            
+
             // Wait for the in-progress request to complete
             nonce_request_cv_.wait( lock, [this]() { return !nonce_request_in_progress_; } );
-            
+
             // Return the cached result if available
             if ( cached_nonce_result_.has_value() )
             {
@@ -571,18 +618,18 @@ namespace sgns
                 return cached_nonce_result_.value();
             }
         }
-        
+
         // Mark that we're starting a request
         nonce_request_in_progress_ = true;
         cached_nonce_result_.reset();
-        
+
         // Release lock while making the network call
         lock.unlock();
-        
+
         genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout_ms );
-        
+
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
-        
+
         outcome::result<uint64_t> result = outcome::failure( std::errc::io_error );
         if ( latest_nonce_result.has_value() )
         {
@@ -603,15 +650,15 @@ namespace sgns
         {
             result = latest_nonce_result;
         }
-        
+
         // Re-acquire lock to update state
         lock.lock();
         nonce_request_in_progress_ = false;
-        
+
         // Only cache successful results
         if ( result.has_value() )
         {
-            cached_nonce_result_ = result;
+            cached_nonce_result_    = result;
             cached_nonce_timestamp_ = std::chrono::steady_clock::now();
             genius_account_logger()->debug( "Cached successful nonce result: {}", result.value() );
         }
@@ -619,11 +666,50 @@ namespace sgns
         {
             genius_account_logger()->debug( "Not caching failed nonce request" );
         }
-        
+
         // Notify all waiting threads
         lock.unlock();
         nonce_request_cv_.notify_all();
-        
+
         return result;
+    }
+
+    outcome::result<void> GeniusAccount::RequestGenesis(
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting Genesis block from the network" );
+
+        return messenger_->RequestGenesis( timeout_ms, std::move( callback ) );
+    }
+
+    outcome::result<void> GeniusAccount::RequestAccountCreation(
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting Genesis block from the network" );
+
+        return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
+    }
+
+    void GeniusAccount::SetGetBlockChainCIDMethod(
+        std::function<outcome::result<std::string>( uint8_t, const std::string & )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_cids_method_ = method;
+    }
+
+    void GeniusAccount::ClearGetBlockChainCIDMethod( void )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_cids_method_ = nullptr;
     }
 }

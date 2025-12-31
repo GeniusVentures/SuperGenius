@@ -75,22 +75,43 @@ namespace sgns
             DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
             DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-            node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
-                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                false,
-                                                false );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                false,
-                                                false );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+            std::string full_node_pub_address =
+                "8b095989e76c1fef19451abc6837c8da086b9196a65bb7335f92a8aad48226319ab3f85c54d932c914c49f39c679314bc2bb6fad905d66d96969834e9c9f12b3";
+            Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+
             full_node = sgns::GeniusNode::New( DEV_CONFIG3,
                                                "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                                false,
                                                false,
                                                40001,
                                                true );
+            test::assertWaitForCondition(
+                [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+                std::chrono::milliseconds( 40000 ),
+                "full_node not ready" );
+
+            node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
+                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
+
+            node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
+
+            node_proc1->GetPubSub()->AddPeers(
+                { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+            node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+
+            test::assertWaitForCondition(
+                [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+                std::chrono::milliseconds( 40000 ),
+                "node_proc1 not ready" );
+            test::assertWaitForCondition(
+                [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+                std::chrono::milliseconds( 40000 ),
+                "node_proc2 not ready" );
         }
 
         static void TearDownTestSuite()
@@ -128,8 +149,7 @@ namespace sgns
                 sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
-            TransferProof prover( static_cast<uint64_t>( account->GetBalance() ),
-                                  static_cast<uint64_t>( amount ) );
+            TransferProof prover( static_cast<uint64_t>( account->GetBalance() ), static_cast<uint64_t>( amount ) );
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
 
             maybe_proof = std::move( proof_result );
@@ -153,24 +173,6 @@ namespace sgns
     {
         auto balance_1_before = node_proc1->GetBalance();
         auto balance_2_before = node_proc2->GetBalance();
-
-        // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers(
-            { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
-
-        test::assertWaitForCondition(
-            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 20000 ),
-            "node_proc1 not synched" );
-        test::assertWaitForCondition(
-            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 20000 ),
-            "node_proc2 not synched" );
-        test::assertWaitForCondition(
-            [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 20000 ),
-            "full_node not synched" );
 
         // Mint tokens with timeout
         auto mint_result = node_proc1->MintTokens( 10000000000,

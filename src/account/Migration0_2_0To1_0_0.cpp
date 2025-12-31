@@ -8,6 +8,7 @@
 
 #include "account/Migration0_2_0To1_0_0.hpp"
 
+#include <filesystem>
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
@@ -16,6 +17,19 @@
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
 #include "base/sgns_version.hpp"
+
+namespace
+{
+    std::string BuildLegacyDbPath( const std::string &write_base_path,
+                                   const std::string &base58_key,
+                                   const std::string &suffix )
+    {
+        static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.00.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58_key ).str();
+        return ( boost::format( "%s%s_%s" ) % write_base_path % legacyNetworkFullPath % suffix ).str();
+    }
+} // namespace
 
 namespace sgns
 {
@@ -50,9 +64,6 @@ namespace sgns
 
     outcome::result<void> Migration0_2_0To1_0_0::Init()
     {
-        OUTCOME_TRY( auto &&target_db, InitTargetDb() );
-        db_1_0_0_ = std::move( target_db );
-        
         auto outDb_result = InitLegacyDb( "out" );
         if ( !outDb_result.has_value() )
         {
@@ -61,7 +72,7 @@ namespace sgns
             return outDb_result.as_failure();
         }
         db_0_0_2_out_ = std::move( outDb_result.value() );
-        
+
         auto inDb_result = InitLegacyDb( "in" );
         if ( !inDb_result.has_value() )
         {
@@ -71,12 +82,24 @@ namespace sgns
             return inDb_result.as_failure();
         }
         db_0_0_2_in_ = std::move( inDb_result.value() );
-        
+
+        if ( db_0_0_2_out_ && db_0_0_2_in_ )
+        {
+            OUTCOME_TRY( auto &&target_db, InitTargetDb() );
+            db_1_0_0_ = std::move( target_db );
+        }
+
         return outcome::success();
     }
 
     outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
     {
+        if ( !db_0_0_2_out_ || !db_0_0_2_in_ )
+        {
+            m_logger->debug( "Legacy 0.2.0 DBs not found; skipping Migration0_2_0To1_0_0" );
+            return false;
+        }
+
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         auto version_ret = db_1_0_0_->GetDataStore()->get( version_key );
@@ -131,10 +154,13 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        static constexpr auto LEGACY_PREFIX_FMT = "SuperGNUSNode.TestNet.2a.00.%1%";
+        const auto fullPath = BuildLegacyDbPath( writeBasePath_, base58key_, suffix );
 
-        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
-        const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
+        if ( !std::filesystem::exists( fullPath ) )
+        {
+            m_logger->debug( "Legacy DB not found at {}; skipping initialization", fullPath );
+            return std::shared_ptr<crdt::GlobalDB>{};
+        }
 
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
@@ -323,6 +349,12 @@ namespace sgns
 
     outcome::result<void> Migration0_2_0To1_0_0::Apply()
     {
+        if ( !db_0_0_2_out_ || !db_0_0_2_in_ )
+        {
+            m_logger->error( "Legacy DBs were not initialized; nothing to migrate for Migration0_2_0To1_0_0" );
+            return outcome::success();
+        }
+
         m_logger->debug( "Starting Apply step of Migration0_2_0To1_0_0" );
 
         crdt_transaction_ = db_1_0_0_->BeginTransaction();

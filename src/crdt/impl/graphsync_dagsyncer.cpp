@@ -595,6 +595,21 @@ namespace sgns::crdt
                     continue;
                 }
 
+                auto child_resolved_res = isResolved( child );
+                if ( child_resolved_res.has_failure() )
+                {
+                    logger_->error( "{}: isResolved failed: {}, cid: {}",
+                                    __func__,
+                                    child_resolved_res.error().message().c_str(),
+                                    child.toString().value() );
+                }
+                else if ( child_resolved_res.value() )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Skipping traversal of resolved child {}",
+                                    child.toString().value() );
+                    continue;
+                }
+
                 logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
                                child.toString().value(),
                                name,

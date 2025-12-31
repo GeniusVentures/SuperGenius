@@ -5,7 +5,7 @@
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
-
+#include "primitives/cid/cid.hpp"
 #include <memory>
 #include <vector>
 #include <optional>
@@ -81,7 +81,7 @@ namespace sgns::crdt
          * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
          * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Commit(const std::set<std::string>& topics);
+        outcome::result<CID> Commit(const std::set<std::string>& topics);
 
     private:
         enum class Operation

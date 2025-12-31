@@ -6,28 +6,27 @@ message AccountMessage {
   oneof payload {
     SignedNonceRequest nonce_request = 1;
     SignedNonceResponse nonce_response = 2;
+    SignedBlockRequest block_request = 3;    // changed: generic block request with index
+    SignedBlockResponse block_response = 4;
   }
 }
 
 message SignedNonceRequest {
   NonceRequest data = 1;
-  bytes signature = 2;         // signature over hash(data)
+  bytes signature = 2;
 }
 
-// Nonce response with signature
 message SignedNonceResponse {
   NonceResponse data = 1;
-  bytes signature = 2;         // signature over hash(data)
+  bytes signature = 2;
 }
 
-// Actual content of the nonce request
 message NonceRequest {
   string requester_address = 1;
   uint64 request_id = 2;
   uint64 timestamp = 3;
 }
 
-// Actual content of the nonce response
 message NonceResponse {
   string responder_address = 1;
   string requester_address = 2;
@@ -35,4 +34,38 @@ message NonceResponse {
   uint64 known_nonce = 4;
   uint64 timestamp = 5;
   bool has_nonce = 6;          // true if known_nonce is valid, false if no nonce available
+}
+
+// New generic block request (index: 0 = genesis, 1 = account, ...)
+message BlockRequest {
+  string requester_address = 1;
+  uint64 request_id = 2;
+  uint64 timestamp = 3;
+  uint32 block_index = 4;
+}
+
+message SignedBlockRequest {
+  BlockRequest data = 1;
+  bytes signature = 2;
+}
+
+
+message BlockInfo {
+  bytes cid = 1;
+  bytes peer_id = 2;
+  repeated bytes addresses = 3;
+}
+
+message BlockResponse {
+  string responder_address = 1;
+  string requester_address = 2;
+  uint64 request_id = 3;
+  repeated BlockInfo blocks = 4;
+  uint64 timestamp = 5;
+}
+
+message SignedBlockResponse {
+  BlockResponse data = 1;
+  bytes signature = 2;
+
 }

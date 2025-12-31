@@ -52,6 +52,13 @@ namespace sgns::crdt
         using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
         using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
 
+        enum class JobStatus
+        {
+            PENDING,
+            COMPLETED,
+            FAILED
+        };
+
         enum class Error
         {
             INVALID_PARAM = 0,
@@ -135,9 +142,9 @@ namespace sgns::crdt
          * @param aValue Value to be stored
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<void> PutKey( const HierarchicalKey       &aKey,
-                                      const Buffer                &aValue,
-                                      const std::set<std::string> &topics );
+        outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
+                                     const Buffer                &aValue,
+                                     const std::set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
@@ -149,7 +156,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to delete from set
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
+        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
 
         /**
          * @brief Publishes a Delta.
@@ -204,22 +211,17 @@ namespace sgns::crdt
          *   The topic name to use when filtering links. Only links whose
          *   `IPLDLinkImpl::getName()` equals this string will be processed.
          */
-        void AddTopicName( const std::string &topic )
-        {
-            topicNames_.emplace( topic );
-        }
-
-        void SetFullNode( bool full_node )
-        {
-            isFullNode = std::move( full_node );
-        }
+        void AddTopicName( const std::string &topic );
 
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
-        outcome::result<void> AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<JobStatus> GetJobStatus( const CID &cid );
 
     protected:
+        friend class PubSubBroadcasterExt;
+
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
@@ -312,13 +314,21 @@ namespace sgns::crdt
          * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
+        outcome::result<void> Broadcast( const std::set<CID>                    &cids,
+                                         const std::string                      &topic,
+                                         boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
         outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+
+        /** EncodeBroadcastStatic encodes list of CIDs to CRDT broadcast data
+        * @param heads list of CIDs
+        * @return data encoded into Buffer data or outcome::failure on error
+        */
+        static outcome::result<Buffer> EncodeBroadcastStatic( const std::set<CID> &heads );
 
         /** PutBlock add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
@@ -342,8 +352,8 @@ namespace sgns::crdt
         */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
 
-        void PutElementsCallback( const std::string &key, const Buffer &value );
-        void DeleteElementsCallback( const std::string &key );
+        void PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid );
+        void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
         bool EnqueueRootCID( const CID &cid );
@@ -360,7 +370,7 @@ namespace sgns::crdt
                        std::shared_ptr<CrdtOptions> aOptions );
 
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
-        bool ProcessJobs(std::queue<RootCIDJob>& jobs);
+        bool ProcessJobs( std::queue<RootCIDJob> &jobs );
         bool SeedNextExternalRoot();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
@@ -415,18 +425,14 @@ namespace sgns::crdt
 
         CRDTCallbackManager crdt_cb_manager_;
 
-        enum class JobStatus
-        {
-            PENDING,
-            COMPLETED,
-            FAILED
-        };
-
         std::map<CID, JobStatus> pending_jobs_;
+
+        void MarkJobPending( const CID &cid );
+        void MarkJobFailed( const CID &cid );
 
         // Cache for CID string representations to avoid repeated base58 encoding
         mutable std::map<CID, std::string> cid_string_cache_;
-        mutable std::mutex                  cid_string_cache_mutex_;
+        mutable std::mutex                 cid_string_cache_mutex_;
     };
 
 }

@@ -32,6 +32,7 @@ add_library(crdt_callback_manager
 target_link_libraries(crdt_callback_manager
     PUBLIC
     buffer
+    logger
 )
 
 target_link_libraries(crdt_heads

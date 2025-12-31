@@ -62,19 +62,19 @@ namespace sgns::crdt
         crdtInstance->set_ = std::make_shared<CrdtSet>(
             crdtInstance->dataStore_,
             aKey.ChildString( std::string( setsNamespace_ ) ),
-            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string  &key,
-                                                                       const base::Buffer &value )
+            [weakptr( std::weak_ptr<CrdtDatastore>(
+                crdtInstance ) )]( const std::string &key, const base::Buffer &value, const std::string &cid )
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->PutElementsCallback( key, value );
+                    strong->PutElementsCallback( key, value, cid );
                 }
             },
-            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key )
+            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key, const std::string &cid )
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->DeleteElementsCallback( key );
+                    strong->DeleteElementsCallback( key, cid );
                 }
             } );
         crdtInstance->dagWorkerJobListThreadRunning_ = true;
@@ -194,11 +194,7 @@ namespace sgns::crdt
         // Signal job failure
         {
             std::lock_guard lock_jobs( dagWorkerMutex_ );
-            auto            job_it = pending_jobs_.find( job.root_node_->getCID() );
-            if ( job_it != pending_jobs_.end() )
-            {
-                job_it->second = JobStatus::FAILED;
-            }
+            pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
         }
 
         const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
@@ -210,7 +206,8 @@ namespace sgns::crdt
 
         // Delete blocks
         (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        if (job.node_ && job.node_->getCID() != job.root_node_->getCID()) {
+        if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+        {
             (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
         }
 
@@ -225,15 +222,13 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingSuccess( const RootCIDJob &job )
     {
-        if ( job.created_by_self_ )
         {
             // Mark self-created job as completed
             std::lock_guard lock_jobs( dagWorkerMutex_ );
-            auto            job_it = pending_jobs_.find( job.root_node_->getCID() );
-            if ( job_it != pending_jobs_.end() )
-            {
-                job_it->second = JobStatus::COMPLETED;
-            }
+            pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
+        }
+        if ( job.created_by_self_ )
+        {
             logger_->debug( "Successfully completed self-created job for CID {}",
                             job.root_node_->getCID().toString().value() );
         }
@@ -498,6 +493,7 @@ namespace sgns::crdt
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
+            logger_->trace( "{}: Received CID {}", __func__, bCastHeadCID.toString().value() );
             auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
             if ( dagSyncerResult.has_failure() )
             {
@@ -514,8 +510,29 @@ namespace sgns::crdt
             if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
             {
                 // If the CID request was already triggered but node didn't finish processing
-                logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
-                continue;
+                bool retry_failed = false;
+                {
+                    std::lock_guard lock( dagWorkerMutex_ );
+                    auto            it = pending_jobs_.find( bCastHeadCID );
+                    if ( it != pending_jobs_.end() && it->second == JobStatus::FAILED )
+                    {
+                        pending_jobs_.erase( it );
+                        retry_failed = true;
+                    }
+                }
+
+                if ( retry_failed )
+                {
+                    logger_->warn( "{}: Clearing failed job for CID {}, allowing retry",
+                                   __func__,
+                                   bCastHeadCID.toString().value() );
+                    (void)dagSyncer_->DeleteCIDBlock( bCastHeadCID );
+                }
+                else
+                {
+                    logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
+                    continue;
+                }
             }
 
             if ( IsRootCIDPendingOrActive( bCastHeadCID ) )
@@ -540,11 +557,26 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
-        OUTCOME_TRY( auto &&root_job, CreateRootJob( aCid ) );
+        auto root_job_result = CreateRootJob( aCid );
+        if ( root_job_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return root_job_result.as_failure();
+        }
 
-        OUTCOME_TRY( auto &&links, GetLinksToFetch( root_job ) );
+        auto links_result = GetLinksToFetch( root_job_result.value() );
+        if ( links_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return links_result.as_failure();
+        }
 
-        OUTCOME_TRY( FetchNodes( root_job, links ) );
+        auto fetch_result = FetchNodes( root_job_result.value(), links_result.value() );
+        if ( fetch_result.has_failure() )
+        {
+            MarkJobFailed( aCid );
+            return fetch_result.as_failure();
+        }
         return outcome::success();
     }
 
@@ -852,11 +884,11 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
     {
         CRDTBroadcast bcastData;
-        
+
         for ( const auto &head : heads )
         {
             auto encodedHead = bcastData.add_heads();
-            
+
             // Check cache first to avoid expensive base58 encoding
             std::string cid_string;
             {
@@ -868,7 +900,7 @@ namespace sgns::crdt
                     logger_->debug( "CID string cache hit for CID {}", cid_string );
                 }
             }
-            
+
             // Cache miss - compute and cache the string
             if ( cid_string.empty() )
             {
@@ -885,8 +917,26 @@ namespace sgns::crdt
                     continue; // Skip this CID if conversion fails
                 }
             }
-            
+
             encodedHead->set_cid( cid_string );
+        }
+
+        Buffer outputBuffer;
+        outputBuffer.put( bcastData.SerializeAsString() );
+        return outputBuffer;
+    }
+
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcastStatic( const std::set<CID> &heads )
+    {
+        CRDTBroadcast bcastData;
+        for ( const auto &head : heads )
+        {
+            auto encodedHead   = bcastData.add_heads();
+            auto strHeadResult = head.toString();
+            if ( !strHeadResult.has_failure() )
+            {
+                encodedHead->set_cid( strHeadResult.value() );
+            }
         }
 
         Buffer outputBuffer;
@@ -936,7 +986,7 @@ namespace sgns::crdt
                 logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
-                    if(logger_->level() == spdlog::level::trace)
+                    if ( logger_->level() == spdlog::level::trace )
                     {
                         logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
                     }
@@ -985,9 +1035,9 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
-                                                 const Buffer                &aValue,
-                                                 const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
+                                                const Buffer                &aValue,
+                                                const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -995,16 +1045,10 @@ namespace sgns::crdt
             return outcome::failure( deltaResult.error() );
         }
 
-        auto publishResult = Publish( deltaResult.value(), topics );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( publishResult.error() );
-        }
-
-        return outcome::success();
+        return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -1017,13 +1061,7 @@ namespace sgns::crdt
             return outcome::success();
         }
 
-        auto publishResult = Publish( deltaResult.value(), topics );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( publishResult.error() );
-        }
-
-        return outcome::success();
+        return Publish( deltaResult.value(), topics );
     }
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
@@ -1033,7 +1071,9 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID>                    &cids,
+                                                    const std::string                      &topic,
+                                                    boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         if ( !broadcaster_ )
         {
@@ -1077,11 +1117,12 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         //Log expensive toString only if trace enabled
-        if(logger_->level() == spdlog::level::trace)
+        if ( logger_->level() == spdlog::level::trace )
         {
-            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}", node->getCID().toString().value() );
+            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}",
+                            node->getCID().toString().value() );
         }
-        
+
         for ( auto &topic : topics )
         {
             logger_->info( "Topics {{ name=\"{}\" }}", topic );
@@ -1097,14 +1138,13 @@ namespace sgns::crdt
             ipfs_lite::ipld::IPLDLinkImpl link( head, topic, cidByte.value().size() );
             node->addLink( link );
             //Log expensive toString only if trace enabled
-            if(logger_->level() == spdlog::level::trace)
+            if ( logger_->level() == spdlog::level::trace )
             {
                 logger_->trace( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                    link.getCID().toString().value(),
-                    link.getName(),
-                    link.getSize() );    
+                                link.getCID().toString().value(),
+                                link.getName(),
+                                link.getSize() );
             }
-
         }
 
         return node;
@@ -1113,12 +1153,8 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
-        auto getListResult = heads_->GetList( topics );
-        if ( getListResult.has_failure() )
-        {
-            return outcome::failure( getListResult.error() );
-        }
-        auto [head_map, height] = getListResult.value();
+        OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
+        auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
@@ -1133,29 +1169,23 @@ namespace sgns::crdt
             }
         }
 
-        auto putBlockResult = PutBlock( headsWithTopics, aDelta, topics );
-        if ( putBlockResult.has_failure() )
-        {
-            return outcome::failure( putBlockResult.error() );
-        }
-        auto node = putBlockResult.value();
+        OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
-        if(logger_->level() == spdlog::level::trace)
+        if ( logger_->level() == spdlog::level::trace )
         {
             logger_->trace( "AddDAGNode: Processing generated block {} from {}",
-                node->getCID().toString().value(),
-                reinterpret_cast<uint64_t>( this ) );
+                            node->getCID().toString().value(),
+                            reinterpret_cast<uint64_t>( this ) );
         }
-
 
         RootCIDJob rootJob{ nullptr, node, true };
 
         {
+            MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
-            pending_jobs_[node->getCID()] = JobStatus::PENDING;
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
-            if(logger_->level() == spdlog::level::trace)
+            if ( logger_->level() == spdlog::level::trace )
             {
                 logger_->trace(
                     "AddDAGNode: Added SELF-CREATED job for CID {}, self-queue size: {}, external-queue size: {}",
@@ -1163,7 +1193,6 @@ namespace sgns::crdt
                     selfCreatedJobList_.size(),
                     rootCIDJobList_.size() );
             }
-
         }
 
         // Notify all workers to ensure immediate processing
@@ -1223,8 +1252,8 @@ namespace sgns::crdt
 
             // Sleep for the minimum of 500ms or remaining time to avoid tight loops near timeout
             auto time_remaining = timeout_duration - ( current_time - start_time );
-            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ), 
-                                           std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
+            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ),
+                                            std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
             if ( sleep_duration.count() > 0 )
             {
                 std::this_thread::sleep_for( sleep_duration );
@@ -1241,6 +1270,39 @@ namespace sgns::crdt
             pending_jobs_.erase( cid );
         }
         return outcome::failure( Error::NODE_CREATION );
+    }
+
+    void CrdtDatastore::MarkJobPending( const CID &cid )
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = pending_jobs_.find( cid );
+        if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
+        {
+            pending_jobs_[cid] = JobStatus::PENDING;
+        }
+    }
+
+    void CrdtDatastore::MarkJobFailed( const CID &cid )
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        pending_jobs_[cid] = JobStatus::FAILED;
+    }
+
+    outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
+    {
+        auto has_block = dagSyncer_->HasBlock( cid );
+        if ( has_block.has_value() && has_block.value() )
+        {
+            return JobStatus::COMPLETED;
+        }
+
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = pending_jobs_.find( cid );
+        if ( it != pending_jobs_.end() )
+        {
+            return it->second;
+        }
+        return outcome::failure( boost::system::error_code{} );
     }
 
     outcome::result<void> CrdtDatastore::PrintDAG()
@@ -1420,14 +1482,14 @@ namespace sgns::crdt
         return crdt_cb_manager_.RegisterDeletedDataCallback( pattern, std::move( callback ) );
     }
 
-    void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value )
+    void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid )
     {
-        crdt_cb_manager_.PutDataCallback( key, value );
+        crdt_cb_manager_.PutDataCallback( key, value, cid );
     }
 
-    void CrdtDatastore::DeleteElementsCallback( const std::string &key )
+    void CrdtDatastore::DeleteElementsCallback( const std::string &key, const std::string &cid )
     {
-        crdt_cb_manager_.DeleteDataCallback( key );
+        crdt_cb_manager_.DeleteDataCallback( key, cid );
     }
 
     void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority )
@@ -1441,11 +1503,6 @@ namespace sgns::crdt
         }
         for ( const auto &[cid, topic] : it->second )
         {
-            std::string topic_to_record = topic;
-            if ( topic_to_record == "SuperGNUSNode.TestNet.FullNode.963" )
-            {
-                topic_to_record = "SuperGNUSNode.TestNet.FullNode";
-            }
             if ( cid == rootCID )
             {
                 auto resolve_result = dagSyncer_->markResolved( cid );
@@ -1456,7 +1513,7 @@ namespace sgns::crdt
                         logger_->error( "{}: error marking Root CID {} as resolved", __func__, cid.toString().value() );
                     }
                 }
-                auto add_result = heads_->Add( rootCID, rootPriority, topic_to_record );
+                auto add_result = heads_->Add( rootCID, rootPriority, topic );
                 if ( add_result.has_failure() )
                 {
                     if ( logger_->level() <= spdlog::level::err )
@@ -1483,7 +1540,7 @@ namespace sgns::crdt
                 if ( !is_resolved_result.value() )
                 {
                     //Log expensive toString only if trace enabled
-                    if(logger_->level() == spdlog::level::trace)
+                    if ( logger_->level() == spdlog::level::trace )
                     {
                         logger_->trace( "{}: Previous Head {} not resolved before replacement with {}",
                                         __func__,
@@ -1503,7 +1560,7 @@ namespace sgns::crdt
                 {
                     logger_->error( "{}: error marking new Head CID {} as resolved", __func__, cid.toString().value() );
                 }
-                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic_to_record );
+                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
                 if ( replace_result.has_failure() && logger_->level() <= spdlog::level::err )
                 {
                     logger_->error( "{}: error replacing head {} with {}",
@@ -1552,6 +1609,11 @@ namespace sgns::crdt
         }
 
         pendingRootQueue_.push( cid );
+        auto it = pending_jobs_.find( cid );
+        if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
+        {
+            pending_jobs_[cid] = JobStatus::PENDING;
+        }
         return true;
     }
 
@@ -1573,5 +1635,10 @@ namespace sgns::crdt
     outcome::result<void> CrdtDatastore::AddHead( const CID &aCid, const std::string &topic, uint64_t priority )
     {
         return heads_->Add( aCid, priority, topic );
+    }
+
+    void CrdtDatastore::AddTopicName( const std::string &topic )
+    {
+        topicNames_.emplace( topic );
     }
 }
