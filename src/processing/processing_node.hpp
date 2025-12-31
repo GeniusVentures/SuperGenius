@@ -7,12 +7,13 @@
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 
 #include <chrono>
+#include <thread>
+#include <optional>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
 #include "processing/processing_engine.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
-#include "processing/processing_subtask_state_storage.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 
 namespace sgns::processing
@@ -25,8 +26,7 @@ namespace sgns::processing
     {
     public:
         static std::shared_ptr<ProcessingNode> New(
-            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-            std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+            std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
             std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
             std::shared_ptr<ProcessingCore>                         processingCore,
             std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -37,21 +37,16 @@ namespace sgns::processing
             std::list<SGProcessing::SubTask>                        subTasks = {},
             std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
             std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
-        ~ProcessingNode();
 
-        /** Attaches the node to the processing channel
-    * @param processingQueueChannelId - identifier of a processing queue channel
-    * @return flag indicating if the room is joined for block data processing
-    */
+        ~ProcessingNode();
 
         bool HasQueueOwnership() const;
 
     private:
         /** Constructs a processing node
-    * @param gossipPubSub - pubsub service
-    */
-        ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-                        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+        * @param gossipPubSub - pubsub service
+        */
+        ProcessingNode( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                         std::shared_ptr<ProcessingCore>                         processingCore,
                         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -60,7 +55,7 @@ namespace sgns::processing
                         std::string                                             node_id,
                         std::chrono::seconds                                    ttl );
 
-        bool AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
+        bool AttachTo( const std::string &processingQueueChannelId );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
         void Initialize( const std::string        &processingQueueChannelId,
                          std::chrono::milliseconds msSubscriptionWaitingDuration );
@@ -74,7 +69,6 @@ namespace sgns::processing
         std::string                           m_nodeId;
         std::string                           m_escrowId;
         std::shared_ptr<ProcessingCore>       m_processingCore;
-        std::shared_ptr<SubTaskStateStorage>  m_subTaskStateStorage;
         std::shared_ptr<SubTaskResultStorage> m_subTaskResultStorage;
 
         std::shared_ptr<ProcessingEngine>                       m_processingEngine;
@@ -89,6 +83,11 @@ namespace sgns::processing
         std::chrono::seconds                                   m_ttl;
         std::unique_ptr<boost::asio::steady_timer>             m_ttlTimer;
         std::function<void( std::shared_ptr<ProcessingNode> )> m_selfDestructCallback;
+
+        std::shared_ptr<boost::asio::io_context> m_localContext;
+        using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        std::optional<WorkGuard> m_localWorkGuard;
+        std::thread              m_localIoThread;
 
         base::Logger m_logger = base::createLogger( "ProcessingNode" );
     };

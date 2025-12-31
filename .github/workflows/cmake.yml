@@ -36,16 +36,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [Android, iOS, OSX, Linux, Windows]
-        build-type: [Debug,Release]
-        abi: [""]
+        target: [ Android, iOS, OSX, Linux, Windows ]
+        build-type: [ Debug,Release ]
+        abi: [ "" ]
         include:
           - target: Linux
             host: ubuntu-22.04
             abi: "x86_64"
             build-type: "Release"
           - target: Linux
-            host: ubuntu-22.04
+            host: gv-Linux-large
             abi: "x86_64"
             build-type: "Debug"
           - target: Linux
@@ -87,7 +87,7 @@ jobs:
             abi: ""
     steps:
       - name: Checkout SuperGenius repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: "SuperGenius"
           submodules: "recursive"
@@ -152,7 +152,7 @@ jobs:
           fi
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
-          tar -zxvf "${FILE_NAME}"
+          tar -zxf "${FILE_NAME}"
           
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
           
@@ -227,7 +227,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-           
+          
           sudo apt install ccache ninja-build libvulkan-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 

@@ -25,12 +25,14 @@ public:
     * Send {@param buff} payload to other replicas.
     * @return outcome::success on success or outcome::failure on error
     */
-        outcome::result<void> Broadcast(const base::Buffer &buff, std::string topic) override;
+        outcome::result<void> Broadcast(const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none) override;
     /**
     * Obtain the next {@return} payload received from the network.
     * @return buffer value or outcome::failure on error
     */
         outcome::result<base::Buffer> Next() override;
+
+        bool HasTopic(const std::string &topic) override { return true; }
 private:
     std::shared_ptr<GossipPubSubTopic> gossipPubSubTopic_;
     std::queue<std::tuple<libp2p::peer::PeerId, std::string>> listOfMessages_;

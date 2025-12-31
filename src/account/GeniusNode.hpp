@@ -2,6 +2,10 @@
 #define _GENIUS_NODE_HPP_
 #include <memory>
 #include <cstdint>
+#include <functional>
+#include <vector>
+#include <thread>
+#include <optional>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -19,6 +23,7 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
+#include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
@@ -47,9 +52,22 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false );
+                                                bool                is_full_node = false,
+                                                bool                use_upnp     = true );
 
         ~GeniusNode() override;
+
+        enum class NodeState
+        {
+            CREATING = 0,
+            MIGRATING_DATABASE,
+            INITIALIZING_DATABASE,
+            INITIALIZING_PROCESSING,
+            INITIALIZING_BLOCKCHAIN,
+            INITIALIZING_TRANSACTIONS,
+            INITIALIZING_DHT,
+            READY,
+        };
 
         /**
          * @brief      GeniusNode Error class
@@ -66,8 +84,9 @@ namespace sgns
             PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
             INVALID_JSON             = 9,  ///< JSON cannot be parsed>
             INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///< No processor for this type>
-            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
+            NO_PROCESSOR             = 11, ///< No processor for this type
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus
+            TRANSACTIONS_NOT_READY   = 13, ///< Transactions aren't ready
         };
 
 #ifdef SGNS_DEBUG
@@ -105,21 +124,32 @@ namespace sgns
             TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
-        void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( uint16_t pubsubport );
+        void AddPeer( const std::string &peer );
+        void RefreshUPNP( uint16_t pubsubport );
+
         uint64_t GetBalance();
-        uint64_t GetBalance( const TokenID token_id );
+        uint64_t GetBalance( TokenID token_id );
         uint64_t GetBalance( const std::string &address );
-        uint64_t GetBalance( const TokenID token_id, const std::string &address );
+        uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
-            return transaction_manager_->GetInTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetInTransactions();
         }
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
         {
-            return transaction_manager_->GetOutTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetOutTransactions();
         }
 
         std::string GetAddress() const
@@ -132,11 +162,18 @@ namespace sgns
             return dev_config_.TokenID;
         }
 
-        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
-            uint64_t                  amount,
-            const std::string        &destination,
-            TokenID                   token_id,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+        [[nodiscard]] processing::ProcessingServiceImpl::Status GetProcessingStatus() const
+        {
+            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::Status::DISABLED
+                                                  : processing_service_->GetProcessingStatus();
+        }
+
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,
+                                                                         const std::string        &destination,
+                                                                         TokenID                   token_id,
+                                                                         std::chrono::milliseconds timeout );
+
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
@@ -197,18 +234,21 @@ namespace sgns
         TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
 
         /**
-         * @brief Format a child-token amount into a human-readable string.
-         * @param amount Amount of child tokens (in minions).
-         * @return Formatted string, e.g. "1.234 GChild".
+         * @brief Set the authorized full node address for blockchain genesis verification
+         * @param pub_address The public address that is authorized to create genesis blocks
          */
-        std::string FormatChildTokens( uint64_t amount ) const;
+        void SetAuthorizedFullNodeAddress( const std::string &pub_address );
 
         /**
-         * @brief Parse a formatted child-token string back into minions.
-         * @param amount_str Formatted string, e.g. "1.234 GChild".
-         * @return outcome::result<uint64_t> of the parsed minions, or error.
+         * @brief Get the current authorized full node public address
+         * @return The authorized full node public address
          */
-        outcome::result<uint64_t> ParseChildTokens( const std::string &amount_str ) const;
+        const std::string &GetAuthorizedFullNodeAddress() const;
+
+        NodeState GetState() const
+        {
+            return state_.load();
+        }
 
     protected:
         friend class TransactionSyncTest;
@@ -232,23 +272,40 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        bool                                                  is_full_node_;
         base::Logger                                          node_logger_;
         DevConfig_st                                          dev_config_;
         std::string                                           gnus_network_full_path_;
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
         uint16_t                                              pubsubport_;
+        std::shared_ptr<Blockchain>                           blockchain_;
 
         GeniusNode( const DevConfig_st &dev_config,
                     const char         *eth_private_key,
                     bool                autodht,
                     bool                isprocessor,
                     uint16_t            base_port,
-                    bool                is_full_node );
-        bool                  InitLoggers( const std::string &base_path );
-        base::Logger          ConfigureLogger( const std::string& tag, const std::string& logdir, spdlog::level::level_enum level );
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
-        void                  DHTInit();
+                    bool                is_full_node,
+                    bool                use_upnp );
+        void         InitOpenSSL();
+        bool         InitLoggers( const std::string &base_path );
+        base::Logger ConfigureLogger( const std::string        &tag,
+                                      const std::string        &logdir,
+                                      spdlog::level::level_enum level );
+        bool         InitNetwork( uint16_t base_port, bool is_full_node );
+        bool         InitUPNP();
+        bool         InitDatabase();
+        bool         InitProcessingModules();
+        void         BeginDBInitialization();
+        void         StateTransition( NodeState next_state );
+        void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
+        void         ScheduleMigrationRetry();
+        void         ScheduleBlockchainRetry();
+        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+        outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
+
+        void DHTInit();
 
         struct PriceInfo
         {
@@ -261,11 +318,22 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
-        std::thread       io_thread;
-        std::thread       upnp_thread;
-        std::atomic<bool> stop_upnp{ false };
+        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        static constexpr unsigned                                       DEFAULT_IO_THREADS = 4;
+        unsigned                                                        io_thread_count_{ DEFAULT_IO_THREADS };
+        std::optional<IoWorkGuard>                                      io_work_guard_;
+        std::vector<std::thread>                                        io_threads_;
+        std::thread                                                     upnp_thread;
+        std::atomic<bool>                                               stop_upnp{ false };
+        std::string                                                     base58key_;
+        std::shared_ptr<libp2p::protocol::AsioScheduler>                scheduler_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_;
 
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
+
+        std::atomic<NodeState> state_{ NodeState::CREATING };
+        bool                   use_upnp_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,
@@ -276,7 +344,7 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
-        void rotateLogFiles( const std::string &base_path );
+        void RotateLogFiles( const std::string &base_path );
         /**
          * @brief Parse and sum all "block_len" values from the JSON.
          * @param json_data JSON string containing an "input" array.
@@ -284,8 +352,7 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        void TransactionStateChanged( TransactionManager::State old_state,
-                                      TransactionManager::State new_state );
+        void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
 
         static constexpr std::string_view db_path_        = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
@@ -320,7 +387,6 @@ groups:
             return config;
         }
     };
-
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );

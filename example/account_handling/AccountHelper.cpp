@@ -5,11 +5,14 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/format.hpp>
+#include <memory>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -34,7 +37,9 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
+        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
+                                      std::make_shared<JSONSecureStorage>( "." ),
+                                      eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -66,8 +71,6 @@ namespace sgns
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
-        account_->InitMessenger( pubsub_ );
-
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
@@ -88,6 +91,8 @@ namespace sgns
         }
 
         globaldb_ = std::move( globaldc_ret.value() );
+
+        account_->InitMessenger( pubsub_ );
 
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );

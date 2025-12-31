@@ -1,4 +1,0 @@
-add_subdirectory(production)
-add_subdirectory(validation)
-add_subdirectory(finality)
-add_subdirectory(authority)

@@ -43,7 +43,11 @@ protected:
 
     static void SetUpTestSuite()
     {
+        std::string full_node_pub_address =
+            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
         std::string binary_path = boost::dll::program_location().parent_path().string();
+        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node1/" ).c_str(),
                       sizeof( DEV_CONFIG.BaseWritePath ) );
@@ -59,18 +63,23 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
                                             true,
                                             40054,
                                             true );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc1 not ready" );
+
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           false );
+
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
@@ -79,12 +88,22 @@ protected:
                                             true );
 
         //Connect to each other
-        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                      node_proc2->GetPubSub()->GetLocalAddress() };
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
+                                      node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_proc2->GetPubSub()->GetLocalAddress() };
+        bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        test::assertWaitForCondition(
+            [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_main not ready" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc2 not ready" );
+
+        //Connect to each other
 
         //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
         //node_proc2->GetPubSub()->AddPeers( bootstrappers );
@@ -155,9 +174,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 {
-    std::string address_main  = node_main->GetPubSub()->GetLocalAddress();
-    std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
-    std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
+    std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -260,7 +279,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     bin_path += "../";
 #endif
     std::string json_data = R"(
@@ -317,8 +336,6 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
                TransactionManager::TransactionStatus::CONFIRMED );
-
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;

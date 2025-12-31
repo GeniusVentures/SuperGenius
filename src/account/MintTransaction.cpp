@@ -47,7 +47,6 @@ namespace sgns
         uint64_t    amount  = tx_struct.amount();
         std::string chainid = tx_struct.chain_id();
         TokenID     tokenid = TokenID::FromBytes( tx_struct.token_id().data(), tx_struct.token_id().size() );
-        //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
         return std::make_shared<MintTransaction>(
             MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) ); // Return new instance

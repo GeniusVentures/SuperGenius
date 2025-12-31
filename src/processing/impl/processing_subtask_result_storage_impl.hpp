@@ -14,9 +14,9 @@ namespace sgns::processing
         /** Create a subtask storage
         * @param db - CRDT globaldb to use
         */
-        SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string topic );
+        SubTaskResultStorageImpl( std::shared_ptr<crdt::GlobalDB> db, std::string topic );
 
-        ~SubTaskResultStorageImpl();
+        ~SubTaskResultStorageImpl() override;
 
         /** Add a subtask result
         * @param result - Result to add

@@ -24,9 +24,11 @@ namespace sgns::crdt
         /**
          * Send {@param buff} payload to other replicas.
          * @param buff buffer to broadcast
+         * @param topic topic to broadcast to
+         * @param peerInfo optional peer info (unused in test implementation)
          * @return outcome::success on success or outcome::failure on error
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic ) override;
+        outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
 
         /**
          * Obtain the next {@return} payload received from the network.

@@ -62,9 +62,9 @@ namespace
         auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
         pubs2->Start( 40002, {} );
 
-        pubs1->AddPeers( { pubs2->GetLocalAddress() } );
+        pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        pubs2->AddPeers( { pubs1->GetLocalAddress() } );
+        pubs2->AddPeers( { pubs1->GetInterfaceAddress() } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel( pubs1, "CountTest" );

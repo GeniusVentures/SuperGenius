@@ -35,12 +35,12 @@ namespace sgns::crdt
         * @param k key name
         * @param v buffer value
         */
-        using PutHookPtr = std::function<void( const std::string &k, const Buffer &v )>;
+        using PutHookPtr = std::function<void( const std::string &k, const Buffer &v, const std::string &cid )>;
 
         /** Function pointer to notify caller when key deleted from datastore
         * @param k key name
         */
-        using DeleteHookPtr = std::function<void( const std::string &k )>;
+        using DeleteHookPtr = std::function<void( const std::string &k, const std::string &cid )>;
 
         /** Constructor
         * @param aDatastore Pointer to datastore

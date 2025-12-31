@@ -271,7 +271,10 @@ namespace sgns::crdt
 
             for ( const auto &[cid, value] : cid_map )
             {
-                logger_->trace( "GetList: Returning CID: {}", cid.toString().value() );
+                if ( logger_->level() <= spdlog::level::trace )
+                {
+                    logger_->trace( "GetList: Returning CID: {}", cid.toString().value() );
+                }
                 result_heads[current_topic].insert( cid );
                 max_value = std::max( max_value, value );
             }

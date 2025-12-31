@@ -7,7 +7,6 @@
 #ifndef _UTXO_TX_PARAMETERS_HPP_
 #define _UTXO_TX_PARAMETERS_HPP_
 
-#include <utility>
 #include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
@@ -89,6 +88,7 @@ namespace sgns
          */
         static std::vector<GeniusUTXO> ReserveUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
                                                      const UTXOTxParameters        &params );
+
         static std::vector<GeniusUTXO> RollbackUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
                                                       const UTXOTxParameters        &params );
 

@@ -29,9 +29,9 @@
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
-#ifdef _PROOF_ENABLED
+
 #include "proof/proto/SGProof.pb.h"
-#endif
+
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
@@ -45,6 +45,7 @@ namespace sgns
     public:
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS     = 10000; ///< Unified timeout for all nonce requests (10 seconds)
 
         /**
          * @brief       State of the Transaction Manager
@@ -171,6 +172,8 @@ namespace sgns
             }
         }
 
+        static std::string GetBlockChainBase( uint16_t network_id );
+
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );
@@ -202,7 +205,6 @@ namespace sgns
 
         static std::string           GetTransactionBasePath( const std::string &address );
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
-        static std::string           GetBlockChainBase( uint16_t network_id );
         static std::string           GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
@@ -250,10 +252,13 @@ namespace sgns
         {
             std::shared_ptr<IGeniusTransactions> tx;
             TransactionStatus                    status;
+            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
         mutable std::shared_mutex                  outgoing_tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> outgoing_tx_processed_m;
+        std::unordered_map<uint64_t, std::string>  outgoing_nonce_to_key_m; // nonce -> tx_key index
+        std::atomic<size_t>                        verifying_count_{ 0 };   // Count of VERIFYING transactions
         mutable std::shared_mutex                  incoming_tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
         std::function<void()>                      task_m;

@@ -11,6 +11,8 @@
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
+#include <rocksdb/db.h>
+
 #include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
@@ -105,8 +107,14 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
-        m_broadcaster->Stop();
-        m_crdtDatastore->Close();
+        if ( m_broadcaster )
+        {
+            m_broadcaster->Stop();
+        }
+        if ( m_crdtDatastore )
+        {
+            m_crdtDatastore->Close();
+        }
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -133,10 +141,32 @@ namespace sgns::crdt
             options.level_compaction_dynamic_level_bytes = false;
             try
             {
-                if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                     dataStoreResult.has_value() )
+                auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                
+                // If database open fails with corruption, try to repair it
+                if ( !dataStoreResult.has_value() )
                 {
-                    dataStore = std::move(dataStoreResult.value());
+                    std::string errorMsg = dataStoreResult.error().message();
+                    if ( errorMsg.find( "corruption" ) != std::string::npos || 
+                         errorMsg.find( "Corruption" ) != std::string::npos )
+                    {
+                        m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
+                        auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
+                        if ( repairStatus.ok() )
+                        {
+                            m_logger->info( "Database repair successful, retrying open" );
+                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                        }
+                        else
+                        {
+                            m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
+                        }
+                    }
+                }
+                
+                if ( dataStoreResult.has_value() )
+                {
+                    dataStore = std::move( dataStoreResult.value() );
                 }
                 else
                 {
@@ -215,22 +245,22 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
     }
 
-    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
         AtomicTransaction batch( m_crdtDatastore );
@@ -248,11 +278,11 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
+    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
@@ -300,16 +330,6 @@ namespace sgns::crdt
         m_crdtDatastore->PrintDataStore();
     }
 
-    void GlobalDB::AddTopicName( std::string topicName )
-    {
-        m_crdtDatastore->AddTopicName( topicName );
-    }
-
-    void GlobalDB::SetFullNode( bool full_node )
-    {
-        m_crdtDatastore->SetFullNode( std::move( full_node ) );
-    }
-
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
@@ -323,6 +343,7 @@ namespace sgns::crdt
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
         m_broadcaster->AddListenTopic( topicName );
+        m_crdtDatastore->AddTopicName( topicName );
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
@@ -363,5 +384,19 @@ namespace sgns::crdt
     outcome::result<void> GlobalDB::CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority )
     {
         return m_crdtDatastore->AddHead( aCid, topic, priority );
+    }
+
+    std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
+    {
+        return m_broadcaster;
+    }
+
+    outcome::result<crdt::CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
+    {
+        if ( !m_crdtDatastore )
+        {
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return m_crdtDatastore->GetJobStatus( cid );
     }
 }

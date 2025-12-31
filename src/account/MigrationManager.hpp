@@ -29,12 +29,18 @@
 
 namespace sgns
 {
+    class GeniusAccount;
+
     /**
      * @brief   Executes a sequence of migration steps to update a CRDT store.
      */
     class MigrationManager : public std::enable_shared_from_this<MigrationManager>
     {
     public:
+        enum class Error
+        {
+            BLOCKCHAIN_INIT_FAILED = 1,
+        };
         /**
          * @brief   Factory function to create a MigrationManager and register all known steps.
          * @param   ioContext     Shared io_context for both legacy and new DB.
@@ -53,13 +59,14 @@ namespace sgns
             std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::string                                                     writeBasePath,
-            std::string                                                     base58key );
+            std::string                                                     base58key,
+            std::shared_ptr<GeniusAccount>                                  account );
 
         /**
          * @brief   Register a migration step.
          * @param   step  IMigrationStep to add.
          */
-        void RegisterStep( std::unique_ptr<IMigrationStep> step );
+        void RegisterStep( std::shared_ptr<IMigrationStep> step );
 
         /**
          * @brief Perform all registered migration steps in sequence.
@@ -75,7 +82,9 @@ namespace sgns
          */
         MigrationManager();
 
-        std::deque<std::unique_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
+        std::deque<std::shared_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
     };
 } // namespace sgns
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, MigrationManager::Error );

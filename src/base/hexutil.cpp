@@ -37,7 +37,7 @@ namespace sgns::base {
     std::vector<uint8_t> blob;
     blob.reserve((hex.size() + 1) / 2);
 
-    if ( hex[0] == '0' && hex[1] == 'x' )
+    if ( hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x' )
     {
         hex = std::string_view( &hex[2], hex.length() - 2 );
     }

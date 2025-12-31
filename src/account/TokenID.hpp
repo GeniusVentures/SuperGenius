@@ -9,7 +9,9 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <string>
+#include <sstream>
 #include <algorithm>
 
 namespace sgns
@@ -22,7 +24,7 @@ namespace sgns
 
         TokenID() : data_{}, valid_( false ) {}
 
-        TokenID( const TokenID &other ) : data_( other.data_ ), valid_( other.valid_ ) {}
+        TokenID( const TokenID &other ) = default;
 
         static TokenID FromBytes( std::initializer_list<uint8_t> list )
         {

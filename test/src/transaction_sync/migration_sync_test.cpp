@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstring>
 #include <system_error>
+#include <chrono>
+#include <atomic>
 
 #include <gtest/gtest.h>
 #include <boost/dll.hpp>
@@ -11,6 +13,7 @@
 #include "account/MigrationManager.hpp"
 #include "account/TokenID.hpp"
 #include "FileManager.hpp"
+#include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
 
@@ -35,10 +38,14 @@ protected:
         ""                                    // BaseWritePath
     };
 
-    std::shared_ptr<sgns::GeniusNode> node;
-
-    static constexpr char DB_PREFIX[]      = "SuperGNUSNode.TestNet.2a.01.";
-    static constexpr int  STARTUP_DELAY_MS = 1000;
+    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.01.";
+    static constexpr int  STARTUP_DELAY_MS   = 1000;
+    static constexpr char FULL_NODE_SUBDIR[] = "migration_full_node";
+    static constexpr char FULL_NODE_ADDR[]   = "0xcafe";
+    static constexpr char FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
+    static constexpr char FULL_NODE_PUB_ADDRESS[] =
+        "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
+    static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 
     static void RemovePrefixedSubdirs( const fs::path &baseDir )
     {
@@ -56,9 +63,18 @@ protected:
             if ( entry.is_directory() )
             {
                 auto name = entry.path().filename().string();
+                // Only remove new (01) database directories, preserving legacy (00) test data
                 if ( name.rfind( DB_PREFIX, 0 ) == 0 )
                 {
                     fs::remove_all( entry.path(), ec );
+                    // On Windows, file locks may not be immediately released
+                    // Retry removal if it fails
+                    if ( ec && fs::exists( entry.path() ) )
+                    {
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                        ec.clear();
+                        fs::remove_all( entry.path(), ec );
+                    }
                 }
             }
         }
@@ -66,7 +82,10 @@ protected:
 
     static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string &binaryParent,
                                                                  const std::string &subdir,
-                                                                 const char        *key_hex )
+                                                                 const char        *key_hex,
+                                                                 bool               is_full_node = false,
+                                                                 bool               is_processor = false,
+                                                                 uint16_t           base_port    = 40001 )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
@@ -75,27 +94,61 @@ protected:
         std::strncpy( DEV_CONFIG.BaseWritePath, baseWrite.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) );
         DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0';
 
-        auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, false );
+        auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, is_processor, base_port, is_full_node );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
 
-    void SetUp() override
+    static std::shared_ptr<sgns::GeniusNode> CreateFullNodeInstance()
     {
-        auto        params       = GetParam();
-        std::string binaryParent = boost::dll::program_location().parent_path().string();
-        node                     = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
-    }
+        static std::atomic<int> nodeCounter{ 0 };
+        int                     id = nodeCounter.fetch_add( 1 );
 
-    void TearDown() override
-    {
-        node.reset();
+        std::string     binaryPath = boost::dll::program_location().parent_path().string();
+        std::string     outPath    = binaryPath + "/" + FULL_NODE_SUBDIR + "_" + std::to_string( id ) + "/";
+        std::error_code ec;
+        fs::remove_all( outPath, ec );
+        fs::create_directories( outPath, ec );
+
+        DevConfig_st devConfig = { "", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "" };
+        std::strncpy( devConfig.Addr, FULL_NODE_ADDR, sizeof( devConfig.Addr ) - 1 );
+        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
+        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
+        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+
+        uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
+        auto     instance    = sgns::GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
+        std::cout << "Full node created" << std::endl;
+        return instance;
     }
 };
 
 TEST_P( MigrationParamTest, BalanceAfterMigration )
 {
-    EXPECT_EQ( node->GetBalance(), GetParam().expected_balance );
+    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
+    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+    auto params    = GetParam();
+    auto full_node = CreateFullNodeInstance();
+    EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
+    sgns::test::assertWaitForCondition(
+        [full_node]()
+        { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "Full node not synched" );
+    auto binaryParent = boost::dll::program_location().parent_path().string();
+    auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
+    
+    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+
+
+    const std::string readiness_message = params.subdir + " node not ready";
+    sgns::test::assertWaitForCondition(
+        [node]() { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        readiness_message );
+
+    EXPECT_EQ( node->GetBalance(), params.expected_balance );
 }
 
 INSTANTIATE_TEST_SUITE_P(
