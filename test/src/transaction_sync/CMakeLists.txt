@@ -71,7 +71,7 @@ add_custom_target(node10_0_2_0
         "$<TARGET_FILE_DIR:migration_sync_test>/node10_0_2_0"
         COMMENT "Copying data"
 )
-add_dependencies(migration_sync_test node10_0_2_0)
+#add_dependencies(migration_sync_test node10_0_2_0)
 
 add_custom_target(node20_0_2_0
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -79,4 +79,4 @@ add_custom_target(node20_0_2_0
         "$<TARGET_FILE_DIR:migration_sync_test>/node20_0_2_0"
         COMMENT "Copying data"
 )
-add_dependencies(migration_sync_test node20_0_2_0)
+#add_dependencies(migration_sync_test node20_0_2_0)
