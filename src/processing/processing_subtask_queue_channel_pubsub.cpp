@@ -1,9 +1,6 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <base/util.hpp>
-<<<<<<< HEAD
 #include "base/sgns_version.hpp"
-=======
->>>>>>> origin/develop
 
 namespace sgns::processing
 {

@@ -12,8 +12,6 @@
 #include <boost/format.hpp>
 
 #include "processing/proto/SGProcessing.pb.h"
-#include "processing/processing_subtask_state_storage.hpp"
-#include <SGNSProcMain.hpp>
 
 namespace sgns
 {
@@ -27,17 +25,9 @@ namespace sgns
             void SplitTask( const SGProcessing::Task         &task,
                             std::list<SGProcessing::SubTask> &subTasks,
                             std::string                       json_data,
-                            uint32_t numchunks, bool addvalidationsubtask, std::string ipfsid );
-
-        private:
-
-        };
-
-        class ProcessSubTaskStateStorage : public SubTaskStateStorage
-        {
-        public:
-            void ChangeSubTaskState( const std::string &subTaskId, SGProcessing::SubTaskState::Type state ) override;
-            std::optional<SGProcessing::SubTaskState> GetSubTaskState( const std::string &subTaskId ) override;
+                            uint32_t                          numchunks,
+                            bool                              addvalidationsubtask,
+                            std::string                       ipfsid );
         };
     }
 }
