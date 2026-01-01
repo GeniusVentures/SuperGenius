@@ -55,22 +55,6 @@ namespace sgns::test
         {
         }
 
-        bool SetProcessingTypeFromJson(std::string jsondata) override
-        {
-            return true;
-        }
-
-        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override
-        {
-            return nullptr;
-        }
-
-        std::shared_ptr<std::vector<char>> GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
-                                                             std::string                              url ) override
-        {
-            return {};
-        }
-
         libp2p::outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override
         {

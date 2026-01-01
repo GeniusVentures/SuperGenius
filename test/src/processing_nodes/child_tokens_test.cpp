@@ -517,49 +517,142 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     bin_path += "../";
 #endif
     std::string json_data = R"(
+{
+  "name": "posenet-inference",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "PoseNet inference on multiple image inputs using MNN model",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+
+  "inputs": [
     {
-      "data": {
-        "type": "file",
-        "URL": "file://[basepath]../../../../test/src/processing_nodes/"
+      "name": "ballet_image",
+	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25
       },
-      "model": {
-        "name": "mnnimage",
-        "file": "model.mnn"
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image", 
+	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16
       },
-      "input": [
-        {
-          "image": "data/ballet.data",
-          "block_len": 4860000,
-          "block_line_stride": 5400,
-          "block_stride": 0,
-          "chunk_line_stride": 1080,
-          "chunk_offset": 0,
-          "chunk_stride": 4320,
-          "chunk_subchunk_height": 5,
-          "chunk_subchunk_width": 5,
-          "chunk_count": 25,
-          "channels": 4
-        },
-        {
-          "image": "data/frisbee3.data",
-          "block_len": 786432,
-          "block_line_stride": 1536,
-          "block_stride": 0,
-          "chunk_line_stride": 384,
-          "chunk_offset": 0,
-          "chunk_stride": 1152,
-          "chunk_subchunk_height": 4,
-          "chunk_subchunk_width": 4,
-          "chunk_count": 16,
-          "channels": 3
-        }
-      ]
+      "format": "RGB8"
     }
-    )";
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor", 
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference", 
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D", 
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints", 
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}
+       )";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
-
-    auto cost          = node_main->GetProcessCost( json_data );
+    auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    auto cost          = node_main->GetProcessCost( procmgr.value() );
     auto bal_main_init = node_main->GetBalance();
     auto bal_p1_init   = node_proc1->GetBalance();
     auto bal_p2_init   = node_proc2->GetBalance();
