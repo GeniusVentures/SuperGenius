@@ -1,5 +1,5 @@
 /**
- * @file       UTXOTxParameters.hpp    
+ * @file       UTXOTxParameters.hpp
  * @brief      Helpers to build UTXO-based transaction parameters
  * @date       2024-04-29
  * @author     Henrique A. Klein (hklein@gnus.ai)

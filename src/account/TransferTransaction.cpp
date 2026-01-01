@@ -86,10 +86,8 @@ namespace sgns
                                  TokenID::FromBytes( output_proto.token_id().data(), output_proto.token_id().size() ) };
             outputs.push_back( curr );
         }
-        std::string token_id = tx_struct.token_id();
 
-        return std::make_shared<TransferTransaction>(
-            TransferTransaction( outputs, inputs, tx_struct.dag_struct() ) );
+        return std::make_shared<TransferTransaction>( TransferTransaction( outputs, inputs, tx_struct.dag_struct() ) );
     }
 
     std::vector<OutputDestInfo> TransferTransaction::GetDstInfos() const

@@ -145,7 +145,6 @@ namespace sgns
         uint64_t Precision() const noexcept;
 
         /**
-
          * @brief  Return this value as a string.
          * @param  fixedDecimals
          *         - true: always show all fractional digits (pad with zeros up to precision)
