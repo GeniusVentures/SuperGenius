@@ -10,4 +10,4 @@
 	url = ../ProofSystem
 [submodule "SGProcessingManager"]
 	path = SGProcessingManager
-	url = git@github.com:GeniusVentures/SGProcessingManager.git
+	url = ../SGProcessingManager.git
