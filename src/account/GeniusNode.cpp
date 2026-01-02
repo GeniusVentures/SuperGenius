@@ -845,7 +845,10 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
-
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         
