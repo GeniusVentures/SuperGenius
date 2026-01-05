@@ -11,6 +11,8 @@ target_link_libraries(processing_schema_test
 )
 
 add_custom_command(TARGET processing_schema_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:processing_schema_test>/processing_schema_test"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/data"
         "$<TARGET_FILE_DIR:processing_schema_test>/processing_schema_test/data"
