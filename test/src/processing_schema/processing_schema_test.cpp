@@ -30,7 +30,7 @@ namespace sgns
 TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
     {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
-        std::string data_path = bin_path + "../../../../../test/src/processing_schema/";
+        std::string data_path = bin_path + "./processing_schema_test/";
 
         // Load test instance file (validation already tested separately)
         std::string   instance_file = data_path + "test-processing-definition.json";
@@ -152,7 +152,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
     TEST_F( ProcessingSchemaTest, BadGeneratedCodeTest )
     {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
-        std::string data_path = bin_path + "../../../../../test/src/processing_schema/";
+        std::string data_path = bin_path + "./processing_schema_test/";
 
         // Load JSON missing required field (inputs)
         std::string   instance_file = data_path + "missing-inputs-definition.json";
@@ -209,7 +209,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
 
     TEST_F( ProcessingSchemaTest, PosenetJobTest ) {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
-        std::string data_path = bin_path + "../../../../../test/src/processing_schema/";
+        std::string data_path = bin_path + "./processing_schema_test/";
 
         // Load test instance file (validation already tested separately)
         std::string   instance_file = data_path + "posenet-processing-job.json";
