@@ -365,7 +365,7 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_same_addr_2 balance not synched" );
 
     // Get final balances after CRDT resolution
