@@ -513,9 +513,6 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#ifdef _WIN32
-    bin_path += "../";
-#endif
     std::string json_data = R"(
 {
   "name": "posenet-inference",
@@ -528,7 +525,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]./child_tokens/data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -548,7 +545,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     },
     {
       "name": "frisbee_image", 
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]./child_tokens/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -599,7 +596,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -625,7 +622,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
       "type": "inference", 
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -660,6 +657,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     auto tok_p1_init   = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
     auto tok_p2_init   = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
 
+    std::cout << "Process cost: " << cost << "\n";
     auto postjob = node_main->ProcessImage( json_data );
     ASSERT_TRUE( postjob ) << "ProcessImage failed: " << postjob.error().message();
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),

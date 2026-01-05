@@ -70,3 +70,17 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+
+add_custom_command(TARGET child_tokens_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/data/"
+        "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/data"
+        COMMENT "Copying data"
+)
+add_custom_command(TARGET child_tokens_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/model.mnn"
+        "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/"
+        COMMENT "Copying files"
+)
