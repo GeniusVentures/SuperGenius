@@ -24,6 +24,7 @@ namespace sgns
 
         virtual outcome::result<SecureBufferType> Load( const std::string &key )                                 = 0;
         virtual outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) = 0;
+        virtual outcome::result<bool>             DeleteKey( const std::string &key )                            = 0;
     };
 }
 

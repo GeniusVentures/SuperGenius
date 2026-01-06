@@ -1,13 +1,13 @@
-
 addtest(multi_account_test
     multi_account_sync.cpp
-    )
+)
 
 target_include_directories(multi_account_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(multi_account_test
     genius_node
 )
+
 if(WIN32)
     target_link_options(multi_account_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 
