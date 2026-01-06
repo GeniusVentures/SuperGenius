@@ -62,6 +62,10 @@ namespace sgns::processing
          */
         bool IsTaskCompleted( const std::string &taskId ) override;
 
+        outcome::result<void> IsTaskValid( const std::string taskJson );
+
+        outcome::result<void> IsSubTaskValid( const std::string taskJson );
+
         /**
          * @brief       Fetches the task and returns the associated escrow path
          * @param[in]   taskId The task ID

@@ -26,6 +26,7 @@
 #include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <processingbase/ProcessingManager.hpp>
 
 typedef struct DevConfig
 {
@@ -100,7 +101,7 @@ namespace sgns
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
-        uint64_t GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );
 
         outcome::result<double> GetGNUSPrice();
 

@@ -18,10 +18,9 @@
 #include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
-#include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processors/processing_processor_mnn_image.hpp"
+//#include "processing/processors/processing_processor_mnn_image.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -34,6 +33,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <Generators.hpp>
 
 namespace
 {
@@ -618,8 +618,6 @@ namespace sgns
 
         task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_, 1, dev_config_.TokenID );
-        processing_core_->RegisterProcessorFactory( "mnnimage",
-                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
@@ -851,9 +849,10 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
-        auto funds = GetProcessCost( jsondata );
+        
+        auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -868,31 +867,47 @@ namespace sgns
         SGProcessing::Task task;
         auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
 
+        //Make a small json to insert without extra indentation and spacing.
+        json smalljson;
+        sgns::to_json( smalljson, procmgr->GetProcessingData());
         task.set_ipfs_block_id( uuidstring );
-        task.set_json_data( jsondata );
+        task.set_json_data( smalljson.dump(-1) );
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
+        //Get Processing Data
+        auto procdata = procmgr->GetProcessingData();
 
-        rapidjson::Document document;
-        document.Parse( jsondata.c_str() );
-        rapidjson::Value inputArray;
-
-        inputArray = document["input"];
-
+        //Split into subtasks
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
-        for ( const auto &input : inputArray.GetArray() )
+        //Make Copies, trying to use references for passes/input nodes may cause problems. 
+        auto passes = procdata.get_passes();
+        for ( const auto &pass : passes )
         {
-            size_t                                     nChunks = input["chunk_count"].GetInt();
-            rapidjson::StringBuffer                    buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+            auto input_nodes = pass.get_model().value().get_input_nodes();
+            for ( auto &model : input_nodes )
+            {
+                json modeljson;
+                sgns::to_json( modeljson, model );
+                auto   index   = procmgr->GetInputIndex( model.get_source().value() );
+                size_t nChunks =
+                    procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
-            input.Accept( writer );
-            std::string inputAsString = buffer.GetString();
-            taskSplitter
-                .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
+                taskSplitter.SplitTask( task,
+                                        subTasks,
+                                        modeljson.dump(-1),
+                                        nChunks,
+                                        false,
+                                        pubsub_->GetHost()->getId().toBase58() );
+            }
         }
-        auto cut = TokenAmount::ParseMinions( dev_config_.Cut );
+        if (subTasks.size() <= 0)
+        {
+            return outcome::failure( Error::INVALID_JSON );
+        }
+        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -922,128 +937,10 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<void> GeniusNode::CheckProcessValidity( const std::string &jsondata )
+
+    uint64_t GeniusNode::GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr )
     {
-        rapidjson::Document document;
-        document.Parse( jsondata.c_str() );
-
-        if ( document.HasParseError() )
-        {
-            return outcome::failure( Error::INVALID_JSON );
-        }
-
-        // Check for required fields
-        if ( !document.HasMember( "data" ) || !document["data"].IsObject() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        if ( !document.HasMember( "model" ) || !document["model"].IsObject() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        if ( !document.HasMember( "input" ) || !document["input"].IsArray() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        // Extract and validate the model
-        const auto &model = document["model"];
-        if ( !model.HasMember( "name" ) || !model["name"].IsString() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        std::string model_name      = model["name"].GetString();
-        auto        processor_check = processing_core_->CheckRegisteredProcessor( model_name );
-        if ( !processor_check )
-        {
-            return outcome::failure( Error::NO_PROCESSOR ); // Return the error if the processor is not registered
-        }
-
-        // Extract input array
-        const auto &inputArray = document["input"];
-        if ( inputArray.Size() == 0 )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        // Validate each input entry
-        for ( auto &input : inputArray.GetArray() )
-        {
-            if ( !input.IsObject() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            if ( !input.HasMember( "block_len" ) || !input["block_len"].IsUint64() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            if ( !input.HasMember( "block_line_stride" ) || !input["block_line_stride"].IsUint64() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            uint64_t block_len         = input["block_len"].GetUint64();
-            uint64_t block_line_stride = input["block_line_stride"].GetUint64();
-
-            // Ensure block_len is evenly divisible by block_line_stride
-            if ( block_line_stride == 0 || ( block_len % block_line_stride ) != 0 )
-            {
-                return outcome::failure( Error::INVALID_BLOCK_PARAMETERS );
-            }
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
-    {
-        node_logger_->info( "Received JSON data: {}", json_data );
-        rapidjson::Document document;
-        if ( document.Parse( json_data.c_str() ).HasParseError() )
-        {
-            node_logger_->error( "Invalid JSON data provided" );
-            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-        }
-
-        rapidjson::Value inputArray;
-        if ( document.HasMember( "input" ) && document["input"].IsArray() )
-        {
-            inputArray = document["input"];
-        }
-        else
-        {
-            node_logger_->error( "This JSON lacks inputs" );
-            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-        }
-
-        uint64_t block_total_len = 0;
-        for ( const auto &input : inputArray.GetArray() )
-        {
-            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
-            {
-                uint64_t block_len  = input["block_len"].GetUint64();
-                block_total_len    += block_len;
-                node_logger_->info( "Block length (bytes): {}", block_len );
-            }
-            else
-            {
-                node_logger_->error( "Missing or invalid block_len in input" );
-                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-            }
-        }
-
-        node_logger_->trace( "Total block length: {}", block_total_len );
-        return block_total_len;
-    }
-
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
-    {
-        auto blockLen = ParseBlockSize( json_data );
+        auto blockLen = procmgr->ParseBlockSize();
         if ( !blockLen )
         {
             node_logger_->error( "ParseBlockSize failed" );

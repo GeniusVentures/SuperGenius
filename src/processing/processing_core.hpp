@@ -13,7 +13,7 @@ namespace sgns::processing
 {
 /**
 * Processing core interface.
-* An implementation of the interface depends on specific processing algorithm
+* An implementatin of the interface depends on specific processing algorithm
 */
 class ProcessingCore
 {
@@ -27,23 +27,6 @@ public:
     */
     virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
-
-    /** Get processing type from json data to set processor
-    * @param jsondata - jsondata that needs to be parsed
-    */
-    virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
-
-    /** Get settings.json and then get data we need for processing based on parsing
-    * @param CID - CID of directory to get settings.json from
-    */
-    virtual std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) = 0;
-
-    /** Get files from a set URL and insert them into pair reference
-    * @param ioc - IO context to run on
-    * @param url - ipfs gateway url to get from
-    */
-    virtual std::shared_ptr<std::vector<char>> GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
-                                                                 std::string                              url ) = 0;
 };
 
 } // namespace sgns::processing

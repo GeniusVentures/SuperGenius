@@ -77,6 +77,7 @@ target_link_libraries(genius_node
     gnus_upnp
     sgns_genius_account  # Link to the GeniusAccount library
     blockchain_genesis
+	ProcessingBase
     PRIVATE
     json_secure_storage
     component_factory

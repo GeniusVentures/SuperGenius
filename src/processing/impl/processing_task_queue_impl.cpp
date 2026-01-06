@@ -1,4 +1,6 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
+#include <processingbase/ProcessingManager.hpp>
+#include <Generators.hpp>
 
 namespace sgns::processing
 {
@@ -77,11 +79,17 @@ namespace sgns::processing
                 if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                 {
                     m_logger->debug( "Subtask check {}", subTask.chunkstoprocess_size() );
+                    if (!IsSubTaskValid(subTask.json_data()))
+                    {
+                        m_logger->debug( "Subtask does not validate" );
+                        return false;
+                    }
                     subTasks.push_back( std::move( subTask ) );
                 }
                 else
                 {
-                    m_logger->debug( "Undable to parse a subtask" );
+                    m_logger->debug( "Unable to parse a subtask" );
+                    return false;
                 }
             }
 
@@ -231,6 +239,29 @@ namespace sgns::processing
         sgns::crdt::HierarchicalKey lock_key( complete_lock_path.str() );
         auto                        lockData = m_db->Get( lock_key );
         return !lockData.has_failure() && lockData.has_value();
+    }
+
+    outcome::result<void> ProcessingTaskQueueImpl::IsTaskValid( const std::string taskJson )
+    {
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
+        return outcome::success();
+    }
+
+    outcome::result<void> ProcessingTaskQueueImpl::IsSubTaskValid( const std::string taskJson )
+    {
+        sgns::ModelNode model;
+        try
+        {
+            m_logger->trace( "SubTask Parsing {}", taskJson );
+            auto data = nlohmann::json::parse( taskJson );
+            sgns::from_json( data, model );
+        }
+        catch ( const nlohmann::json::exception &e )
+        {
+            m_logger->debug( "SubTask Parsing Failed {} ", e.what() );
+            return outcome::failure( boost::system::error_code{} );
+        }
+        return outcome::success();
     }
 
     bool ProcessingTaskQueueImpl::LockTask( const std::string &taskKey )

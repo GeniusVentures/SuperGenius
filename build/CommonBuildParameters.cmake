@@ -344,6 +344,10 @@ find_package(LLVM CONFIG REQUIRED)
 set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
 find_package(gnus_upnp CONFIG REQUIRED)
 
+#json.hpp
+set(nlohmann_json_DIR "${_THIRDPARTY_BUILD_DIR}/json/share/cmake/nlohmann_json")
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
@@ -377,6 +381,9 @@ include_directories(
     ${PROJECT_ROOT}/ProofSystem
 )
 include_directories(
+    ${PROJECT_ROOT}/SGProcessingManager
+)
+include_directories(
     ${PROJECT_ROOT}/app
 )
 
@@ -403,6 +410,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
+add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
@@ -462,6 +470,7 @@ install_hfile(${PROJECT_ROOT}/app/integration)
 install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
 install_hfile(${PROJECT_ROOT}/src/singleton)
 install_hfile(${PROJECT_ROOT}/src/coinprices)
+install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
 
 # install proto header files
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)

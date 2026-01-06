@@ -65,18 +65,16 @@ else()
     )
 endif()
 
-add_custom_target(node10_0_2_0
+add_custom_command(TARGET migration_sync_test POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/node10_0_2_0/"
         "$<TARGET_FILE_DIR:migration_sync_test>/node10_0_2_0"
-        COMMENT "Copying data"
+        COMMENT "Copying node10_0_2_0 data"
 )
-add_dependencies(migration_sync_test node10_0_2_0)
 
-add_custom_target(node20_0_2_0
+add_custom_command(TARGET migration_sync_test POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/node20_0_2_0/"
         "$<TARGET_FILE_DIR:migration_sync_test>/node20_0_2_0"
-        COMMENT "Copying data"
+        COMMENT "Copying node20_0_2_0 data"
 )
-add_dependencies(migration_sync_test node20_0_2_0)

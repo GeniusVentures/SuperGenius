@@ -15,4 +15,4 @@ add_subdirectory(proof)
 add_subdirectory(account_creation)
 add_subdirectory(pubsub_counts)
 add_subdirectory(graphsync)
-
+add_subdirectory(processing_schema)
