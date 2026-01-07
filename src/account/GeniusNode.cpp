@@ -161,6 +161,7 @@ namespace sgns
         use_upnp_( use_upnp )
 
     {
+        
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
         InitOpenSSL();
@@ -176,6 +177,7 @@ namespace sgns
         {
             throw std::runtime_error( "Network initialization error" );
         }
+        node_logger_->debug( "Account Address {}", account_->GetAddress() );
     }
 
     void GeniusNode::BeginDBInitialization()
@@ -261,10 +263,6 @@ namespace sgns
             }
             case NodeState::INITIALIZING_DHT:
             {
-                if ( autodht_ )
-                {
-                    DHTInit();
-                }
                 if ( use_upnp_ )
                 {
                     RefreshUPNP( pubsubport_ );
@@ -517,6 +515,12 @@ namespace sgns
                 pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;
             }
             graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
+
+            // Initialize DHT early so peer discovery works during database migration
+            if ( autodht_ )
+            {
+                DHTInit();
+            }
         } while ( 0 );
         return ret;
     }
