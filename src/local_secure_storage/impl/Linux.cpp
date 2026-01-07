@@ -12,15 +12,15 @@ namespace sgns
 {
     LinuxSecureStorage::LinuxSecureStorage() : schema( { "SuperGenius", SECRET_SCHEMA_NONE } ) {}
 
-    outcome::result<rapidjson::Document> LinuxSecureStorage::LoadJSON() const
+    outcome::result<rj::Document> LinuxSecureStorage::LoadJSON() const
     {
         GError      *error  = nullptr;
         SecretValue *result = secret_password_lookup_binary_sync( &schema, nullptr, &error, NULL );
 
         if ( result == nullptr )
         {
-            rj::Document foo( rj::Type::kObjectType );
-            return foo;
+            rj::Document empty_document( rj::Type::kObjectType );
+            return empty_document;
         }
 
         if ( error != nullptr )
@@ -46,7 +46,7 @@ namespace sgns
         return d;
     }
 
-    outcome::result<void> LinuxSecureStorage::SaveJSON( rapidjson::Document document )
+    outcome::result<void> LinuxSecureStorage::SaveJSON( rj::Document document )
     {
         rj::StringBuffer password;
         rj::Writer       writer( password );

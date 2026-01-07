@@ -57,19 +57,20 @@ TEST_P( SecureStorageTest, CantGetKeyThatWasntSaved )
     ASSERT_FALSE( storage.Load( "foo" ).has_value() );
 }
 
-TEST_P(SecureStorageTest, WorksWithBinaryData) {
-    auto& storage = *GetParam();
+TEST_P( SecureStorageTest, WorksWithBinaryData )
+{
+    auto &storage = *GetParam();
 
-    ISecureStorage::SecureBufferType binary("B\0I\0N\0A\0R\0Y");
+    ISecureStorage::SecureBufferType binary( "B\0I\0N\0A\0R\0Y" );
 
-    ASSERT_TRUE(storage.Save("foo", binary).has_value());
+    ASSERT_TRUE( storage.Save( "foo", binary ).has_value() );
 
-    auto result_load = storage.Load("foo");
+    auto result_load = storage.Load( "foo" );
 
-    EXPECT_TRUE(result_load.has_value());
+    EXPECT_TRUE( result_load.has_value() );
 
-    ASSERT_EQ(result_load.value().size(), binary.size());
-    ASSERT_EQ(result_load.value(), binary);
+    ASSERT_EQ( result_load.value().size(), binary.size() );
+    ASSERT_EQ( result_load.value(), binary );
 }
 
 #ifdef __linux__
@@ -77,5 +78,13 @@ TEST_P(SecureStorageTest, WorksWithBinaryData) {
 #include "local_secure_storage/impl/Linux.hpp"
 
 INSTANTIATE_TEST_SUITE_P( SecureStorage, SecureStorageTest, testing::Values( std::make_shared<LinuxSecureStorage>() ) );
+
+#elif defined( _WIN32 )
+
+#include "local_secure_storage/impl/Windows.hpp"
+
+INSTANTIATE_TEST_SUITE_P( SecureStorage,
+                          SecureStorageTest,
+                          testing::Values( std::make_shared<WindowsSecureStorage>() ) );
 
 #endif
