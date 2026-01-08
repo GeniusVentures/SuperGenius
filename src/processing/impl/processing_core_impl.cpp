@@ -82,6 +82,7 @@ namespace sgns::processing
         }
         else
         {
+            --m_processingSubTaskCount;
             return tempResult.error();
         }
         return result;
