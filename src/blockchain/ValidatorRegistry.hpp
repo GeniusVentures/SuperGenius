@@ -8,66 +8,29 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include <gsl/span>
-
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
+#include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
-#include "scale/scale_decoder_stream.hpp"
-#include "scale/scale_encoder_stream.hpp"
 
 namespace sgns::blockchain
 {
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
     {
     public:
-        enum class Role : uint8_t
-        {
-            Genesis = 0,
-            Full    = 1,
-            Regular = 2,
-            Sharded = 3
-        };
-
-        enum class Status : uint8_t
-        {
-            Active      = 0,
-            Suspended   = 1,
-            Blacklisted = 2
-        };
-
-        struct ValidatorEntry
-        {
-            std::string validator_id_;
-            uint64_t    weight_ = 0;
-            Role        role_   = Role::Regular;
-            Status      status_ = Status::Active;
-        };
-
-        struct Registry
-        {
-            uint64_t                  epoch_ = 0;
-            std::vector<ValidatorEntry> validators_;
-        };
-
-        struct SignatureEntry
-        {
-            std::string validator_id_;
-            std::string signature_;
-        };
-
-        struct RegistryUpdate
-        {
-            Registry                  registry_;
-            std::string               prev_registry_hash_;
-            std::vector<SignatureEntry> signatures_;
-        };
+        using ValidatorEntry = validator::ValidatorEntry;
+        using Registry = validator::Registry;
+        using SignatureEntry = validator::SignatureEntry;
+        using RegistryUpdate = validator::RegistryUpdate;
+        using Role = validator::Role;
+        using Status = validator::Status;
 
         struct WeightConfig
         {
@@ -78,11 +41,11 @@ namespace sgns::blockchain
             uint64_t max_weight_        = 10;
         };
 
-        ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
-                           uint64_t                        quorum_numerator = 2,
-                           uint64_t                        quorum_denominator = 3,
-                           WeightConfig                    weight_config = {},
-                           std::string                     genesis_authority = {} );
+        static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
+                                                       uint64_t                        quorum_numerator = 2,
+                                                       uint64_t                        quorum_denominator = 3,
+                                                       WeightConfig                    weight_config = {},
+                                                       std::string                     genesis_authority = {} );
 
         uint64_t ComputeWeight( Role role ) const;
         uint64_t TotalWeight( const Registry &registry ) const;
@@ -97,10 +60,10 @@ namespace sgns::blockchain
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
         bool RegisterFilter();
 
-        outcome::result<base::Buffer> SerializeRegistry( const Registry &registry ) const;
-        outcome::result<Registry>     DeserializeRegistry( const base::Buffer &buffer ) const;
-        outcome::result<base::Buffer> SerializeRegistryUpdate( const RegistryUpdate &update ) const;
-        outcome::result<RegistryUpdate> DeserializeRegistryUpdate( const base::Buffer &buffer ) const;
+        outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
+        outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
+        outcome::result<std::vector<uint8_t>> SerializeRegistryUpdate( const RegistryUpdate &update ) const;
+        outcome::result<RegistryUpdate>       DeserializeRegistryUpdate( const std::vector<uint8_t> &buffer ) const;
 
         static constexpr std::string_view RegistryKey()
         {
@@ -113,6 +76,12 @@ namespace sgns::blockchain
         }
 
     private:
+        ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
+                           uint64_t                        quorum_numerator,
+                           uint64_t                        quorum_denominator,
+                           WeightConfig                    weight_config,
+                           std::string                     genesis_authority );
+
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         outcome::result<std::vector<uint8_t>>         ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
         std::string                                   ComputeRegistryHash( const Registry &registry ) const;
@@ -128,57 +97,4 @@ namespace sgns::blockchain
         base::Logger                    logger_ = base::createLogger( "ValidatorRegistry" );
     };
 
-    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
-    Stream &operator<<( Stream &s, const ValidatorRegistry::SignatureEntry &entry )
-    {
-        return s << entry.validator_id_ << entry.signature_;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
-    Stream &operator>>( Stream &s, ValidatorRegistry::SignatureEntry &entry )
-    {
-        return s >> entry.validator_id_ >> entry.signature_;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
-    Stream &operator<<( Stream &s, const ValidatorRegistry::ValidatorEntry &entry )
-    {
-        return s << entry.validator_id_ << entry.weight_ << static_cast<uint8_t>( entry.role_ )
-                 << static_cast<uint8_t>( entry.status_ );
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
-    Stream &operator>>( Stream &s, ValidatorRegistry::ValidatorEntry &entry )
-    {
-        uint8_t role = 0;
-        uint8_t status = 0;
-        s >> entry.validator_id_ >> entry.weight_ >> role >> status;
-        entry.role_   = static_cast<ValidatorRegistry::Role>( role );
-        entry.status_ = static_cast<ValidatorRegistry::Status>( status );
-        return s;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
-    Stream &operator<<( Stream &s, const ValidatorRegistry::Registry &registry )
-    {
-        return s << registry.epoch_ << registry.validators_;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
-    Stream &operator>>( Stream &s, ValidatorRegistry::Registry &registry )
-    {
-        return s >> registry.epoch_ >> registry.validators_;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
-    Stream &operator<<( Stream &s, const ValidatorRegistry::RegistryUpdate &update )
-    {
-        return s << update.registry_ << update.prev_registry_hash_ << update.signatures_;
-    }
-
-    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
-    Stream &operator>>( Stream &s, ValidatorRegistry::RegistryUpdate &update )
-    {
-        return s >> update.registry_ >> update.prev_registry_hash_ >> update.signatures_;
-    }
 }

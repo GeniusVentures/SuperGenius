@@ -83,13 +83,14 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        instance->validator_registry_ = std::make_shared<blockchain::ValidatorRegistry>(
+        instance->validator_registry_ = blockchain::ValidatorRegistry::New(
             instance->db_,
             2,
             3,
             blockchain::ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress() );
-        const bool validator_filter_initialized = instance->validator_registry_->RegisterFilter();
+        const bool validator_filter_initialized =
+            instance->validator_registry_ ? instance->validator_registry_->RegisterFilter() : false;
 
         if ( !genesis_filter_initialized )
         {
@@ -373,13 +374,22 @@ namespace sgns
 
         if ( !validator_registry_ )
         {
-            validator_registry_ = std::make_shared<blockchain::ValidatorRegistry>(
+            validator_registry_ = blockchain::ValidatorRegistry::New(
                 db_,
                 2,
                 3,
                 blockchain::ValidatorRegistry::WeightConfig{},
                 GetAuthorizedFullNodeAddress() );
-            (void)validator_registry_->RegisterFilter();
+            if ( validator_registry_ )
+            {
+                (void)validator_registry_->RegisterFilter();
+            }
+        }
+        if ( !validator_registry_ )
+        {
+            logger_->error( "[{}] Validator registry not initialized",
+                            account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
         }
 
         auto registry_result = validator_registry_->StoreGenesisRegistry(
@@ -751,13 +761,23 @@ namespace sgns
 
         if ( !validator_registry_ )
         {
-            validator_registry_ = std::make_shared<blockchain::ValidatorRegistry>(
+            validator_registry_ = blockchain::ValidatorRegistry::New(
                 db_,
                 2,
                 3,
                 blockchain::ValidatorRegistry::WeightConfig{},
                 GetAuthorizedFullNodeAddress() );
-            (void)validator_registry_->RegisterFilter();
+            if ( validator_registry_ )
+            {
+                (void)validator_registry_->RegisterFilter();
+            }
+        }
+
+        if ( !validator_registry_ )
+        {
+            logger_->error( "[{}] Validator registry not initialized",
+                            account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
         }
 
         auto registry_result = validator_registry_->StoreGenesisRegistry(

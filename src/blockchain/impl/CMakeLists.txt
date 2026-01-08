@@ -1,5 +1,6 @@
 add_proto_library(SGBlocksProto proto/SGBlocks.proto)
 add_proto_library(SGBlockchainProto proto/SGBlockchain.proto)
+add_proto_library(ValidatorRegistryProto proto/ValidatorRegistry.proto)
 
 add_library(blockchain_common
     types.cpp
@@ -38,6 +39,7 @@ target_link_libraries(blockchain_genesis
     sgns_genius_account
     PRIVATE
     SGBlockchainProto
+    ValidatorRegistryProto
 )
 
 supergenius_install(blockchain_genesis)

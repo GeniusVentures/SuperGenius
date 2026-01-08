@@ -10,10 +10,12 @@
 #include <set>
 #include <system_error>
 
+#include <gsl/span>
+
 #include "account/GeniusAccount.hpp"
 #include "base/hexutil.hpp"
+#include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crypto/hasher/hasher_impl.hpp"
-#include "scale/scale.hpp"
 
 namespace sgns::blockchain
 {
@@ -28,10 +30,29 @@ namespace sgns::blockchain
         , weight_config_( std::move( weight_config ) )
         , genesis_authority_( std::move( genesis_authority ) )
     {
-        if ( quorum_denominator_ == 0 )
+
+    }
+
+    std::shared_ptr<ValidatorRegistry> ValidatorRegistry::New( std::shared_ptr<crdt::GlobalDB> db,
+                                                               uint64_t                        quorum_numerator,
+                                                               uint64_t                        quorum_denominator,
+                                                               WeightConfig                    weight_config,
+                                                               std::string                     genesis_authority )
+    {
+        if ( !db )
         {
-            quorum_denominator_ = 1;
+            return nullptr;
         }
+        if ( quorum_denominator == 0 )
+        {
+            quorum_denominator = 1;
+        }
+        return std::shared_ptr<ValidatorRegistry>(
+            new ValidatorRegistry( std::move( db ),
+                                    quorum_numerator,
+                                    quorum_denominator,
+                                    std::move( weight_config ),
+                                    std::move( genesis_authority ) ) );
     }
 
     uint64_t ValidatorRegistry::ComputeWeight( Role role ) const
@@ -41,16 +62,16 @@ namespace sgns::blockchain
 
         switch ( role )
         {
-            case Role::Genesis:
+            case Role::GENESIS:
                 multiplier = weight_config_.genesis_multiplier_;
                 break;
-            case Role::Full:
+            case Role::FULL:
                 multiplier = weight_config_.full_multiplier_;
                 break;
-            case Role::Sharded:
+            case Role::SHARDED:
                 multiplier = weight_config_.sharded_multiplier_;
                 break;
-            case Role::Regular:
+            case Role::REGULAR:
             default:
                 multiplier = 1;
                 break;
@@ -73,13 +94,13 @@ namespace sgns::blockchain
     uint64_t ValidatorRegistry::TotalWeight( const Registry &registry ) const
     {
         uint64_t total_weight = 0;
-        for ( const auto &entry : registry.validators_ )
+        for ( const auto &entry : registry.validators() )
         {
-            if ( entry.status_ != Status::Active )
+            if ( entry.status() != Status::ACTIVE )
             {
                 continue;
             }
-            total_weight += entry.weight_;
+            total_weight += entry.weight();
         }
         return total_weight;
     }
@@ -103,77 +124,73 @@ namespace sgns::blockchain
         const std::string &genesis_validator_id ) const
     {
         Registry registry;
-        ValidatorEntry entry;
-        entry.validator_id_ = genesis_validator_id;
-        entry.role_          = Role::Genesis;
-        entry.status_        = Status::Active;
-        entry.weight_        = ComputeWeight( entry.role_ );
-
-        registry.validators_.push_back( std::move( entry ) );
+        registry.set_epoch( 0 );
+        auto *entry = registry.add_validators();
+        entry->set_validator_id( genesis_validator_id );
+        entry->set_role( Role::GENESIS );
+        entry->set_status( Status::ACTIVE );
+        entry->set_weight( ComputeWeight( entry->role() ) );
         return registry;
     }
 
-    outcome::result<base::Buffer> ValidatorRegistry::SerializeRegistry( const Registry &registry ) const
+    outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistry( const Registry &registry ) const
     {
-        auto encoded = scale::encode( registry );
-        if ( encoded.has_error() )
+        std::string serialized;
+        if ( !registry.SerializeToString( &serialized ) )
         {
-            return outcome::failure( encoded.error() );
+            return outcome::failure( std::errc::invalid_argument );
         }
-        return base::Buffer( std::move( encoded.value() ) );
+        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
     outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::DeserializeRegistry(
-        const base::Buffer &buffer ) const
+        const std::vector<uint8_t> &buffer ) const
     {
-        auto decoded = scale::decode<Registry>( gsl::span<const uint8_t>( buffer.data(), buffer.size() ) );
-        if ( decoded.has_error() )
+        Registry proto;
+        if ( !proto.ParseFromArray( buffer.data(), static_cast<int>( buffer.size() ) ) )
         {
-            return outcome::failure( decoded.error() );
+            return outcome::failure( std::errc::invalid_argument );
         }
-        return decoded.value();
+        return proto;
     }
 
-    outcome::result<base::Buffer> ValidatorRegistry::SerializeRegistryUpdate( const RegistryUpdate &update ) const
+    outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistryUpdate( const RegistryUpdate &update ) const
     {
-        auto encoded = scale::encode( update );
-        if ( encoded.has_error() )
+        std::string serialized;
+        if ( !update.SerializeToString( &serialized ) )
         {
-            return outcome::failure( encoded.error() );
+            return outcome::failure( std::errc::invalid_argument );
         }
-        return base::Buffer( std::move( encoded.value() ) );
+        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
     outcome::result<ValidatorRegistry::RegistryUpdate> ValidatorRegistry::DeserializeRegistryUpdate(
-        const base::Buffer &buffer ) const
+        const std::vector<uint8_t> &buffer ) const
     {
-        auto decoded = scale::decode<RegistryUpdate>( gsl::span<const uint8_t>( buffer.data(), buffer.size() ) );
-        if ( decoded.has_error() )
+        RegistryUpdate proto;
+        if ( !proto.ParseFromArray( buffer.data(), static_cast<int>( buffer.size() ) ) )
         {
-            return outcome::failure( decoded.error() );
+            return outcome::failure( std::errc::invalid_argument );
         }
-        return decoded.value();
+        return proto;
     }
 
     outcome::result<void> ValidatorRegistry::StoreGenesisRegistry(
         const std::string &genesis_validator_id,
         std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign )
     {
-        if ( !db_ )
-        {
-            return outcome::failure( std::errc::bad_address );
-        }
-
         const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
         const auto                  registry_get = db_->Get( registry_key );
         bool                        registry_empty = true;
 
         if ( registry_get.has_value() )
         {
-            auto decoded_update = DeserializeRegistryUpdate( registry_get.value() );
+            const auto &buffer = registry_get.value();
+            std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
+            auto decoded_update = DeserializeRegistryUpdate( bytes );
             if ( decoded_update.has_value() )
             {
-                registry_empty = decoded_update.value().registry_.validators_.empty();
+                registry_empty = decoded_update.value().registry().validators().empty();
             }
         }
 
@@ -188,8 +205,8 @@ namespace sgns::blockchain
         }
 
         RegistryUpdate update;
-        update.registry_ = CreateGenesisRegistry( genesis_validator_id );
-        update.prev_registry_hash_.clear();
+        *update.mutable_registry() = CreateGenesisRegistry( genesis_validator_id );
+        update.clear_prev_registry_hash();
 
         auto signing_bytes = ComputeUpdateSigningBytes( update );
         if ( signing_bytes.has_error() )
@@ -198,10 +215,10 @@ namespace sgns::blockchain
         }
 
         SignatureEntry signature_entry;
-        signature_entry.validator_id_ = genesis_validator_id;
+        signature_entry.set_validator_id( genesis_validator_id );
         auto signature = sign( signing_bytes.value() );
-        signature_entry.signature_ = std::string( signature.begin(), signature.end() );
-        update.signatures_.push_back( std::move( signature_entry ) );
+        signature_entry.set_signature( signature.data(), signature.size() );
+        *update.add_signatures() = signature_entry;
 
         auto serialized_update = SerializeRegistryUpdate( update );
         if ( serialized_update.has_error() )
@@ -209,8 +226,12 @@ namespace sgns::blockchain
             return outcome::failure( serialized_update.error() );
         }
 
+        base::Buffer update_buffer( gsl::span<const uint8_t>(
+            serialized_update.value().data(),
+            serialized_update.value().size() ) );
+
         auto registry_put = db_->Put( registry_key,
-                                      serialized_update.value(),
+                                      update_buffer,
                                       { std::string( ValidatorTopic() ) } );
         if ( registry_put.has_error() )
         {
@@ -227,16 +248,11 @@ namespace sgns::blockchain
         {
             return outcome::failure( update_result.error() );
         }
-        return update_result.value().registry_;
+        return update_result.value().registry();
     }
 
     outcome::result<ValidatorRegistry::RegistryUpdate> ValidatorRegistry::LoadRegistryUpdate() const
     {
-        if ( !db_ )
-        {
-            return outcome::failure( std::errc::bad_address );
-        }
-
         const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
         auto                        registry_get = db_->Get( registry_key );
         if ( registry_get.has_error() )
@@ -244,16 +260,13 @@ namespace sgns::blockchain
             return outcome::failure( registry_get.error() );
         }
 
-        return DeserializeRegistryUpdate( registry_get.value() );
+        const auto &buffer = registry_get.value();
+        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
+        return DeserializeRegistryUpdate( bytes );
     }
 
     bool ValidatorRegistry::RegisterFilter()
     {
-        if ( !db_ )
-        {
-            return false;
-        }
-
         const std::string pattern = "/?" + std::string( RegistryKey() );
         auto              weak_self = weak_from_this();
         return db_->RegisterElementFilter(
@@ -271,9 +284,8 @@ namespace sgns::blockchain
     std::optional<std::vector<crdt::pb::Element>> ValidatorRegistry::FilterRegistryUpdate(
         const crdt::pb::Element &element )
     {
-        auto decoded_update = DeserializeRegistryUpdate( base::Buffer{
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( element.value().data() ),
-                                      element.value().size() ) } );
+        std::vector<uint8_t> bytes( element.value().begin(), element.value().end() );
+        auto decoded_update = DeserializeRegistryUpdate( bytes );
         if ( decoded_update.has_error() )
         {
             logger_->warn( "Failed to parse validator registry update, rejecting: {}", element.key() );
@@ -288,10 +300,12 @@ namespace sgns::blockchain
             auto                        registry_get = db_->Get( registry_key );
             if ( registry_get.has_value() )
             {
-                auto stored_update = DeserializeRegistryUpdate( registry_get.value() );
+                const auto &buffer = registry_get.value();
+                std::vector<uint8_t> stored_bytes( buffer.data(), buffer.data() + buffer.size() );
+                auto stored_update = DeserializeRegistryUpdate( stored_bytes );
                 if ( stored_update.has_value() )
                 {
-                    current_registry = stored_update.value().registry_;
+                    current_registry = stored_update.value().registry();
                 }
             }
         }
@@ -309,7 +323,17 @@ namespace sgns::blockchain
     outcome::result<std::vector<uint8_t>> ValidatorRegistry::ComputeUpdateSigningBytes(
         const RegistryUpdate &update ) const
     {
-        return scale::encode( update.prev_registry_hash_, update.registry_ );
+        sgns::blockchain::validator::RegistrySigningPayload payload;
+        *payload.mutable_registry() = update.registry();
+        payload.set_prev_registry_hash( update.prev_registry_hash() );
+
+        std::string serialized;
+        if ( !payload.SerializeToString( &serialized ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
     std::string ValidatorRegistry::ComputeRegistryHash( const Registry &registry ) const
@@ -328,7 +352,7 @@ namespace sgns::blockchain
 
     bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const
     {
-        if ( update.registry_.validators_.empty() )
+        if ( update.registry().validators().empty() )
         {
             return false;
         }
@@ -341,16 +365,16 @@ namespace sgns::blockchain
 
         if ( !current_registry )
         {
-            if ( update.prev_registry_hash_.empty() && !genesis_authority_.empty() )
+            if ( update.prev_registry_hash().empty() && !genesis_authority_.empty() )
             {
-                for ( const auto &signature : update.signatures_ )
+                for ( const auto &signature : update.signatures() )
                 {
-                    if ( signature.validator_id_ != genesis_authority_ )
+                    if ( signature.validator_id() != genesis_authority_ )
                     {
                         continue;
                     }
-                    if ( GeniusAccount::VerifySignature( signature.validator_id_,
-                                                         signature.signature_,
+                    if ( GeniusAccount::VerifySignature( signature.validator_id(),
+                                                         signature.signature(),
                                                          signing_bytes.value() ) )
                     {
                         return true;
@@ -361,12 +385,12 @@ namespace sgns::blockchain
         }
 
         const std::string current_hash = ComputeRegistryHash( *current_registry );
-        if ( current_hash.empty() || update.prev_registry_hash_ != current_hash )
+        if ( current_hash.empty() || update.prev_registry_hash() != current_hash )
         {
             return false;
         }
 
-        if ( update.registry_.epoch_ <= current_registry->epoch_ )
+        if ( update.registry().epoch() <= current_registry->epoch() )
         {
             return false;
         }
@@ -375,27 +399,27 @@ namespace sgns::blockchain
         uint64_t accumulated_weight = 0;
         std::set<std::string> seen;
 
-        for ( const auto &signature : update.signatures_ )
+        for ( const auto &signature : update.signatures() )
         {
-            if ( !seen.insert( signature.validator_id_ ).second )
+            if ( !seen.insert( signature.validator_id() ).second )
             {
                 continue;
             }
 
-            const auto *validator = FindValidator( *current_registry, signature.validator_id_ );
-            if ( !validator || validator->status_ != Status::Active )
+            const auto *validator = FindValidator( *current_registry, signature.validator_id() );
+            if ( !validator || validator->status() != Status::ACTIVE )
             {
                 continue;
             }
 
-            if ( !GeniusAccount::VerifySignature( signature.validator_id_,
-                                                  signature.signature_,
+            if ( !GeniusAccount::VerifySignature( signature.validator_id(),
+                                                  signature.signature(),
                                                   signing_bytes.value() ) )
             {
                 continue;
             }
 
-            accumulated_weight += validator->weight_;
+            accumulated_weight += validator->weight();
             if ( IsQuorum( accumulated_weight, total_weight ) )
             {
                 return true;
@@ -409,9 +433,9 @@ namespace sgns::blockchain
         const Registry &registry,
         const std::string &validator_id ) const
     {
-        for ( const auto &validator : registry.validators_ )
+        for ( const auto &validator : registry.validators() )
         {
-            if ( validator.validator_id_ == validator_id )
+            if ( validator.validator_id() == validator_id )
             {
                 return &validator;
             }
