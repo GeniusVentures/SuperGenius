@@ -154,7 +154,7 @@ namespace sgns::processing
                                                                  m_processingDoneSink );
 
         // Run messages processing once all dependent object are created
-        processingQueueChannel->Listen( msSubscriptionWaitingDuration );
+        (void)processingQueueChannel->Listen( msSubscriptionWaitingDuration );
 
         // Keep the channel
         m_queueChannel = processingQueueChannel;
@@ -194,6 +194,14 @@ namespace sgns::processing
     bool ProcessingNode::HasQueueOwnership() const
     {
         return m_subtaskQueueManager && m_subtaskQueueManager->HasOwnership();
+    }
+
+    float ProcessingNode::GetProgress() const
+    {
+        if (m_processingEngine) {
+            return m_processingEngine->GetProgress();
+        }
+        return 0.0f;
     }
 
     void ProcessingNode::InitTTL()

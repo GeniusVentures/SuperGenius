@@ -42,6 +42,11 @@ namespace sgns::processing
 
         bool HasQueueOwnership() const;
 
+        /** Get current processing progress
+        * @return Progress percentage (0.0 to 100.0)
+        */
+        float GetProgress() const;
+
     private:
         /** Constructs a processing node
         * @param gossipPubSub - pubsub service

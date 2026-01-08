@@ -32,6 +32,11 @@ namespace sgns::processing
         void StopQueueProcessing();
         bool IsQueueProcessingStarted() const;
 
+        /** Get current processing progress
+        * @return Progress percentage (0.0 to 100.0)
+        */
+        float GetProgress() const;
+
     private:
         void OnSubTaskGrabbed( boost::optional<const SGProcessing::SubTask &> subTask );
 

@@ -27,6 +27,11 @@ public:
     */
     virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
+
+    /** Get current processing progress
+    * @return Progress percentage (0.0 to 100.0)
+    */
+    virtual float GetProgress() const { return 0.0f; }
 };
 
 } // namespace sgns::processing

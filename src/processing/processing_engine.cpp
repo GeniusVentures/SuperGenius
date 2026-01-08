@@ -53,6 +53,14 @@ namespace sgns::processing
         return m_subTaskQueueAccessor != nullptr;
     }
 
+    float ProcessingEngine::GetProgress() const
+    {
+        if (m_processingCore) {
+            return m_processingCore->GetProgress();
+        }
+        return 0.0f;
+    }
+
     void ProcessingEngine::OnSubTaskGrabbed( boost::optional<const SGProcessing::SubTask &> subTask )
     {
         if ( subTask )

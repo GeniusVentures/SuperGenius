@@ -406,8 +406,31 @@ namespace sgns::processing
         m_channelListRequestTimeout = channelListRequestTimeout;
     }
 
-    ProcessingServiceImpl::Status ProcessingServiceImpl::GetProcessingStatus() const {
-        return m_isStopped ? Status::DISABLED : m_processingNodes.size() > 0 ? Status::PROCESSING : Status::IDLE;
+    ProcessingServiceImpl::ProcessingStatus ProcessingServiceImpl::GetProcessingStatus() const {
+        if (m_isStopped) {
+            return ProcessingStatus(Status::DISABLED, 0.0f);
+        }
+        
+        std::lock_guard lock(m_mutexNodes);
+        if (m_processingNodes.empty()) {
+            return ProcessingStatus(Status::IDLE, 0.0f);
+        }
+        
+        // Calculate average progress across all processing nodes
+        float totalProgress = 0.0f;
+        size_t nodeCount = 0;
+        for (const auto& [queueId, node] : m_processingNodes) {
+            if (node) {
+                totalProgress += node->GetProgress();
+                ++nodeCount;
+            }
+        }
+        
+        float averageProgress = (nodeCount > 0) ? (totalProgress / nodeCount) : 0.0f;
+        // Round to 2 decimal places
+        averageProgress = std::round(averageProgress * 100.0f) / 100.0f;
+        
+        return ProcessingStatus(Status::PROCESSING, averageProgress);
     }
 
     void ProcessingServiceImpl::HandleRequestTimeout()
