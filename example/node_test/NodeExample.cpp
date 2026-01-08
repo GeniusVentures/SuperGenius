@@ -441,7 +441,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]./child_tokens/data/ballet.data",
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -461,7 +461,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
     },
     {
       "name": "frisbee_image", 
-	  "source_uri_param": "file://[basepath]./child_tokens/data/frisbee3.data",
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -512,7 +512,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -538,7 +538,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
       "type": "inference", 
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -652,7 +652,7 @@ int main( int argc, char *argv[] )
     {
         input_thread = std::thread( keyboard_input_thread );
     }
-    //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
