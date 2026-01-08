@@ -87,4 +87,12 @@ INSTANTIATE_TEST_SUITE_P( SecureStorage,
                           SecureStorageTest,
                           testing::Values( std::make_shared<WindowsSecureStorage>() ) );
 
+#elif defined(__APPLE__)
+
+#include "local_secure_storage/impl/Apple.hpp"
+
+INSTANTIATE_TEST_SUITE_P( SecureStorage,
+                          SecureStorageTest,
+                          testing::Values( std::make_shared<AppleSecureStorage>() ) );
+
 #endif

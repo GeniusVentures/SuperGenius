@@ -13,6 +13,9 @@ if(LINUX)
     target_link_libraries(secure_storage PUBLIC PkgConfig::LIBSECRET)
 elseif(WIN32)
     target_sources(secure_storage PUBLIC impl/Windows.cpp)
+elseif(APPLE)
+    target_sources(secure_storage PUBLIC impl/OSX.cpp)
+    target_link_libraries(secure_storage PRIVATE ${SECURITY_FRAMEWORK} ${CORE_FOUNDATION})
 endif()
 
 target_link_libraries(json_secure_storage

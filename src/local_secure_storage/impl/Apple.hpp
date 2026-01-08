@@ -4,14 +4,17 @@
 
 #include <rapidjson/document.h>
 
-namespace sgns
-{
-    class WindowsSecureStorage : public ISecureStorage
-    {
+namespace sgns {
+    class AppleSecureStorage: public ISecureStorage {
+
     public:
+        AppleSecureStorage() = default;
+
+        ~AppleSecureStorage() override = default;
+
         std::string GetName() override
         {
-            return "WindowsSecureStorage";
+            return "AppleSecureStorage";
         }
 
         outcome::result<SecureBufferType> Load( const std::string &key ) override;
