@@ -430,44 +430,137 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
         }
 
         std::string json_data = R"(
-                {
-                "data": {
-                    "type": "https",
-                    "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
-                },
-                "model": {
-                    "name": "mnnimage",
-                    "file": "model.mnn"
-                },
-                "input": [
-                    {
-                        "image": "data/ballet.data",
-                        "block_len": 4860000 ,
-                        "block_line_stride": 5400,
-                        "block_stride": 0,
-                        "chunk_line_stride": 1080,
-                        "chunk_offset": 0,
-                        "chunk_stride": 4320,
-                        "chunk_subchunk_height": 5,
-                        "chunk_subchunk_width": 5,
-                        "chunk_count": 25,
-                        "channels": 4
-                    },
-                    {
-                        "image": "data/frisbee3.data",
-                        "block_len": 786432 ,
-                        "block_line_stride": 1536,
-                        "block_stride": 0,
-                        "chunk_line_stride": 384,
-                        "chunk_offset": 0,
-                        "chunk_stride": 1152,
-                        "chunk_subchunk_height": 4,
-                        "chunk_subchunk_width": 4,
-                        "chunk_count": 16,
-                        "channels": 3
-                    }
-                ]
-                }
+{
+  "name": "posenet-inference",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "PoseNet inference on multiple image inputs using MNN model",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+
+  "inputs": [
+    {
+      "name": "ballet_image",
+	  "source_uri_param": "file://[basepath]./child_tokens/data/ballet.data",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25
+      },
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image", 
+	  "source_uri_param": "file://[basepath]./child_tokens/data/frisbee3.data",
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16
+      },
+      "format": "RGB8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor", 
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference", 
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D", 
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints", 
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}
                )";
         auto        jobpost   = genius_node->ProcessImage( json_data /*args[1]*/
         );
@@ -510,7 +603,7 @@ int main( int argc, char *argv[] )
         std::string arg = argv[1];
         if ( arg == "server" )
         {
-            start_processing = false;
+            start_processing = true;
             is_processor     = false;
             use_upnp         = false;
             is_full_node     = true;
@@ -559,7 +652,7 @@ int main( int argc, char *argv[] )
     {
         input_thread = std::thread( keyboard_input_thread );
     }
-
+    //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
