@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -88,6 +89,7 @@ namespace sgns::blockchain
         bool                                          VerifyUpdate( const RegistryUpdate &update,
                                                                       const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
+        void                     InitializeCache();
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -95,6 +97,11 @@ namespace sgns::blockchain
         WeightConfig                    weight_config_;
         std::string                     genesis_authority_;
         base::Logger                    logger_ = base::createLogger( "ValidatorRegistry" );
+        mutable std::shared_mutex       cache_mutex_;
+        std::optional<Registry>         cached_registry_;
+        std::optional<RegistryUpdate>   cached_update_;
+        std::string                     cached_registry_hash_;
+        bool                            cache_initialized_ = false;
     };
 
 }
