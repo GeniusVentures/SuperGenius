@@ -25,6 +25,10 @@
 
 namespace sgns
 {
+    namespace blockchain
+    {
+        class ValidatorRegistry;
+    }
 
     class Blockchain : public std::enable_shared_from_this<Blockchain>
     {
@@ -44,6 +48,7 @@ namespace sgns
             ACCOUNT_CREATION_BLOCK_INVALID_SIGNATURE,    ///< Account creation block has invalid signature
             ACCOUNT_CREATION_BLOCK_SERIALIZATION_FAILED, ///< Failed to serialize/deserialize account creation block
             ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK, ///< Account creation block not properly linked to genesis
+            VALIDATOR_REGISTRY_CREATION_FAILED,          ///< Failed to create validator registry
         };
 
         // Callback type for when the blockchain is initialized
@@ -132,6 +137,7 @@ namespace sgns
         void                  InformGenesisResult( outcome::result<std::string> result );
         void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
         void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
+        outcome::result<void> EnsureValidatorRegistry();
 
         /// Topic used for the blockchain CRDT
         static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain";
@@ -181,6 +187,8 @@ namespace sgns
         BlockchainCIDs cids_;
 
         static std::string &AuthorizedFullNodeAddressStorage();
+
+        std::shared_ptr<blockchain::ValidatorRegistry> validator_registry_;
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 

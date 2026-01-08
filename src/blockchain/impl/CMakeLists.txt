@@ -23,6 +23,7 @@ supergenius_install(blockchain_common)
 
 add_library(blockchain_genesis
     Blockchain.cpp
+    ../ValidatorRegistry.cpp
 )
 
 target_link_libraries(blockchain_genesis
@@ -31,6 +32,9 @@ target_link_libraries(blockchain_genesis
     crdt_globaldb
     sgns_version
     buffer
+    hasher
+    hexutil
+    logger
     sgns_genius_account
     PRIVATE
     SGBlockchainProto
