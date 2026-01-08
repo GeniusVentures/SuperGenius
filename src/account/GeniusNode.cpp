@@ -417,6 +417,17 @@ namespace sgns
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
+        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        //AsyncIOManager Loggers
+        auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
+        auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
+        auto asioHttpCommon  = ConfigureLogger( "HTTPCommon", logdir, spdlog::level::err );
+        auto asioIpfsCommon  = ConfigureLogger( "IPFSCommon", logdir, spdlog::level::err );
+        auto asioIpfsLoader  = ConfigureLogger( "IPFSLoader", logdir, spdlog::level::err );
+        auto asioFileLoader  = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
+        auto asioWSCommon    = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
 #else
         // Release mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
@@ -445,6 +456,17 @@ namespace sgns
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        //AsyncIOManager Loggers
+        auto asioFileCommon         = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
+        auto asioFileManager        = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
+        auto asioHttpCommon         = ConfigureLogger( "HTTPCommon", logdir, spdlog::level::err );
+        auto asioIpfsCommon         = ConfigureLogger( "IPFSCommon", logdir, spdlog::level::err );
+        auto asioIpfsLoader         = ConfigureLogger( "IPFSLoader", logdir, spdlog::level::err );
+        auto asioFileLoader         = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
+        auto asioWSCommon           = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
 #endif
 
         // Logger initialization complete
