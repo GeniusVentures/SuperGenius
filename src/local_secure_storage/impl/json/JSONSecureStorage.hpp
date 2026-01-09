@@ -5,10 +5,9 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#ifndef _JSON_SECURE_STORAGE_HPP_
-#define _JSON_SECURE_STORAGE_HPP_
+#pragma once
 
-#include "local_secure_storage/ISecureStorage.hpp"
+#include "../../ISecureStorage.hpp"
 
 namespace sgns
 {
@@ -24,6 +23,8 @@ namespace sgns
 
         outcome::result<void> Save( const std::string &key, const SecureBufferType &buffer ) override;
 
+        outcome::result<bool> DeleteKey( const std::string &key ) override;
+
         std::string GetName() override
         {
             return "LocalSecureStorage";
@@ -35,5 +36,3 @@ namespace sgns
         std::string directory_;
     };
 }
-
-#endif

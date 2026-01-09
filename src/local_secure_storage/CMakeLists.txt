@@ -5,7 +5,15 @@ add_library(json_secure_storage
 add_library(secure_storage STATIC impl/JSONBackend.cpp)
 target_link_libraries(secure_storage PUBLIC outcome rapidjson)
 
-if(LINUX)
+if(ANDROID)
+    target_sources(secure_storage PUBLIC impl/Android.cpp)
+    target_link_libraries(secure_storage
+        PUBLIC
+        ${android-lib}
+        PRIVATE
+        ${log-lib}
+    )
+elseif(LINUX)
     target_sources(secure_storage PUBLIC impl/Linux.cpp)
 
     find_package(PkgConfig)
@@ -14,7 +22,7 @@ if(LINUX)
 elseif(WIN32)
     target_sources(secure_storage PUBLIC impl/Windows.cpp)
 elseif(APPLE)
-    target_sources(secure_storage PUBLIC impl/OSX.cpp)
+    target_sources(secure_storage PUBLIC impl/Apple.cpp)
     target_link_libraries(secure_storage PRIVATE ${SECURITY_FRAMEWORK} ${CORE_FOUNDATION})
 endif()
 

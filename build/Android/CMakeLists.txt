@@ -49,7 +49,8 @@ set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_
 
 set(TESTING OFF)
 
+find_library(log-lib log)
+find_library(android-lib android)
+
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
-
-message("Boost_LIBRARIES: ${Boost_LIBRARIES}")

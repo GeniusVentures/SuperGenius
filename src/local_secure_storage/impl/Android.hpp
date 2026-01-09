@@ -9,7 +9,8 @@ namespace sgns
     class AndroidSecureStorage : public JSONBackend
     {
     public:
-        explicit AndroidSecureStorage( JavaVM *jvm = nullptr );
+        AndroidSecureStorage( JavaVM *jvm = nullptr );
+
         ~AndroidSecureStorage() override;
 
         std::string GetName() override

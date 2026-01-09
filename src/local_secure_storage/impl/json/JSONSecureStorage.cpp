@@ -90,4 +90,9 @@ namespace sgns
 
         return outcome::success();
     }
+
+    outcome::result<bool> JSONSecureStorage::DeleteKey( const std::string &key )
+    {
+        return outcome::failure( std::errc::operation_not_supported );
+    }
 }
