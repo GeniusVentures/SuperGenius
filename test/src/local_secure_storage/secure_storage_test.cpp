@@ -73,7 +73,15 @@ TEST_P( SecureStorageTest, WorksWithBinaryData )
     ASSERT_EQ( result_load.value(), binary );
 }
 
-#ifdef __linux__
+#ifdef __ANDROID__
+
+#include "local_secure_storage/impl/Android.hpp"
+
+INSTANTIATE_TEST_SUITE_P( SecureStorage,
+                          SecureStorageTest,
+                          testing::Values( std::make_shared<AndroidSecureStorage>() ) );
+
+#elif defined( __linux__ )
 
 #include "local_secure_storage/impl/Linux.hpp"
 
@@ -87,12 +95,10 @@ INSTANTIATE_TEST_SUITE_P( SecureStorage,
                           SecureStorageTest,
                           testing::Values( std::make_shared<WindowsSecureStorage>() ) );
 
-#elif defined(__APPLE__)
+#elif defined( __APPLE__ )
 
 #include "local_secure_storage/impl/Apple.hpp"
 
-INSTANTIATE_TEST_SUITE_P( SecureStorage,
-                          SecureStorageTest,
-                          testing::Values( std::make_shared<AppleSecureStorage>() ) );
+INSTANTIATE_TEST_SUITE_P( SecureStorage, SecureStorageTest, testing::Values( std::make_shared<AppleSecureStorage>() ) );
 
 #endif
