@@ -2,7 +2,7 @@ add_library(json_secure_storage
     impl/json/JSONSecureStorage.cpp
 )
 
-add_library(secure_storage STATIC ISecureStorage.hpp)
+add_library(secure_storage STATIC impl/JSONBackend.cpp)
 target_link_libraries(secure_storage PUBLIC outcome rapidjson)
 
 if(LINUX)

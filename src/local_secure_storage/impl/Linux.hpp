@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../ISecureStorage.hpp"
+#include "JSONBackend.hpp"
 
 #include <libsecret/secret.h>
-#include <rapidjson/document.h>
 
 namespace sgns
 {
-    class LinuxSecureStorage : public ISecureStorage
+    class LinuxSecureStorage : public JSONBackend
     {
     public:
         explicit LinuxSecureStorage();
@@ -19,17 +18,12 @@ namespace sgns
             return "LinuxSecureStorage";
         }
 
-        outcome::result<SecureBufferType> Load( const std::string &key ) override;
+    protected:
+        outcome::result<rapidjson::Document> LoadJSON() const override;
 
-        outcome::result<void> Save( const std::string &key, const SecureBufferType &buffer ) override;
-
-        outcome::result<bool> DeleteKey( const std::string &key ) override;
+        outcome::result<void> SaveJSON( rapidjson::Document document ) override;
 
     private:
-        outcome::result<rapidjson::Document> LoadJSON() const;
-
-        outcome::result<void> SaveJSON( rapidjson::Document document );
-
         SecretSchema schema;
     };
 }

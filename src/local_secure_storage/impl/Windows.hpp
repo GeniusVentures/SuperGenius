@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../ISecureStorage.hpp"
+#include "JSONBackend.hpp"
 
 #include <rapidjson/document.h>
 
 namespace sgns
 {
-    class WindowsSecureStorage : public ISecureStorage
+    class WindowsSecureStorage : public JSONBackend
     {
     public:
         std::string GetName() override
@@ -14,15 +14,9 @@ namespace sgns
             return "WindowsSecureStorage";
         }
 
-        outcome::result<SecureBufferType> Load( const std::string &key ) override;
+    protected:
+        outcome::result<rapidjson::Document> LoadJSON() const override;
 
-        outcome::result<void> Save( const std::string &key, const SecureBufferType &buffer ) override;
-
-        outcome::result<bool> DeleteKey( const std::string &key ) override;
-
-    private:
-        outcome::result<rapidjson::Document> LoadJSON() const;
-
-        outcome::result<void> SaveJSON( rapidjson::Document document );
+        outcome::result<void> SaveJSON( rapidjson::Document document ) override;
     };
 }

@@ -1,10 +1,13 @@
 #include "Linux.hpp"
-#include "outcome/outcome.hpp"
-#include <glib.h>
+
 #include <iostream>
+
+#include <glib.h>
 #include <libsecret/secret.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+
+#include "outcome/outcome.hpp"
 
 namespace rj = rapidjson;
 
@@ -68,58 +71,11 @@ namespace sgns
                 std::cerr << "Error saving secret: " << error->message << '\n';
                 g_error_free( error );
             }
+            secret_value_unref(value);
             return outcome::failure( std::errc::bad_message );
         }
-
+        
+        secret_value_unref(value);
         return outcome::success();
-    }
-
-    outcome::result<ISecureStorage::SecureBufferType> LinuxSecureStorage::Load( const std::string &key )
-    {
-        OUTCOME_TRY( rj::Document d, LoadJSON() );
-
-        if ( !d.HasMember( key.c_str() ) )
-        {
-            return outcome::failure( std::errc::no_message );
-        }
-
-        auto &value = d[key.c_str()];
-        if ( !value.IsString() )
-        {
-            return outcome::failure( std::errc::bad_message );
-        }
-
-        SecureBufferType ret( value.GetString(), value.GetStringLength() );
-
-        return ret;
-    }
-
-    outcome::result<void> LinuxSecureStorage::Save( const std::string &key, const SecureBufferType &buffer )
-    {
-        OUTCOME_TRY( rj::Document d, LoadJSON() );
-
-        rj::Value val( rj::StringRef( buffer.c_str(), buffer.length() ), d.GetAllocator() );
-
-        if ( d.HasMember( key.c_str() ) )
-        {
-            d[key.c_str()] = val;
-        }
-        else
-        {
-            d.AddMember( rj::StringRef( key.c_str(), key.size() ), val, d.GetAllocator() );
-        }
-
-        return SaveJSON( std::move( d ) );
-    }
-
-    outcome::result<bool> LinuxSecureStorage::DeleteKey( const std::string &key )
-    {
-        OUTCOME_TRY( rj::Document d, LoadJSON() );
-
-        bool ret = d.RemoveMember( key.c_str() );
-
-        OUTCOME_TRY( SaveJSON( std::move( d ) ) );
-
-        return ret;
     }
 }

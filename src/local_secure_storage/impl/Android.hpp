@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../ISecureStorage.hpp"
+#include "JSONBackend.hpp"
 
 #include <jni.h>
-#include <rapidjson/document.h>
 
 namespace sgns
 {
-    class AndroidSecureStorage : public ISecureStorage
+    class AndroidSecureStorage : public JSONBackend
     {
     public:
         explicit AndroidSecureStorage( JavaVM *jvm = nullptr );
@@ -18,14 +17,13 @@ namespace sgns
             return "AndroidSecureStorage";
         }
 
-        outcome::result<SecureBufferType> Load( const std::string &key ) override;
-        outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) override;
-        outcome::result<bool>             DeleteKey( const std::string &key ) override;
+    protected:
+        outcome::result<rapidjson::Document> LoadJSON() const override;
+
+        outcome::result<void> SaveJSON( rapidjson::Document document ) override;
 
     private:
-        outcome::result<rapidjson::Document> LoadJSON() const;
-        outcome::result<void>                SaveJSON( rapidjson::Document document );
-        JNIEnv                              *GetJNIEnv() const;
+        JNIEnv *GetJNIEnv() const;
 
         JavaVM *jvm_;
         jclass  key_store_helper_class_;

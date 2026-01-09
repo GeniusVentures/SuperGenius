@@ -19,8 +19,10 @@ namespace sgns
         JSONSecureStorage( std::string directory ) : directory_( std::move( directory ) ) {}
 
         ~JSONSecureStorage() override = default;
+
         outcome::result<SecureBufferType> Load( const std::string &key ) override;
-        outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) override;
+
+        outcome::result<void> Save( const std::string &key, const SecureBufferType &buffer ) override;
 
         std::string GetName() override
         {
