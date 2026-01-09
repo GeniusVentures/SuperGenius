@@ -255,6 +255,10 @@ namespace sgns
         outcome::result<void> RequestAccountCreation(
             uint64_t                                            timeout_ms,
             std::function<void( outcome::result<std::string> )> callback ) const;
+        outcome::result<void> RequestRegularBlock(
+            uint64_t                                            timeout_ms,
+            const std::string                                  &cid,
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
          * @brief       Derives a Genius address from a given Ethereum private key
          * @param[in]   base_path The base path to store/retrieve the key
@@ -269,6 +273,8 @@ namespace sgns
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
         void ClearGetBlockChainCIDMethod();
+        void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
+        void ClearHasBlockCidMethod();
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -297,6 +303,7 @@ namespace sgns
         std::mutex                                      get_cids_mutex_;        ///< Mutex for the genesis method
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
+        std::function<outcome::result<bool>( const std::string & )> has_cid_method_; ///< Function to check CID presence
 
         uint64_t GetNextNonceLocked() const;
 

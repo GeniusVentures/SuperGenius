@@ -479,6 +479,29 @@ namespace sgns::blockchain
             return;
         }
 
+        const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
+        auto                        registry_get = db_->Get( registry_key );
+        bool                        content_present = registry_get.has_value();
+        if ( registry_get.has_value() )
+        {
+            const auto          &buffer = registry_get.value();
+            std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
+            auto                 decoded = DeserializeRegistryUpdate( bytes );
+            if ( decoded.has_value() )
+            {
+                cached_update_ = decoded.value();
+                cached_registry_ = decoded.value().registry();
+            }
+            else
+            {
+                logger_->warn( "Failed to parse registry content during cache init" );
+            }
+        }
+        else
+        {
+            logger_->warn( "Registry content not found during cache init" );
+        }
+
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
         auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
@@ -487,37 +510,41 @@ namespace sgns::blockchain
             cached_registry_id_ = registry_cid.value().toString();
         }
 
-        if ( cached_registry_ )
+        const bool missing_cid = cached_registry_id_.empty();
+        std::set<CID> heads_to_request;
+
+        if ( content_present && missing_cid )
         {
-            cache_initialized_ = true;
-            return;
+            logger_->warn( "Registry content found, but CID is missing; requesting heads" );
         }
 
-        const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
-        auto                        registry_get = db_->Get( registry_key );
-        if ( registry_get.has_error() )
+        if ( missing_cid )
         {
-            cache_initialized_ = true;
-            return;
-        }
-
-        const auto          &buffer = registry_get.value();
-        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
-        auto                 decoded = DeserializeRegistryUpdate( bytes );
-        if ( decoded.has_error() )
-        {
-            logger_->warn( "Failed to initialize registry cache from CRDT" );
-            cache_initialized_ = true;
-            return;
-        }
-
-        cached_update_ = decoded.value();
-        cached_registry_ = decoded.value().registry();
-        if ( cached_registry_id_.empty() )
-        {
-            cached_registry_id_ = ComputeRegistryHash( decoded.value().registry() );
+            auto heads_result = db_->GetCRDTHeadList();
+            if ( heads_result.has_value() )
+            {
+                const auto &heads_map = heads_result.value().first;
+                auto        it = heads_map.find( std::string( ValidatorTopic() ) );
+                if ( it != heads_map.end() )
+                {
+                    heads_to_request = it->second;
+                }
+            }
         }
         cache_initialized_ = true;
+
+        lock.unlock();
+        if ( missing_cid && !heads_to_request.empty() )
+        {
+            RequestHeadCids( heads_to_request );
+        }
+    }
+
+    void ValidatorRegistry::SetRequestBlockByCidMethod(
+        std::function<void( const std::string &cid,
+                            std::function<void( outcome::result<std::string> )> callback )> method )
+    {
+        request_block_by_cid_ = std::move( method );
     }
 
     void ValidatorRegistry::PersistLocalState( const std::string &cid )
@@ -527,5 +554,23 @@ namespace sgns::blockchain
         sgns::crdt::GlobalDB::Buffer registry_cid;
         registry_cid.put( cid );
         (void)db_->GetDataStore()->put( registry_cid_key, registry_cid );
+    }
+
+    void ValidatorRegistry::RequestHeadCids( const std::set<CID> &cids )
+    {
+        if ( cids.empty() )
+        {
+            return;
+        }
+        if ( !request_block_by_cid_ )
+        {
+            logger_->warn( "No RequestBlockByCid method configured" );
+            return;
+        }
+
+        for ( const auto &cid : cids )
+        {
+            request_block_by_cid_( cid.toString().value(), nullptr );
+        }
     }
 }

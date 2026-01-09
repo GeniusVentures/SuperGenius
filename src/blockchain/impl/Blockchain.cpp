@@ -89,6 +89,19 @@ namespace sgns
             3,
             blockchain::ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress() );
+        if ( instance->validator_registry_ )
+        {
+            instance->validator_registry_->SetRequestBlockByCidMethod(
+                [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                    const std::string &cid,
+                    std::function<void( outcome::result<std::string> )> callback )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                    }
+                } );
+        }
         const bool validator_filter_initialized =
             instance->validator_registry_ ? instance->validator_registry_->RegisterFilter() : false;
 

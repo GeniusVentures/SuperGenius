@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <shared_mutex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,7 @@
 #include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "primitives/cid/cid.hpp"
 
 namespace sgns::blockchain
 {
@@ -67,6 +69,9 @@ namespace sgns::blockchain
         outcome::result<std::vector<uint8_t>> SerializeRegistryUpdate( const RegistryUpdate &update ) const;
         outcome::result<RegistryUpdate>       DeserializeRegistryUpdate( const std::vector<uint8_t> &buffer ) const;
 
+        void SetRequestBlockByCidMethod(
+            std::function<void( const std::string &cid,
+                                std::function<void( outcome::result<std::string> )> callback )> method );
         static constexpr std::string_view RegistryKey()
         {
             return "gnus-validator-registry";
@@ -99,6 +104,7 @@ namespace sgns::blockchain
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
         void                     InitializeCache();
         void                     PersistLocalState( const std::string &cid );
+        void                     RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -111,6 +117,8 @@ namespace sgns::blockchain
         std::optional<RegistryUpdate>   cached_update_;
         std::string                     cached_registry_id_;
         bool                            cache_initialized_ = false;
+        std::function<void( const std::string &cid,
+                             std::function<void( outcome::result<std::string> )> callback )> request_block_by_cid_;
     };
 
 }
