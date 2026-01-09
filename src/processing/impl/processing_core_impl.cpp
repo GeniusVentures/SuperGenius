@@ -60,6 +60,7 @@ namespace sgns::processing
         task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
         //Parse main json data
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
+        m_currentProcessingManager = procmgr; // Store for progress tracking
         //Parse subtask json
         auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
         sgns::ModelNode                 model;
@@ -79,13 +80,23 @@ namespace sgns::processing
             result.set_result_hash( hashString );
             result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
             --m_processingSubTaskCount;
+            m_currentProcessingManager.reset(); // Clear after completion
         }
         else
         {
             --m_processingSubTaskCount;
+            m_currentProcessingManager.reset(); // Clear on error
             return tempResult.error();
         }
         return result;
+    }
+
+    float ProcessingCoreImpl::GetProgress() const
+    {
+        if (m_currentProcessingManager) {
+            return m_currentProcessingManager->GetProgress();
+        }
+        return 0.0f;
     }
     
 }

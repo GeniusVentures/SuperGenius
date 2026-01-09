@@ -17,6 +17,10 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/TokenID.hpp"
 
+// Forward declaration
+namespace sgns::sgprocessing {
+    class ProcessingManager;
+}
 
 namespace sgns::processing
 {
@@ -90,6 +94,11 @@ namespace sgns::processing
         */
         //bool SetProcessingTypeFromJson(std::string jsondata) override;
 
+        /** Get current processing progress
+        * @return Progress percentage (0.0 to 100.0)
+        */
+        float GetProgress() const override;
+
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
@@ -105,7 +114,7 @@ namespace sgns::processing
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
 
-
+        mutable std::shared_ptr<sgprocessing::ProcessingManager> m_currentProcessingManager;
 
         std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
         

@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <atomic>
+#include <iomanip>
 #ifdef _WIN32
 //#include <windows.h>
 #else
@@ -342,6 +343,37 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
+void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
+{
+    while ( !finished )
+    {
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) ); // Poll every 2 seconds
+        if ( finished )
+        {
+            break;
+        }
+
+        auto status = genius_node->GetProcessingStatus();
+        
+        std::string status_str;
+        switch (status.status) {
+            case sgns::processing::ProcessingServiceImpl::Status::DISABLED:
+                status_str = "DISABLED";
+                break;
+            case sgns::processing::ProcessingServiceImpl::Status::IDLE:
+                status_str = "IDLE";
+                break;
+            case sgns::processing::ProcessingServiceImpl::Status::PROCESSING:
+                status_str = "PROCESSING";
+                break;
+        }
+        
+        // Simple output without terminal manipulation
+        std::cout << "[Status: " << status_str << " | Progress: " 
+                  << std::fixed << std::setprecision(2) << status.percentage << "%]" << std::endl;
+    }
+}
+
 void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
@@ -647,14 +679,18 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     std::cout << "Generated Ethereum Private Key: " << eth_private_key << std::endl;
 
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
+    auto node_instance =
+        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+
     std::thread input_thread;
+    std::thread status_thread;
     if ( terminal_mode )
     {
         input_thread = std::thread( keyboard_input_thread );
     }
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
-    auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+
+    //status_thread = std::thread( status_polling_thread, node_instance );
 
     if ( terminal_mode )
     {
@@ -703,6 +739,11 @@ int main( int argc, char *argv[] )
     if ( input_thread.joinable() )
     {
         input_thread.join();
+    }
+    
+    if ( status_thread.joinable() )
+    {
+        status_thread.join();
     }
 
     return 0;

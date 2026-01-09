@@ -17,6 +17,14 @@ namespace sgns::processing
             PROCESSING,
         };
 
+        struct ProcessingStatus {
+            Status status;
+            float percentage; // 0.0 to 100.0
+
+            ProcessingStatus(Status s = Status::DISABLED, float p = 0.0f) 
+                : status(s), percentage(p) {}
+        };
+
         /** Constructs a processing service.
          * @param gossipPubSub - pubsub service
          * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
@@ -47,7 +55,7 @@ namespace sgns::processing
 
         void SetChannelListRequestTimeout( boost::posix_time::time_duration channelListRequestTimeout );
 
-        [[nodiscard]] Status GetProcessingStatus() const;
+        [[nodiscard]] ProcessingStatus GetProcessingStatus() const;
 
     private:
         /** Listen to data feed channel.

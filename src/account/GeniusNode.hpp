@@ -162,10 +162,12 @@ namespace sgns
             return dev_config_.TokenID;
         }
 
-        [[nodiscard]] processing::ProcessingServiceImpl::Status GetProcessingStatus() const
+        [[nodiscard]] processing::ProcessingServiceImpl::ProcessingStatus GetProcessingStatus() const
         {
-            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::Status::DISABLED
-                                                  : processing_service_->GetProcessingStatus();
+            return processing_service_ == nullptr 
+                ? processing::ProcessingServiceImpl::ProcessingStatus(
+                    processing::ProcessingServiceImpl::Status::DISABLED, 0.0f)
+                : processing_service_->GetProcessingStatus();
         }
 
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,
