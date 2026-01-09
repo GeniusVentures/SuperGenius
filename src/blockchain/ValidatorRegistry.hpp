@@ -17,6 +17,7 @@
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
+#include "crdt/crdt_callback_manager.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -76,6 +77,11 @@ namespace sgns::blockchain
             return "gnus-validator-registry";
         }
 
+        static constexpr std::string_view RegistryCidKey()
+        {
+            return "gnus-validator-registry-cid";
+        }
+
     private:
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                            uint64_t                        quorum_numerator,
@@ -84,12 +90,15 @@ namespace sgns::blockchain
                            std::string                     genesis_authority );
 
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
+        void                                          RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
+                                                                              const std::string                     &cid );
         outcome::result<std::vector<uint8_t>>         ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
         std::string                                   ComputeRegistryHash( const Registry &registry ) const;
         bool                                          VerifyUpdate( const RegistryUpdate &update,
                                                                       const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
         void                     InitializeCache();
+        void                     PersistLocalState( const std::string &cid );
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -100,7 +109,7 @@ namespace sgns::blockchain
         mutable std::shared_mutex       cache_mutex_;
         std::optional<Registry>         cached_registry_;
         std::optional<RegistryUpdate>   cached_update_;
-        std::string                     cached_registry_hash_;
+        std::string                     cached_registry_id_;
         bool                            cache_initialized_ = false;
     };
 

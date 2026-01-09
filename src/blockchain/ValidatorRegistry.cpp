@@ -224,12 +224,9 @@ namespace sgns::blockchain
             return outcome::failure( registry_put.error() );
         }
 
+        if ( registry_put.value().toString().has_value() )
         {
-            std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
-            cached_registry_ = update.registry();
-            cached_update_ = update;
-            cached_registry_hash_ = ComputeRegistryHash( update.registry() );
-            cache_initialized_ = true;
+            PersistLocalState( registry_put.value().toString().value() );
         }
 
         return outcome::success();
@@ -270,7 +267,7 @@ namespace sgns::blockchain
     {
         const std::string pattern   = "/?" + std::string( RegistryKey() );
         auto              weak_self = weak_from_this();
-        return db_->RegisterElementFilter(
+        const bool filter_registered = db_->RegisterElementFilter(
             pattern,
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
@@ -280,6 +277,15 @@ namespace sgns::blockchain
                 }
                 return std::nullopt;
             } );
+        const bool callback_registered = db_->RegisterNewElementCallback(
+            pattern,
+            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid ) {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->RegistryUpdateReceived( std::move( new_data ), cid );
+                }
+            } );
+        return filter_registered && callback_registered;
     }
 
     std::optional<std::vector<crdt::pb::Element>> ValidatorRegistry::FilterRegistryUpdate(
@@ -310,15 +316,30 @@ namespace sgns::blockchain
             return std::vector<crdt::pb::Element>{};
         }
 
+        return std::nullopt;
+    }
+
+    void ValidatorRegistry::RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
+                                                    const std::string                     &cid )
+    {
+        const auto          &buffer = new_data.second;
+        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
+        auto                 decoded = DeserializeRegistryUpdate( bytes );
+        if ( decoded.has_error() )
+        {
+            logger_->warn( "Failed to parse registry update for cache refresh" );
+            return;
+        }
+
         {
             std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
-            cached_registry_ = update.registry();
-            cached_update_ = update;
-            cached_registry_hash_ = ComputeRegistryHash( update.registry() );
+            cached_update_ = decoded.value();
+            cached_registry_ = decoded.value().registry();
+            cached_registry_id_ = cid;
             cache_initialized_ = true;
         }
 
-        return std::nullopt;
+        PersistLocalState( cid );
     }
 
     outcome::result<std::vector<uint8_t>> ValidatorRegistry::ComputeUpdateSigningBytes(
@@ -384,8 +405,16 @@ namespace sgns::blockchain
             return false;
         }
 
-        const std::string current_hash = ComputeRegistryHash( *current_registry );
-        if ( current_hash.empty() || update.prev_registry_hash() != current_hash )
+        std::string current_id;
+        {
+            std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+            current_id = cached_registry_id_;
+        }
+        if ( current_id.empty() )
+        {
+            current_id = ComputeRegistryHash( *current_registry );
+        }
+        if ( current_id.empty() || update.prev_registry_hash() != current_id )
         {
             return false;
         }
@@ -450,6 +479,20 @@ namespace sgns::blockchain
             return;
         }
 
+        sgns::crdt::GlobalDB::Buffer registry_cid_key;
+        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
+        if ( registry_cid.has_value() )
+        {
+            cached_registry_id_ = registry_cid.value().toString();
+        }
+
+        if ( cached_registry_ )
+        {
+            cache_initialized_ = true;
+            return;
+        }
+
         const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
         auto                        registry_get = db_->Get( registry_key );
         if ( registry_get.has_error() )
@@ -470,7 +513,19 @@ namespace sgns::blockchain
 
         cached_update_ = decoded.value();
         cached_registry_ = decoded.value().registry();
-        cached_registry_hash_ = ComputeRegistryHash( decoded.value().registry() );
+        if ( cached_registry_id_.empty() )
+        {
+            cached_registry_id_ = ComputeRegistryHash( decoded.value().registry() );
+        }
         cache_initialized_ = true;
+    }
+
+    void ValidatorRegistry::PersistLocalState( const std::string &cid )
+    {
+        sgns::crdt::GlobalDB::Buffer registry_cid_key;
+        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        sgns::crdt::GlobalDB::Buffer registry_cid;
+        registry_cid.put( cid );
+        (void)db_->GetDataStore()->put( registry_cid_key, registry_cid );
     }
 }
