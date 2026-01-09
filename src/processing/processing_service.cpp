@@ -411,18 +411,21 @@ namespace sgns::processing
             return ProcessingStatus(Status::DISABLED, 0.0f);
         }
         
-        std::lock_guard lock(m_mutexNodes);
-        if (m_processingNodes.empty()) {
-            return ProcessingStatus(Status::IDLE, 0.0f);
-        }
-        
-        // Calculate average progress across all processing nodes
         float totalProgress = 0.0f;
         size_t nodeCount = 0;
-        for (const auto& [queueId, node] : m_processingNodes) {
-            if (node) {
-                totalProgress += node->GetProgress();
-                ++nodeCount;
+        
+        {
+            std::lock_guard lock(m_mutexNodes);
+            if (m_processingNodes.empty()) {
+                return ProcessingStatus(Status::IDLE, 0.0f);
+            }
+            
+            // Calculate average progress across all processing nodes
+            for (const auto& [queueId, node] : m_processingNodes) {
+                if (node) {
+                    totalProgress += node->GetProgress();
+                    ++nodeCount;
+                }
             }
         }
         
