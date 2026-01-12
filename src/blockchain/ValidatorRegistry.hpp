@@ -105,7 +105,6 @@ namespace sgns::blockchain
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         void RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
-        std::string                           ComputeRegistryHash( const Registry &registry ) const;
         bool                  VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
         void                  InitializeCache();

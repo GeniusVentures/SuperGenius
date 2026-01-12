@@ -14,9 +14,7 @@
 #include <gsl/span>
 
 #include "account/GeniusAccount.hpp"
-#include "base/hexutil.hpp"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
-#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns::blockchain
 {
@@ -384,19 +382,6 @@ namespace sgns::blockchain
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    std::string ValidatorRegistry::ComputeRegistryHash( const Registry &registry ) const
-    {
-        auto encoded = SerializeRegistry( registry );
-        if ( encoded.has_error() )
-        {
-            return {};
-        }
-
-        sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256( gsl::span<const uint8_t>( encoded.value().data(), encoded.value().size() ) );
-        return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
-    }
-
     bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const
     {
         if ( update.registry().validators().empty() )
@@ -431,16 +416,13 @@ namespace sgns::blockchain
             return false;
         }
 
-        std::string current_id;
+        const std::string prev_registry_cid = update.prev_registry_hash();
+        std::string       current_id;
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             current_id = cached_registry_id_;
         }
-        if ( current_id.empty() )
-        {
-            current_id = ComputeRegistryHash( *current_registry );
-        }
-        if ( current_id.empty() || update.prev_registry_hash() != current_id )
+        if ( current_id.empty() || prev_registry_cid != current_id )
         {
             return false;
         }
