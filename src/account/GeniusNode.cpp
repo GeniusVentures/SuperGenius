@@ -4,6 +4,10 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+
+#include <mutex>
+#include <stdexcept>
+
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -20,8 +24,7 @@
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-//#include "processing/processors/processing_processor_mnn_image.hpp"
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/SecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -143,7 +146,7 @@ namespace sgns
                             bool                is_full_node,
                             bool                use_upnp ) :
         account_( GeniusAccount::New( dev_config.TokenID,
-                                      std::make_shared<JSONSecureStorage>( dev_config.BaseWritePath ),
+                                      std::make_shared<SecureStorageImpl>(),
                                       eth_private_key,
                                       is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),

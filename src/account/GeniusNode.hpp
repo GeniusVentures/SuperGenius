@@ -1,11 +1,13 @@
 #ifndef _GENIUS_NODE_HPP_
 #define _GENIUS_NODE_HPP_
+
 #include <memory>
 #include <cstdint>
 #include <functional>
 #include <vector>
 #include <thread>
 #include <optional>
+
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>

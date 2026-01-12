@@ -79,7 +79,7 @@ target_link_libraries(genius_node
     blockchain_genesis
 	ProcessingBase
     PRIVATE
-    json_secure_storage
+    secure_storage
     component_factory
     block_header_repository
     block_storage    

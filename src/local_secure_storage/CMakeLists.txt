@@ -2,6 +2,15 @@ add_library(json_secure_storage
     impl/json/JSONSecureStorage.cpp
 )
 
+target_link_libraries(json_secure_storage
+    PUBLIC
+    outcome
+    PRIVATE
+    rapidjson
+)
+
+supergenius_install(json_secure_storage)
+
 add_library(secure_storage STATIC impl/JSONBackend.cpp)
 target_link_libraries(secure_storage PUBLIC outcome rapidjson)
 
@@ -26,11 +35,4 @@ elseif(APPLE)
     target_link_libraries(secure_storage PRIVATE ${SECURITY_FRAMEWORK} ${CORE_FOUNDATION})
 endif()
 
-target_link_libraries(json_secure_storage
-    PUBLIC
-    outcome
-    PRIVATE
-    rapidjson
-)
-
-supergenius_install(json_secure_storage)
+supergenius_install(secure_storage)
