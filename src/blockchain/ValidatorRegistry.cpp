@@ -67,6 +67,12 @@ namespace sgns::blockchain
                                                                                    std::move( weight_config ),
                                                                                    std::move( genesis_authority ) ) );
         instance->InitializeCache();
+
+        if ( !RegisterFilter() )
+        {
+            return nullptr;
+        }
+
         return instance;
     }
 
@@ -301,6 +307,9 @@ namespace sgns::blockchain
                     strong->RegistryUpdateReceived( std::move( new_data ), cid );
                 }
             } );
+
+        db_->AddListenTopic( std::string( ValidatorTopic() ) );
+
         return filter_registered && callback_registered;
     }
 
@@ -499,25 +508,24 @@ namespace sgns::blockchain
         const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
         auto                        registry_get    = db_->Get( registry_key );
         bool                        content_present = registry_get.has_value();
-        if ( content_present )
-        {
-            const auto          &buffer = registry_get.value();
-            std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
-            auto                 decoded = DeserializeRegistryUpdate( bytes );
-            if ( decoded.has_value() )
-            {
-                cached_update_   = decoded.value();
-                cached_registry_ = decoded.value().registry();
-            }
-            else
-            {
-                logger_->warn( "Failed to parse registry content during cache init" );
-            }
-        }
-        else
+        if ( !content_present )
         {
             logger_->warn( "Registry content not found during cache init" );
+            return;
         }
+        const auto          &buffer = registry_get.value();
+        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
+        auto                 decoded = DeserializeRegistryUpdate( bytes );
+        if ( !decoded.has_value() )
+        {
+            logger_->warn( "Failed to parse registry content during cache init" );
+            return;
+        }
+
+        cached_update_   = decoded.value();
+        cached_registry_ = decoded.value().registry();
+
+        cache_initialized_ = true;
 
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
@@ -525,38 +533,28 @@ namespace sgns::blockchain
         if ( registry_cid.has_value() )
         {
             cached_registry_id_ = registry_cid.value().toString();
-        }
-
-        const bool    missing_cid = cached_registry_id_.empty();
-        std::set<CID> heads_to_request;
-
-        if ( content_present && missing_cid )
-        {
-            logger_->warn( "Registry content found, but CID is missing; requesting heads" );
-
-            auto heads_result = db_->GetCRDTHeadList();
-            if ( heads_result.has_value() )
-            {
-                const auto &heads_map = heads_result.value().first;
-                auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
-                if ( it != heads_map.end() )
-                {
-                    heads_to_request = it->second;
-                }
-            }
-        }
-        cache_initialized_      = true;
-        const bool has_registry = cached_registry_.has_value() && !cached_registry_->validators().empty();
-
-        lock.unlock();
-
-        if ( has_registry && !missing_cid )
-        {
             NotifyInitialized( true );
             return;
         }
 
-        if ( missing_cid && !heads_to_request.empty() )
+        std::set<CID> heads_to_request;
+
+        logger_->warn( "Registry content found, but CID is missing; requesting heads" );
+
+        auto heads_result = db_->GetCRDTHeadList();
+        if ( heads_result.has_value() )
+        {
+            const auto &heads_map = heads_result.value().first;
+            auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
+            if ( it != heads_map.end() )
+            {
+                heads_to_request = it->second;
+            }
+        }
+
+        lock.unlock();
+
+        if ( !heads_to_request.empty() )
         {
             RequestHeadCids( heads_to_request );
         }
