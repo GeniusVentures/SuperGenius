@@ -7,6 +7,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <set>
 #include <system_error>
 
@@ -36,7 +37,8 @@ namespace sgns::blockchain
                                                                uint64_t                        quorum_numerator,
                                                                uint64_t                        quorum_denominator,
                                                                WeightConfig                    weight_config,
-                                                               std::string                     genesis_authority )
+                                                               std::string                     genesis_authority,
+                                                               InitCallback                    init_callback )
     {
         if ( !db )
         {
@@ -51,7 +53,7 @@ namespace sgns::blockchain
                                                                                    quorum_denominator,
                                                                                    std::move( weight_config ),
                                                                                    std::move( genesis_authority ) ) );
-        instance->InitializeCache();
+        instance->InitializeCache( std::move( init_callback ) );
         return instance;
     }
 
@@ -265,9 +267,9 @@ namespace sgns::blockchain
 
     bool ValidatorRegistry::RegisterFilter()
     {
-        const std::string pattern   = "/?" + std::string( RegistryKey() );
-        auto              weak_self = weak_from_this();
-        const bool filter_registered = db_->RegisterElementFilter(
+        const std::string pattern           = "/?" + std::string( RegistryKey() );
+        auto              weak_self         = weak_from_this();
+        const bool        filter_registered = db_->RegisterElementFilter(
             pattern,
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
@@ -279,7 +281,8 @@ namespace sgns::blockchain
             } );
         const bool callback_registered = db_->RegisterNewElementCallback(
             pattern,
-            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid ) {
+            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+            {
                 if ( auto strong = weak_self.lock() )
                 {
                     strong->RegistryUpdateReceived( std::move( new_data ), cid );
@@ -299,7 +302,7 @@ namespace sgns::blockchain
             return std::vector<crdt::pb::Element>{};
         }
 
-        RegistryUpdate update = decoded_update.value();
+        RegistryUpdate  update      = decoded_update.value();
         const Registry *current_ptr = nullptr;
 
         {
@@ -333,13 +336,14 @@ namespace sgns::blockchain
 
         {
             std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
-            cached_update_ = decoded.value();
-            cached_registry_ = decoded.value().registry();
+            cached_update_      = decoded.value();
+            cached_registry_    = decoded.value().registry();
             cached_registry_id_ = cid;
-            cache_initialized_ = true;
+            cache_initialized_  = true;
         }
 
         PersistLocalState( cid );
+        NotifyInitialized( true );
     }
 
     outcome::result<std::vector<uint8_t>> ValidatorRegistry::ComputeUpdateSigningBytes(
@@ -471,8 +475,14 @@ namespace sgns::blockchain
         return nullptr;
     }
 
-    void ValidatorRegistry::InitializeCache()
+    void ValidatorRegistry::InitializeCache( InitCallback init_callback )
     {
+        if ( init_callback )
+        {
+            std::lock_guard<std::mutex> lock( init_mutex_ );
+            init_callback_ = std::move( init_callback );
+        }
+
         std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
         if ( cache_initialized_ )
         {
@@ -480,16 +490,16 @@ namespace sgns::blockchain
         }
 
         const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
-        auto                        registry_get = db_->Get( registry_key );
+        auto                        registry_get    = db_->Get( registry_key );
         bool                        content_present = registry_get.has_value();
-        if ( registry_get.has_value() )
+        if ( content_present )
         {
             const auto          &buffer = registry_get.value();
             std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
             auto                 decoded = DeserializeRegistryUpdate( bytes );
             if ( decoded.has_value() )
             {
-                cached_update_ = decoded.value();
+                cached_update_   = decoded.value();
                 cached_registry_ = decoded.value().registry();
             }
             else
@@ -510,41 +520,64 @@ namespace sgns::blockchain
             cached_registry_id_ = registry_cid.value().toString();
         }
 
-        const bool missing_cid = cached_registry_id_.empty();
+        const bool    missing_cid = cached_registry_id_.empty();
         std::set<CID> heads_to_request;
 
         if ( content_present && missing_cid )
         {
             logger_->warn( "Registry content found, but CID is missing; requesting heads" );
-        }
 
-        if ( missing_cid )
-        {
             auto heads_result = db_->GetCRDTHeadList();
             if ( heads_result.has_value() )
             {
                 const auto &heads_map = heads_result.value().first;
-                auto        it = heads_map.find( std::string( ValidatorTopic() ) );
+                auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
                 if ( it != heads_map.end() )
                 {
                     heads_to_request = it->second;
                 }
             }
         }
-        cache_initialized_ = true;
+        cache_initialized_      = true;
+        const bool has_registry = cached_registry_.has_value() && !cached_registry_->validators().empty();
 
         lock.unlock();
+
+        if ( has_registry && !missing_cid )
+        {
+            NotifyInitialized( true );
+            return;
+        }
+
         if ( missing_cid && !heads_to_request.empty() )
         {
-            RequestHeadCids( heads_to_request );
+            if ( request_block_by_cid_ )
+            {
+                RequestHeadCids( heads_to_request );
+            }
+            else
+            {
+                std::lock_guard<std::mutex> init_lock( init_mutex_ );
+                pending_head_requests_.insert( heads_to_request.begin(), heads_to_request.end() );
+            }
         }
     }
 
     void ValidatorRegistry::SetRequestBlockByCidMethod(
-        std::function<void( const std::string &cid,
-                            std::function<void( outcome::result<std::string> )> callback )> method )
+        std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
+            method )
     {
         request_block_by_cid_ = std::move( method );
+
+        std::set<CID> pending;
+        {
+            std::lock_guard<std::mutex> lock( init_mutex_ );
+            pending.swap( pending_head_requests_ );
+        }
+        if ( !pending.empty() )
+        {
+            RequestHeadCids( pending );
+        }
     }
 
     void ValidatorRegistry::PersistLocalState( const std::string &cid )
@@ -568,9 +601,76 @@ namespace sgns::blockchain
             return;
         }
 
+        struct RequestState
+        {
+            std::atomic<size_t> remaining;
+            std::atomic<bool>   success_reported{ false };
+        };
+
+        auto state = std::make_shared<RequestState>( RequestState{ cids.size() } );
+
         for ( const auto &cid : cids )
         {
-            request_block_by_cid_( cid.toString().value(), nullptr );
+            auto cid_string = cid.toString();
+            if ( !cid_string.has_value() )
+            {
+                if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
+                {
+                    NotifyInitialized( false );
+                }
+                continue;
+            }
+
+            request_block_by_cid_(
+                cid_string.value(),
+                [weak_self = weak_from_this(), state]( outcome::result<std::string> result )
+                {
+                    if ( auto self = weak_self.lock() )
+                    {
+                        if ( !result.has_error() )
+                        {
+                            if ( !state->success_reported.exchange( true ) )
+                            {
+                                self->NotifyInitialized( true );
+                            }
+                        }
+
+                        if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
+                        {
+                            self->NotifyInitialized( false );
+                        }
+                    }
+                } );
+        }
+    }
+
+    void ValidatorRegistry::NotifyInitialized( bool success )
+    {
+        InitCallback callback;
+        {
+            std::lock_guard<std::mutex> lock( init_mutex_ );
+            if ( !init_callback_ )
+            {
+                return;
+            }
+            if ( init_state_.has_value() && init_state_.value() == success )
+            {
+                return;
+            }
+            init_state_ = success;
+            if ( success )
+            {
+                callback = std::move( init_callback_ );
+            }
+            else
+            {
+                callback = init_callback_;
+            }
+        }
+
+        if ( callback )
+        {
+            callback( success );
         }
     }
 }

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <set>
@@ -35,6 +36,7 @@ namespace sgns::blockchain
         using RegistryUpdate = validator::RegistryUpdate;
         using Role = validator::Role;
         using Status = validator::Status;
+        using InitCallback = std::function<void( bool )>;
 
         struct WeightConfig
         {
@@ -49,7 +51,8 @@ namespace sgns::blockchain
                                                        uint64_t                        quorum_numerator = 2,
                                                        uint64_t                        quorum_denominator = 3,
                                                        WeightConfig                    weight_config = {},
-                                                       std::string                     genesis_authority = {} );
+                                                       std::string                     genesis_authority = {},
+                                                       InitCallback                    init_callback = {} );
 
         uint64_t ComputeWeight( Role role ) const;
         uint64_t TotalWeight( const Registry &registry ) const;
@@ -102,7 +105,8 @@ namespace sgns::blockchain
         bool                                          VerifyUpdate( const RegistryUpdate &update,
                                                                       const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
-        void                     InitializeCache();
+        void                     InitializeCache( InitCallback init_callback );
+        void                     NotifyInitialized( bool success );
         void                     PersistLocalState( const std::string &cid );
         void                     RequestHeadCids( const std::set<CID> &cids );
 
@@ -117,6 +121,10 @@ namespace sgns::blockchain
         std::optional<RegistryUpdate>   cached_update_;
         std::string                     cached_registry_id_;
         bool                            cache_initialized_ = false;
+        std::mutex                      init_mutex_;
+        InitCallback                    init_callback_;
+        std::optional<bool>             init_state_;
+        std::set<CID>                   pending_head_requests_;
         std::function<void( const std::string &cid,
                              std::function<void( outcome::result<std::string> )> callback )> request_block_by_cid_;
     };

@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <atomic>
 #include <optional>
 #include <unordered_map>
 #include "outcome/outcome.hpp"
@@ -49,6 +50,7 @@ namespace sgns
             ACCOUNT_CREATION_BLOCK_SERIALIZATION_FAILED, ///< Failed to serialize/deserialize account creation block
             ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK, ///< Account creation block not properly linked to genesis
             VALIDATOR_REGISTRY_CREATION_FAILED,          ///< Failed to create validator registry
+            BLOCKCHAIN_NOT_INITIALIZED,                  ///< Blockchain not fully initialized yet
         };
 
         // Callback type for when the blockchain is initialized
@@ -192,6 +194,10 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
+        bool               created_successfully_ = false;
+        bool               filters_registered_ = false;
+        bool               callbacks_registered_ = false;
+        std::atomic<bool>  validator_registry_initialized_{ false };
         bool genesis_ready_          = false;
         bool account_creation_ready_ = false;
     };

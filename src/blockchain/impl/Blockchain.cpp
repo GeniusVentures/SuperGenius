@@ -36,6 +36,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
             return "Account creation block not properly linked to genesis";
         case Error::VALIDATOR_REGISTRY_CREATION_FAILED:
             return "Couldn't create validator registry";
+        case Error::BLOCKCHAIN_NOT_INITIALIZED:
+            return "Blockchain not fully initialized";
     }
     return "Unknown error";
 }
@@ -88,7 +90,19 @@ namespace sgns
             2,
             3,
             blockchain::ValidatorRegistry::WeightConfig{},
-            GetAuthorizedFullNodeAddress() );
+            GetAuthorizedFullNodeAddress(),
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->validator_registry_initialized_.store( initialized );
+                    if ( !initialized )
+                    {
+                        strong->logger_->warn( "[{}] Validator registry not initialized yet",
+                                               strong->account_->GetAddress().substr( 0, 8 ) );
+                    }
+                }
+            } );
         if ( instance->validator_registry_ )
         {
             instance->validator_registry_->SetRequestBlockByCidMethod(
@@ -121,7 +135,7 @@ namespace sgns
                                       instance->account_->GetAddress().substr( 0, 8 ) );
         }
 
-        (void)instance->db_->RegisterNewElementCallback(
+        const bool genesis_callback_registered = instance->db_->RegisterNewElementCallback(
             "/?" + std::string( GENESIS_KEY ),
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
@@ -132,7 +146,7 @@ namespace sgns
                 }
             } );
 
-        (void)instance->db_->RegisterNewElementCallback(
+        const bool account_creation_callback_registered = instance->db_->RegisterNewElementCallback(
             "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
@@ -142,6 +156,12 @@ namespace sgns
                     strong->AccountCreationReceivedCallback( std::move( new_data ), cid );
                 }
             } );
+
+        instance->filters_registered_ =
+            genesis_filter_initialized && account_creation_filter_initialized && validator_filter_initialized;
+        instance->callbacks_registered_ = genesis_callback_registered && account_creation_callback_registered;
+        instance->created_successfully_ =
+            instance->filters_registered_ && instance->callbacks_registered_ && instance->validator_registry_;
         instance->account_->SetGetBlockChainCIDMethod(
             [weak_ptr( std::weak_ptr<Blockchain>(
                 instance ) )]( uint8_t block_index, const std::string &address ) -> outcome::result<std::string>
@@ -212,6 +232,19 @@ namespace sgns
 
     outcome::result<void> Blockchain::Start()
     {
+        if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
+             !validator_registry_initialized_.load() )
+        {
+            logger_->warn(
+                "[{}] Blockchain start deferred (created: {}, filters: {}, callbacks: {}, validator_registry: {})",
+                account_->GetAddress().substr( 0, 8 ),
+                created_successfully_,
+                filters_registered_,
+                callbacks_registered_,
+                validator_registry_initialized_.load() );
+            return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+        }
+
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
