@@ -31,41 +31,43 @@ namespace sgns::blockchain
     {
     public:
         using ValidatorEntry = validator::ValidatorEntry;
-        using Registry = validator::Registry;
+        using Registry       = validator::Registry;
         using SignatureEntry = validator::SignatureEntry;
         using RegistryUpdate = validator::RegistryUpdate;
-        using Role = validator::Role;
-        using Status = validator::Status;
-        using InitCallback = std::function<void( bool )>;
+        using Role           = validator::Role;
+        using Status         = validator::Status;
+        using InitCallback   = std::function<void( bool )>;
+        using BlockRequestMethod =
+            std::function<void( const std::string &, std::function<void( outcome::result<std::string> )> )>;
 
         struct WeightConfig
         {
-            uint64_t base_weight_       = 1;
-            uint64_t full_multiplier_   = 3;
+            uint64_t base_weight_        = 1;
+            uint64_t full_multiplier_    = 3;
             uint64_t genesis_multiplier_ = 5;
             uint64_t sharded_multiplier_ = 1;
-            uint64_t max_weight_        = 10;
+            uint64_t max_weight_         = 10;
         };
 
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
-                                                       uint64_t                        quorum_numerator = 2,
+                                                       uint64_t                        quorum_numerator   = 2,
                                                        uint64_t                        quorum_denominator = 3,
-                                                       WeightConfig                    weight_config = {},
-                                                       std::string                     genesis_authority = {},
-                                                       InitCallback                    init_callback = {} );
+                                                       WeightConfig                    weight_config      = {},
+                                                       std::string                     genesis_authority,
+                                                       InitCallback                    init_callback = nullptr,
+                                                       BlockRequestMethod              block_request_method );
 
         uint64_t ComputeWeight( Role role ) const;
         uint64_t TotalWeight( const Registry &registry ) const;
         uint64_t QuorumThreshold( uint64_t total_weight ) const;
         bool     IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
-        Registry CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
-        outcome::result<void> StoreGenesisRegistry( const std::string &genesis_validator_id,
-                                                    std::function<std::vector<uint8_t>( std::vector<uint8_t> )>
-                                                        sign );
-        outcome::result<Registry> LoadRegistry() const;
+        Registry                        CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        outcome::result<void>           StoreGenesisRegistry( const std::string &genesis_validator_id,
+                                                              std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
+        outcome::result<Registry>       LoadRegistry() const;
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
-        bool RegisterFilter();
+        bool                            RegisterFilter();
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
@@ -73,8 +75,9 @@ namespace sgns::blockchain
         outcome::result<RegistryUpdate>       DeserializeRegistryUpdate( const std::vector<uint8_t> &buffer ) const;
 
         void SetRequestBlockByCidMethod(
-            std::function<void( const std::string &cid,
-                                std::function<void( outcome::result<std::string> )> callback )> method );
+            std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
+                method );
+
         static constexpr std::string_view RegistryKey()
         {
             return "gnus-validator-registry";
@@ -95,20 +98,20 @@ namespace sgns::blockchain
                            uint64_t                        quorum_numerator,
                            uint64_t                        quorum_denominator,
                            WeightConfig                    weight_config,
-                           std::string                     genesis_authority );
+                           std::string                     genesis_authority,
+                           InitCallback                    init_callback,
+                           BlockRequestMethod              block_request_method );
 
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
-        void                                          RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                                              const std::string                     &cid );
-        outcome::result<std::vector<uint8_t>>         ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
-        std::string                                   ComputeRegistryHash( const Registry &registry ) const;
-        bool                                          VerifyUpdate( const RegistryUpdate &update,
-                                                                      const Registry *current_registry ) const;
+        void RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
+        outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
+        std::string                           ComputeRegistryHash( const Registry &registry ) const;
+        bool                  VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
-        void                     InitializeCache( InitCallback init_callback );
-        void                     NotifyInitialized( bool success );
-        void                     PersistLocalState( const std::string &cid );
-        void                     RequestHeadCids( const std::set<CID> &cids );
+        void                  InitializeCache();
+        void                  NotifyInitialized( bool success );
+        void                  PersistLocalState( const std::string &cid );
+        void                  RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -121,12 +124,10 @@ namespace sgns::blockchain
         std::optional<RegistryUpdate>   cached_update_;
         std::string                     cached_registry_id_;
         bool                            cache_initialized_ = false;
-        std::mutex                      init_mutex_;
-        InitCallback                    init_callback_;
-        std::optional<bool>             init_state_;
-        std::set<CID>                   pending_head_requests_;
-        std::function<void( const std::string &cid,
-                             std::function<void( outcome::result<std::string> )> callback )> request_block_by_cid_;
+
+        InitCallback init_callback_;
+        std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
+            request_block_by_cid_;
     };
 
 }

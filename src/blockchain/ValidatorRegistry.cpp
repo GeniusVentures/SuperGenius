@@ -24,12 +24,16 @@ namespace sgns::blockchain
                                           uint64_t                        quorum_numerator,
                                           uint64_t                        quorum_denominator,
                                           WeightConfig                    weight_config,
-                                          std::string                     genesis_authority ) :
+                                          std::string                     genesis_authority,
+                                          InitCallback                    init_callback,
+                                          BlockRequestMethod              block_request_method ) :
         db_( std::move( db ) ),
         quorum_numerator_( quorum_numerator ),
         quorum_denominator_( quorum_denominator ),
         weight_config_( std::move( weight_config ) ),
-        genesis_authority_( std::move( genesis_authority ) )
+        genesis_authority_( std::move( genesis_authority ) ),
+        init_callback_( std::move( init_callback ) ),
+        request_block_by_cid_( std::move( block_request_method ) )
     {
     }
 
@@ -38,9 +42,18 @@ namespace sgns::blockchain
                                                                uint64_t                        quorum_denominator,
                                                                WeightConfig                    weight_config,
                                                                std::string                     genesis_authority,
-                                                               InitCallback                    init_callback )
+                                                               InitCallback                    init_callback,
+                                                               BlockRequestMethod              block_request_method )
     {
         if ( !db )
+        {
+            return nullptr;
+        }
+        if ( genesis_authority.empty() )
+        {
+            return nullptr;
+        }
+        if ( block_request_method == nullptr )
         {
             return nullptr;
         }
@@ -53,7 +66,7 @@ namespace sgns::blockchain
                                                                                    quorum_denominator,
                                                                                    std::move( weight_config ),
                                                                                    std::move( genesis_authority ) ) );
-        instance->InitializeCache( std::move( init_callback ) );
+        instance->InitializeCache();
         return instance;
     }
 
@@ -390,7 +403,7 @@ namespace sgns::blockchain
 
         if ( !current_registry )
         {
-            if ( update.prev_registry_hash().empty() && !genesis_authority_.empty() )
+            if ( update.prev_registry_hash().empty() )
             {
                 for ( const auto &signature : update.signatures() )
                 {
@@ -475,14 +488,8 @@ namespace sgns::blockchain
         return nullptr;
     }
 
-    void ValidatorRegistry::InitializeCache( InitCallback init_callback )
+    void ValidatorRegistry::InitializeCache()
     {
-        if ( init_callback )
-        {
-            std::lock_guard<std::mutex> lock( init_mutex_ );
-            init_callback_ = std::move( init_callback );
-        }
-
         std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
         if ( cache_initialized_ )
         {
@@ -551,32 +558,7 @@ namespace sgns::blockchain
 
         if ( missing_cid && !heads_to_request.empty() )
         {
-            if ( request_block_by_cid_ )
-            {
-                RequestHeadCids( heads_to_request );
-            }
-            else
-            {
-                std::lock_guard<std::mutex> init_lock( init_mutex_ );
-                pending_head_requests_.insert( heads_to_request.begin(), heads_to_request.end() );
-            }
-        }
-    }
-
-    void ValidatorRegistry::SetRequestBlockByCidMethod(
-        std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
-            method )
-    {
-        request_block_by_cid_ = std::move( method );
-
-        std::set<CID> pending;
-        {
-            std::lock_guard<std::mutex> lock( init_mutex_ );
-            pending.swap( pending_head_requests_ );
-        }
-        if ( !pending.empty() )
-        {
-            RequestHeadCids( pending );
+            RequestHeadCids( heads_to_request );
         }
     }
 
@@ -593,11 +575,6 @@ namespace sgns::blockchain
     {
         if ( cids.empty() )
         {
-            return;
-        }
-        if ( !request_block_by_cid_ )
-        {
-            logger_->warn( "No RequestBlockByCid method configured" );
             return;
         }
 
@@ -646,31 +623,9 @@ namespace sgns::blockchain
 
     void ValidatorRegistry::NotifyInitialized( bool success )
     {
-        InitCallback callback;
+        if ( init_callback_ )
         {
-            std::lock_guard<std::mutex> lock( init_mutex_ );
-            if ( !init_callback_ )
-            {
-                return;
-            }
-            if ( init_state_.has_value() && init_state_.value() == success )
-            {
-                return;
-            }
-            init_state_ = success;
-            if ( success )
-            {
-                callback = std::move( init_callback_ );
-            }
-            else
-            {
-                callback = init_callback_;
-            }
-        }
-
-        if ( callback )
-        {
-            callback( success );
+            init_callback_( success );
         }
     }
 }
