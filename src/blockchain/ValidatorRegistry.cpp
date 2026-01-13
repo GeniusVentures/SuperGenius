@@ -237,15 +237,12 @@ namespace sgns::blockchain
         base::Buffer update_buffer(
             gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
 
+        const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
+
         auto registry_put = db_->Put( registry_key, update_buffer, { std::string( ValidatorTopic() ) } );
         if ( registry_put.has_error() )
         {
             return outcome::failure( registry_put.error() );
-        }
-
-        if ( registry_put.value().toString().has_value() )
-        {
-            PersistLocalState( registry_put.value().toString().value() );
         }
 
         return outcome::success();
@@ -350,7 +347,7 @@ namespace sgns::blockchain
         auto                 decoded = DeserializeRegistryUpdate( bytes );
         if ( decoded.has_error() )
         {
-            logger_->warn( "Failed to parse registry update for cache refresh" );
+            logger_->error( "Failed to parse registry update for cache refresh" );
             return;
         }
 
