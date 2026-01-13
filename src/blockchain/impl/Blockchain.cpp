@@ -91,6 +91,15 @@ namespace sgns
             3,
             blockchain::ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress(),
+
+            [weak_ptr( std::weak_ptr<Blockchain>(
+                instance ) )]( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                }
+            },
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
             {
                 if ( auto strong = weak_ptr.lock() )
@@ -98,23 +107,17 @@ namespace sgns
                     strong->validator_registry_initialized_.store( initialized );
                     if ( !initialized )
                     {
-                        strong->logger_->warn( "[{}] Validator registry not initialized yet",
+                        strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                strong->account_->GetAddress().substr( 0, 8 ) );
                     }
                 }
             } );
-        if ( instance->validator_registry_ )
+
+        if ( !instance->validator_registry_ )
         {
-            instance->validator_registry_->SetRequestBlockByCidMethod(
-                [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                    const std::string                                  &cid,
-                    std::function<void( outcome::result<std::string> )> callback )
-                {
-                    if ( auto strong = weak_ptr.lock() )
-                    {
-                        (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
-                    }
-                } );
+            instance->logger_->error( "[{}] Failed to create validator registry",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
         }
 
         if ( !genesis_filter_initialized )
@@ -408,20 +411,6 @@ namespace sgns
         if ( account_->GetAddress() != GetAuthorizedFullNodeAddress() )
         {
             return outcome::success();
-        }
-
-        if ( !validator_registry_ )
-        {
-            validator_registry_ = blockchain::ValidatorRegistry::New( db_,
-                                                                      2,
-                                                                      3,
-                                                                      blockchain::ValidatorRegistry::WeightConfig{},
-                                                                      GetAuthorizedFullNodeAddress() );
-        }
-        if ( !validator_registry_ )
-        {
-            logger_->error( "[{}] Validator registry not initialized", account_->GetAddress().substr( 0, 8 ) );
-            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
         }
 
         auto registry_result = validator_registry_->StoreGenesisRegistry(
@@ -788,21 +777,6 @@ namespace sgns
                                { std::string( BLOCKCHAIN_TOPIC ) } );
 
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
-        }
-
-        if ( !validator_registry_ )
-        {
-            validator_registry_ = blockchain::ValidatorRegistry::New( db_,
-                                                                      2,
-                                                                      3,
-                                                                      blockchain::ValidatorRegistry::WeightConfig{},
-                                                                      GetAuthorizedFullNodeAddress() );
-        }
-
-        if ( !validator_registry_ )
-        {
-            logger_->error( "[{}] Validator registry not initialized", account_->GetAddress().substr( 0, 8 ) );
-            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
         }
 
         auto registry_result = validator_registry_->StoreGenesisRegistry(

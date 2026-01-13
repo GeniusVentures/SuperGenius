@@ -23,15 +23,15 @@ namespace sgns::blockchain
                                           uint64_t                        quorum_denominator,
                                           WeightConfig                    weight_config,
                                           std::string                     genesis_authority,
-                                          InitCallback                    init_callback,
-                                          BlockRequestMethod              block_request_method ) :
+                                          BlockRequestMethod              block_request_method,
+                                          InitCallback                    init_callback ) :
         db_( std::move( db ) ),
         quorum_numerator_( quorum_numerator ),
         quorum_denominator_( quorum_denominator ),
         weight_config_( std::move( weight_config ) ),
         genesis_authority_( std::move( genesis_authority ) ),
-        init_callback_( std::move( init_callback ) ),
-        request_block_by_cid_( std::move( block_request_method ) )
+        request_block_by_cid_( std::move( block_request_method ) ),
+        init_callback_( std::move( init_callback ) )
     {
     }
 
@@ -40,8 +40,8 @@ namespace sgns::blockchain
                                                                uint64_t                        quorum_denominator,
                                                                WeightConfig                    weight_config,
                                                                std::string                     genesis_authority,
-                                                               InitCallback                    init_callback,
-                                                               BlockRequestMethod              block_request_method )
+                                                               BlockRequestMethod              block_request_method,
+                                                               InitCallback                    init_callback )
     {
         if ( !db )
         {
@@ -63,10 +63,14 @@ namespace sgns::blockchain
                                                                                    quorum_numerator,
                                                                                    quorum_denominator,
                                                                                    std::move( weight_config ),
-                                                                                   std::move( genesis_authority ) ) );
+                                                                                   std::move( genesis_authority ),
+                                                                                   std::move( block_request_method ),
+                                                                                   std::move( init_callback ) ) );
+
+        instance->logger_->trace( "ValidatorRegistry instance created" );
         instance->InitializeCache();
 
-        if ( !RegisterFilter() )
+        if ( !instance->RegisterFilter() )
         {
             return nullptr;
         }
@@ -237,7 +241,7 @@ namespace sgns::blockchain
         base::Buffer update_buffer(
             gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
 
-        const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
 
         auto registry_put = db_->Put( registry_key, update_buffer, { std::string( ValidatorTopic() ) } );
         if ( registry_put.has_error() )
@@ -421,6 +425,7 @@ namespace sgns::blockchain
         }
         if ( current_id.empty() || prev_registry_cid != current_id )
         {
+            //TODO - Check if the CID checking is necessary, because we could receive out-of-order updates
             return false;
         }
 
@@ -481,15 +486,17 @@ namespace sgns::blockchain
         std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
         if ( cache_initialized_ )
         {
+            logger_->error( "Cache already initialized" );
             return;
         }
+        logger_->trace( "Grabbing Validator Registry from CRDT" );
 
-        const crdt::HierarchicalKey registry_key( std::string( RegistryKey() ) );
-        auto                        registry_get    = db_->Get( registry_key );
-        bool                        content_present = registry_get.has_value();
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        auto                  registry_get    = db_->Get( registry_key );
+        bool                  content_present = registry_get.has_value();
         if ( !content_present )
         {
-            logger_->warn( "Registry content not found during cache init" );
+            logger_->error( "Registry content not found during cache init" );
             return;
         }
         const auto          &buffer = registry_get.value();
@@ -559,9 +566,11 @@ namespace sgns::blockchain
         {
             std::atomic<size_t> remaining;
             std::atomic<bool>   success_reported{ false };
+
+            explicit RequestState( size_t remaining_count ) : remaining( remaining_count ) {}
         };
 
-        auto state = std::make_shared<RequestState>( RequestState{ cids.size() } );
+        auto state = std::make_shared<RequestState>( cids.size() );
 
         for ( const auto &cid : cids )
         {

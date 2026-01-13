@@ -50,12 +50,12 @@ namespace sgns::blockchain
         };
 
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
-                                                       uint64_t                        quorum_numerator   = 2,
-                                                       uint64_t                        quorum_denominator = 3,
-                                                       WeightConfig                    weight_config      = {},
+                                                       uint64_t                        quorum_numerator,
+                                                       uint64_t                        quorum_denominator,
+                                                       WeightConfig                    weight_config,
                                                        std::string                     genesis_authority,
-                                                       InitCallback                    init_callback = nullptr,
-                                                       BlockRequestMethod              block_request_method );
+                                                       BlockRequestMethod              block_request_method,
+                                                       InitCallback                    init_callback = nullptr );
 
         uint64_t ComputeWeight( Role role ) const;
         uint64_t TotalWeight( const Registry &registry ) const;
@@ -73,10 +73,6 @@ namespace sgns::blockchain
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
         outcome::result<std::vector<uint8_t>> SerializeRegistryUpdate( const RegistryUpdate &update ) const;
         outcome::result<RegistryUpdate>       DeserializeRegistryUpdate( const std::vector<uint8_t> &buffer ) const;
-
-        void SetRequestBlockByCidMethod(
-            std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
-                method );
 
         static constexpr std::string_view RegistryKey()
         {
@@ -99,8 +95,8 @@ namespace sgns::blockchain
                            uint64_t                        quorum_denominator,
                            WeightConfig                    weight_config,
                            std::string                     genesis_authority,
-                           InitCallback                    init_callback,
-                           BlockRequestMethod              block_request_method );
+                           BlockRequestMethod              block_request_method,
+                           InitCallback                    init_callback );
 
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         void RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
