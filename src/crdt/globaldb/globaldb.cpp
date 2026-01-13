@@ -399,4 +399,22 @@ namespace sgns::crdt
         }
         return m_crdtDatastore->GetJobStatus( cid );
     }
+
+    outcome::result<void> GlobalDB::RequestHeadBroadcast( const std::vector<std::string> &topics )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "RequestHeadBroadcast: CRDT datastore not initialized" );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+
+        if ( !started_.load() )
+        {
+            m_logger->error( "RequestHeadBroadcast: GlobalDB not started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        m_logger->debug( "RequestHeadBroadcast: Forwarding request for {} topics", topics.size() );
+        return m_crdtDatastore->BroadcastHeadsForTopics( topics );
+    }
 }

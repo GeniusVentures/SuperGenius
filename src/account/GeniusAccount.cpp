@@ -700,6 +700,11 @@ namespace sgns
         return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
     }
 
+    std::shared_ptr<AccountMessenger> GeniusAccount::GetMessenger() const
+    {
+        return messenger_;
+    }
+
     void GeniusAccount::SetGetBlockChainCIDMethod(
         std::function<outcome::result<std::string>( uint8_t, const std::string & )> method )
     {

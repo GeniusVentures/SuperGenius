@@ -161,7 +161,6 @@ namespace sgns
                     break;
                 case accountComm::AccountMessage::kNonceResponse:
                 case accountComm::AccountMessage::kBlockResponse:
-                case accountComm::AccountMessage::kHeadResponse:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:

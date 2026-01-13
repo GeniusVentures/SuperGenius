@@ -151,6 +151,13 @@ namespace sgns::crdt
         outcome::result<void>     CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority );
         outcome::result<crdt::CrdtDatastore::JobStatus> GetCIDJobStatus( const CID &cid ) const;
 
+        /**
+         * @brief       Request head broadcast for specified topics
+         * @param[in]   topics Vector of topic names to broadcast heads for
+         * @return      outcome::success on success, or outcome::failure on error
+         */
+        outcome::result<void> RequestHeadBroadcast( const std::vector<std::string> &topics );
+
     private:
         /**
          * @brief       Constructs a new Global D B object

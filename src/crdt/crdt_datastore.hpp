@@ -219,6 +219,13 @@ namespace sgns::crdt
         outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
         outcome::result<JobStatus> GetJobStatus( const CID &cid );
 
+        /**
+         * @brief       Broadcast heads for the specified topics
+         * @param[in]   topics Vector of topic names to broadcast heads for
+         * @return      outcome::success on success, or outcome::failure on error
+         */
+        outcome::result<void> BroadcastHeadsForTopics( const std::vector<std::string> &topics );
+
     protected:
         friend class PubSubBroadcasterExt;
 

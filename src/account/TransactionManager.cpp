@@ -102,6 +102,25 @@ namespace sgns
                 } );
         }
 
+        // Register head request handler to bridge AccountMessenger -> GlobalDB -> CrdtDatastore
+        if ( auto messenger = instance->account_m->GetMessenger() )
+        {
+            messenger->RegisterHeadRequestHandler(
+                [weak_globaldb = std::weak_ptr<crdt::GlobalDB>( instance->globaldb_m )](
+                    const std::vector<std::string> &topics )
+                {
+                    if ( auto globaldb = weak_globaldb.lock() )
+                    {
+                        auto result = globaldb->RequestHeadBroadcast( topics );
+                        if ( result.has_error() )
+                        {
+                            auto logger = base::createLogger( "TransactionManager" );
+                            logger->error( "Failed to request head broadcast for {} topics", topics.size() );
+                        }
+                    }
+                } );
+        }
+
         return instance;
     }
 

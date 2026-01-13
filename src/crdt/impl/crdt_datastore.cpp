@@ -1002,6 +1002,67 @@ namespace sgns::crdt
         }
     }
 
+    outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::vector<std::string> &topics )
+    {
+        if ( topics.empty() )
+        {
+            logger_->debug( "BroadcastHeadsForTopics: No topics requested" );
+            return outcome::success();
+        }
+
+        auto head_list_result = heads_->GetList();
+        if ( head_list_result.has_error() )
+        {
+            logger_->error( "BroadcastHeadsForTopics: Failed to get head list" );
+            return outcome::failure( head_list_result.error() );
+        }
+
+        auto [head_map, maxHeight] = head_list_result.value();
+
+        // Get PeerInfo once to reuse across broadcasts
+        boost::optional<libp2p::peer::PeerInfo> peerInfo;
+        {
+            auto dagSyncerPtr = std::static_pointer_cast<GraphsyncDAGSyncer>( broadcaster_->GetDagSyncer() );
+            if ( dagSyncerPtr )
+            {
+                auto peerInfoResult = dagSyncerPtr->GetPeerInfo();
+                if ( peerInfoResult.has_value() )
+                {
+                    peerInfo = peerInfoResult.value();
+                }
+                else
+                {
+                    logger_->warn( "BroadcastHeadsForTopics: Failed to get peer info, broadcasts will retry per-call" );
+                }
+            }
+        }
+
+        // Broadcast heads for each requested topic
+        for ( const auto &topic_name : topics )
+        {
+            auto it = head_map.find( topic_name );
+            if ( it == head_map.end() || it->second.empty() )
+            {
+                logger_->debug( "BroadcastHeadsForTopics: No heads to broadcast for topic {}", topic_name );
+                continue;
+            }
+
+            auto broadcastResult = Broadcast( it->second, topic_name, peerInfo );
+            if ( broadcastResult.has_failure() )
+            {
+                logger_->error( "BroadcastHeadsForTopics: Broadcast failed for topic {}", topic_name );
+            }
+            else
+            {
+                logger_->debug( "BroadcastHeadsForTopics: Broadcasted {} heads for topic {}",
+                               it->second.size(),
+                               topic_name );
+            }
+        }
+
+        return outcome::success();
+    }
+
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey ) const
     {
         return set_->GetElement( aKey.GetKey() );

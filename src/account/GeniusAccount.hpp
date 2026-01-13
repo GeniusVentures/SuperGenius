@@ -256,6 +256,11 @@ namespace sgns
             uint64_t                                            timeout_ms,
             std::function<void( outcome::result<std::string> )> callback ) const;
         /**
+         * @brief       Get the account messenger instance
+         * @return      Shared pointer to the account messenger
+         */
+        std::shared_ptr<AccountMessenger> GetMessenger() const;
+        /**
          * @brief       Derives a Genius address from a given Ethereum private key
          * @param[in]   base_path The base path to store/retrieve the key
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
