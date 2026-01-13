@@ -120,6 +120,13 @@ namespace sgns
             return nullptr;
         }
 
+        auto ensure_registry_result = instance->EnsureValidatorRegistry();
+        if ( ensure_registry_result.has_error() )
+        {
+            instance->logger_->error( "[{}] Failed to ensure validator registry during init",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+
         if ( !genesis_filter_initialized )
         {
             instance->logger_->error( "[{}] Failed to initialize genesis filter",
