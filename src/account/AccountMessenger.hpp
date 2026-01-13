@@ -24,6 +24,7 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 #include "account/proto/SGAccountComm.pb.h"
+#include "primitives/cid/cid.hpp"
 
 namespace sgns
 {
@@ -67,6 +68,9 @@ namespace sgns
         // Global block response handler type
         using BlockResponseHandler =
             std::function<bool( const std::string &cid, const std::string &peer_id, const std::string &address )>;
+
+        // Head request handler type: called when a head request is received for topics
+        using HeadRequestHandler = std::function<void( const std::vector<std::string> &topics )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -121,6 +125,17 @@ namespace sgns
          */
         void ClearBlockResponseHandler();
 
+        /**
+         * @brief       Register handler for incoming head requests
+         * @param[in]   handler Function to call when head request is received with topic list
+         */
+        void RegisterHeadRequestHandler( HeadRequestHandler handler );
+
+        /**
+         * @brief      Clears the head request handler
+         */
+        void ClearHeadRequestHandler();
+
     private:
         /// Basis of the account receiving topic
         static constexpr std::string_view ACCOUNT_COMM = ".comm";
@@ -157,6 +172,10 @@ namespace sgns
         /// Global block response handler
         BlockResponseHandler global_block_handler_;
         std::mutex           global_handler_mutex_;
+
+        /// Global head request handler
+        HeadRequestHandler head_request_handler_;
+        std::mutex         head_handler_mutex_;
 
         // Worker thread state
         enum class RequestType
@@ -249,6 +268,12 @@ namespace sgns
          * @param[in]   resp The proto block response package
          */
         void HandleBlockResponse( const accountComm::SignedBlockResponse &resp );
+
+        /**
+         * @brief       Handles the Head request package (calls registered handler)
+         * @param[in]   req The proto head request package
+         */
+        void HandleHeadRequest( const accountComm::SignedHeadRequest &req );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

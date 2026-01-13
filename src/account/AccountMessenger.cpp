@@ -11,6 +11,7 @@
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
+#include "primitives/cid/cid.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
 {
@@ -123,6 +124,18 @@ namespace sgns
         global_block_handler_ = nullptr;
     }
 
+    void AccountMessenger::RegisterHeadRequestHandler( HeadRequestHandler handler )
+    {
+        std::lock_guard lock( head_handler_mutex_ );
+        head_request_handler_ = std::move( handler );
+    }
+
+    void AccountMessenger::ClearHeadRequestHandler()
+    {
+        std::lock_guard lock( head_handler_mutex_ );
+        head_request_handler_ = nullptr;
+    }
+
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         if ( message )
@@ -143,8 +156,12 @@ namespace sgns
                 case accountComm::AccountMessage::kBlockRequest:
                     HandleBlockRequest( acc_msg.block_request() );
                     break;
+                case accountComm::AccountMessage::kHeadRequest:
+                    HandleHeadRequest( acc_msg.head_request() );
+                    break;
                 case accountComm::AccountMessage::kNonceResponse:
                 case accountComm::AccountMessage::kBlockResponse:
+                case accountComm::AccountMessage::kHeadResponse:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
@@ -943,6 +960,54 @@ namespace sgns
                             resp.responder_address().substr( 0, 8 ) );
             // Track addresses that responded with no nonce
             no_nonce_responses_[resp.request_id()].insert( resp.responder_address() );
+        }
+    }
+
+    void AccountMessenger::HandleHeadRequest( const accountComm::SignedHeadRequest &signed_req )
+    {
+        const auto &req = signed_req.data();
+
+        logger_->debug( "[{}] Received a Head request req_id {} for {} topics",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.topics_size() );
+
+        std::string serialized;
+        if ( !req.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize HeadRequest for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
+        auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
+                                                                   signed_req.signature(),
+                                                                   serialized_vec );
+        if ( verify_signature_result.has_error() || !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on HeadRequest from {}", req.requester_address() );
+            return;
+        }
+
+        // Get topics from request
+        std::vector<std::string> requested_topics;
+        for ( int i = 0; i < req.topics_size(); ++i )
+        {
+            requested_topics.push_back( req.topics( i ) );
+        }
+
+        // Call the registered handler (typically will be handled by CrdtDatastore)
+        std::lock_guard lock( head_handler_mutex_ );
+        if ( head_request_handler_ )
+        {
+            logger_->debug( "[{}] Forwarding head request for {} topics to handler",
+                            address_.substr( 0, 8 ),
+                            requested_topics.size() );
+            head_request_handler_( requested_topics );
+        }
+        else
+        {
+            logger_->warn( "[{}] No head request handler registered, ignoring HeadRequest", address_.substr( 0, 8 ) );
         }
     }
 
