@@ -223,6 +223,12 @@ namespace sgns
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();
 
+        /**
+         * @brief       Request heads for relevant topics when we detect we're behind
+         * @param[in]   nonce_gap How far behind our local nonce is
+         */
+        void RequestRelevantHeads( uint64_t nonce_gap );
+
         outcome::result<bool> CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check );
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
@@ -243,6 +249,13 @@ namespace sgns
         State                                    state_m;
         std::mutex                               state_change_callback_mutex_;
         StateChangeCallback                      state_change_callback_;
+
+        // Head request rate limiting (for reactive requests due to nonce gaps)
+        std::optional<std::chrono::steady_clock::time_point> last_head_request_time_;
+        
+        // Periodic sync - request heads every 10 minutes to stay in sync across devices/instances
+        std::chrono::steady_clock::time_point last_periodic_sync_time_;
+        static constexpr std::chrono::minutes PERIODIC_SYNC_INTERVAL = std::chrono::minutes(10);
 
         // for the SendTransactionItem thread support
         mutable std::mutex          mutex_m;

@@ -136,6 +136,13 @@ namespace sgns
          */
         void ClearHeadRequestHandler();
 
+        /**
+         * @brief       Request heads broadcast for specific topics
+         * @param[in]   topics Vector of topic names to request heads for
+         * @return      outcome::success if request was sent, error otherwise
+         */
+        outcome::result<void> RequestHeads( const std::vector<std::string> &topics );
+
     private:
         /// Basis of the account receiving topic
         static constexpr std::string_view ACCOUNT_COMM = ".comm";

@@ -256,6 +256,12 @@ namespace sgns
             uint64_t                                            timeout_ms,
             std::function<void( outcome::result<std::string> )> callback ) const;
         /**
+         * @brief       Request heads broadcast for specific topics
+         * @param[in]   topics Vector of topic names to request heads for
+         * @return      outcome::success if request was sent, error otherwise
+         */
+        outcome::result<void> RequestHeads( const std::vector<std::string> &topics ) const;
+        /**
          * @brief       Get the account messenger instance
          * @return      Shared pointer to the account messenger
          */

@@ -139,7 +139,8 @@ namespace sgns
         state_m( State::CREATING ),
         timestamp_tolerance_m( std::move( timestamp_tolerance ) ),
         mutability_window_m( std::move( mutability_window ) ),
-        last_loop_time_( std::chrono::steady_clock::now() )
+        last_loop_time_( std::chrono::steady_clock::now() ),
+        last_periodic_sync_time_( std::chrono::steady_clock::now() )
 
     {
     }
@@ -327,6 +328,39 @@ namespace sgns
             m_logger->trace( "[{} - full: {}] Unknown ConfirmTransactions error",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
+        }
+
+        // Periodic sync - request heads every 10 minutes to stay synchronized across devices/instances
+        auto time_since_last_periodic_sync = std::chrono::duration_cast<std::chrono::minutes>(
+            now - last_periodic_sync_time_ );
+        if ( time_since_last_periodic_sync >= PERIODIC_SYNC_INTERVAL )
+        {
+            m_logger->debug( "[{} - full: {}] Periodic sync - requesting heads after {} minutes",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             time_since_last_periodic_sync.count() );
+            
+            std::vector<std::string> topics;
+            topics.push_back( account_m->GetAddress() );
+            if ( full_node_m )
+            {
+                topics.push_back( full_node_topic_m );
+            }
+            
+            if ( account_m->RequestHeads( topics ) )
+            {
+                last_periodic_sync_time_ = now;
+                m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 topics.size() );
+            }
+            else
+            {
+                m_logger->warn( "[{} - full: {}] Periodic sync head request failed",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m );
+            }
         }
 
         // Wait with condition variable instead of timer
@@ -1759,6 +1793,16 @@ namespace sgns
             {
                 ChangeState( State::READY );
             }
+            else
+            {
+                // We're missing transactions - request heads to help sync faster
+                uint64_t gap = network_confirmed_nonce - account_m->GetProposedNonce() + 1;
+                m_logger->info( "[{} - full: {}] Missing transactions during init, gap: {}",
+                               account_m->GetAddress().substr( 0, 8 ),
+                               full_node_m,
+                               gap );
+                RequestRelevantHeads( gap );
+            }
         }
         else
         {
@@ -1828,11 +1872,66 @@ namespace sgns
         }
         else if ( proposed_nonce < expected_next_nonce )
         {
-            m_logger->error( "[{} - full: {}] Local nonce behind - Local: {}, Expected: {}. Waiting to sync",
+            uint64_t nonce_gap = expected_next_nonce - proposed_nonce;
+            m_logger->error( "[{} - full: {}] Local nonce behind - Local: {}, Expected: {}. Gap: {}. Waiting to sync",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              proposed_nonce,
-                             expected_next_nonce );
+                             expected_next_nonce,
+                             nonce_gap );
+
+            // If we're behind at all, we need to catch up - even a gap of 1 means
+            // there's transaction data in CRDT that we don't have, and we cannot
+            // safely propose new transactions until we're caught up
+            constexpr uint64_t SIGNIFICANT_GAP_THRESHOLD = 1;
+            if ( nonce_gap >= SIGNIFICANT_GAP_THRESHOLD )
+            {
+                RequestRelevantHeads( nonce_gap );
+            }
+        }
+    }
+
+    void TransactionManager::RequestRelevantHeads( uint64_t nonce_gap )
+    {
+        // Rate limiting: don't request more than once per 30 seconds
+        auto now = std::chrono::steady_clock::now();
+        if ( last_head_request_time_.has_value() )
+        {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_request_time_.value() );
+            if ( elapsed.count() < 30 )
+            {
+                m_logger->trace( "[{} - full: {}] Skipping head request - too soon since last request ({}s ago)",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                elapsed.count() );
+                return;
+            }
+        }
+
+        std::vector<std::string> topics_to_request;
+        topics_to_request.push_back( account_m->GetAddress() );
+        
+        if ( full_node_m )
+        {
+            topics_to_request.push_back( full_node_topic_m );
+        }
+
+        m_logger->info( "[{} - full: {}] Requesting heads for {} topics due to nonce gap of {}",
+                       account_m->GetAddress().substr( 0, 8 ),
+                       full_node_m,
+                       topics_to_request.size(),
+                       nonce_gap );
+
+        auto result = account_m->RequestHeads( topics_to_request );
+        if ( result.has_error() )
+        {
+            m_logger->warn( "[{} - full: {}] Failed to request heads", 
+                           account_m->GetAddress().substr( 0, 8 ), 
+                           full_node_m );
+        }
+        else
+        {
+            last_head_request_time_ = now;
         }
     }
 

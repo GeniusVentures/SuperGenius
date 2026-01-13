@@ -136,6 +136,53 @@ namespace sgns
         head_request_handler_ = nullptr;
     }
 
+    outcome::result<void> AccountMessenger::RequestHeads( const std::vector<std::string> &topics )
+    {
+        if ( topics.empty() )
+        {
+            logger_->debug( "[{}] RequestHeads called with empty topics list", address_.substr( 0, 8 ) );
+            return outcome::success();
+        }
+
+        accountComm::HeadRequest req;
+        req.set_requester_address( address_ );
+        req.set_request_id( rd_() );
+        req.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        for ( const auto &topic : topics )
+        {
+            req.add_topics( topic );
+        }
+
+        accountComm::SignedHeadRequest signed_req;
+        signed_req.mutable_request()->CopyFrom( req );
+
+        std::string req_string;
+        if ( !req.SerializeToString( &req_string ) )
+        {
+            logger_->error( "[{}] Failed to serialize HeadRequest", address_.substr( 0, 8 ) );
+            return outcome::failure( Error::PROTO_SERIALIZATION );
+        }
+
+        auto sign_result = methods_.sign_( std::vector<uint8_t>( req_string.begin(), req_string.end() ) );
+        if ( sign_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to sign HeadRequest", address_.substr( 0, 8 ) );
+            return outcome::failure( sign_result.error() );
+        }
+
+        signed_req.set_signature( std::string( sign_result.value().begin(), sign_result.value().end() ) );
+
+        accountComm::AccountMessage envelope;
+        envelope.mutable_signed_head_request()->CopyFrom( signed_req );
+
+        logger_->debug( "[{}] Sending HeadRequest for {} topics", address_.substr( 0, 8 ), topics.size() );
+
+        return SendAccountMessage( envelope, { requests_topic_ } );
+    }
+
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         if ( message )

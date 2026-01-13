@@ -700,6 +700,17 @@ namespace sgns
         return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
     }
 
+    outcome::result<void> GeniusAccount::RequestHeads( const std::vector<std::string> &topics ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting heads broadcast for {} topics", topics.size() );
+
+        return messenger_->RequestHeads( topics );
+    }
+
     std::shared_ptr<AccountMessenger> GeniusAccount::GetMessenger() const
     {
         return messenger_;
