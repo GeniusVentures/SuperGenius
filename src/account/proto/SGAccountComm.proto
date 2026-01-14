@@ -9,7 +9,7 @@ message AccountMessage {
     SignedBlockRequest block_request = 3;    // changed: generic block request with index
     SignedBlockResponse block_response = 4;
     SignedHeadRequest head_request = 5;
-    SignedBlockCidRequest block_cid_request = 5;
+    SignedBlockCidRequest block_cid_request = 6;
   }
 }
 
