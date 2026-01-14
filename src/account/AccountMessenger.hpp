@@ -62,6 +62,9 @@ namespace sgns
             /// @brief Get local genesis block method
             std::function<outcome::result<std::string>( uint8_t block_index, const std::string &address )>
                 get_block_cid_;
+
+            /// @brief Check if a CID is locally available
+            std::function<outcome::result<bool>( const std::string &cid )> has_block_cid_;
         };
 
         // Global block response handler type
@@ -109,6 +112,16 @@ namespace sgns
         outcome::result<void> RequestAccountCreation(
             uint64_t timeout_ms,
             std::function<void( outcome::result<std::string> )> callback );
+
+        /**
+         * @brief       Request a block by CID from the network (retries until timeout)
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   cid CID to request
+         * @return      success on scheduled request, error otherwise
+         */
+        outcome::result<void> RequestRegularBlock( uint64_t                                            timeout_ms,
+                                                   std::string                                         cid,
+                                                   std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Register global block response handler
@@ -163,7 +176,8 @@ namespace sgns
         {
             Nonce,
             Genesis,
-            AccountCreation
+            AccountCreation,
+            BlockByCid
         };
 
         struct RequestTask
@@ -172,6 +186,7 @@ namespace sgns
             uint64_t                                            timeout_ms;
             uint64_t                                            silent_time_ms{ 150 };
             uint8_t                                             block_index{ 0 };
+            std::string                                         cid;
             std::function<void( outcome::result<std::string> )> callback;
             std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
         };
@@ -186,6 +201,7 @@ namespace sgns
         void EnqueueTask( RequestTask task );
         outcome::result<uint64_t> PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
         outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, uint8_t block_index );
+        outcome::result<std::set<std::string>> PerformBlockCidRequest( uint64_t timeout_ms, const std::string &cid );
 
         /**
          * @brief       Private constructor of the Account Messenger 
@@ -208,6 +224,12 @@ namespace sgns
          * @param[in]   block_index index of the requested block (0 = genesis, 1 = account, ...)
          */
         outcome::result<void> RequestBlock( uint64_t req_id, uint8_t block_index );
+
+        /**
+         * @brief       Request a block (by CID) from the network (no callback)
+         * @param[in]   cid CID to request
+         */
+        outcome::result<void> RequestBlockByCid( uint64_t req_id, const std::string &cid );
 
         /**
          * @brief       Callback of pubsub message when a response was received
@@ -244,6 +266,11 @@ namespace sgns
          * @param[in]   req The proto genesis request package
          */
         void HandleBlockRequest( const accountComm::SignedBlockRequest &req );
+        /**
+         * @brief       Handles the Block-by-CID request package
+         * @param[in]   req The proto block-by-CID request package
+         */
+        void HandleBlockCidRequest( const accountComm::SignedBlockCidRequest &req );
         /**
          * @brief       Handles the Block response package (calls global handler)
          * @param[in]   resp The proto block response package
