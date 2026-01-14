@@ -157,7 +157,7 @@ namespace sgns
         }
 
         accountComm::SignedHeadRequest signed_req;
-        signed_req.mutable_request()->CopyFrom( req );
+        signed_req.mutable_data()->CopyFrom( req );
 
         std::string req_string;
         if ( !req.SerializeToString( &req_string ) )
@@ -176,7 +176,7 @@ namespace sgns
         signed_req.set_signature( std::string( sign_result.value().begin(), sign_result.value().end() ) );
 
         accountComm::AccountMessage envelope;
-        envelope.mutable_signed_head_request()->CopyFrom( signed_req );
+        envelope.mutable_head_request()->CopyFrom( signed_req );
 
         logger_->debug( "[{}] Sending HeadRequest for {} topics", address_.substr( 0, 8 ), topics.size() );
 
