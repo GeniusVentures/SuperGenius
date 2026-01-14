@@ -6,14 +6,10 @@
  */
 
 #include "Migration3_4_0To3_5_0.hpp"
+
 #include "account/GeniusAccount.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
-
-#include <filesystem>
-#include <algorithm>
-#include <chrono>
-#include <vector>
 
 namespace sgns
 {
@@ -423,7 +419,7 @@ namespace sgns
             return std::shared_ptr<crdt::GlobalDB>{};
         }
 
-        logger_->debug( "Initializing legacy {} DB at path {}", ToVersion(), full_path );
+        logger_->debug( "Initializing legacy {} DB at path {}", FromVersion(), full_path );
 
         auto maybe_db_3_4_0 = crdt::GlobalDB::New( ioContext_,
                                                    full_path,
@@ -435,11 +431,11 @@ namespace sgns
 
         if ( !maybe_db_3_4_0.has_value() )
         {
-            logger_->error( "Legacy {} DB error at path {}", ToVersion(), full_path );
+            logger_->error( "Legacy {} DB error at path {}", FromVersion(), full_path );
             return outcome::failure( boost::system::error_code{} );
         }
 
-        logger_->debug( "Started legacy {} DB at path {}", ToVersion(), full_path );
+        logger_->debug( "Started legacy {} DB at path {}", FromVersion(), full_path );
         return std::move( maybe_db_3_4_0.value() );
     }
 

@@ -9,7 +9,7 @@ namespace sgns
     class LinuxSecureStorage : public JSONBackend
     {
     public:
-        explicit LinuxSecureStorage();
+        explicit LinuxSecureStorage(std::string identifier);
 
         ~LinuxSecureStorage() override = default;
 
@@ -18,12 +18,12 @@ namespace sgns
             return "LinuxSecureStorage";
         }
 
-    protected:
         outcome::result<rapidjson::Document> LoadJSON() const override;
 
         outcome::result<void> SaveJSON( rapidjson::Document document ) override;
 
     private:
-        SecretSchema schema;
+        std::string identifier_;
+        SecretSchema schema_;
     };
 }

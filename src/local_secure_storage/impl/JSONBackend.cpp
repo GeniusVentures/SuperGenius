@@ -1,7 +1,6 @@
 #include "JSONBackend.hpp"
 
 #include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 namespace rj = rapidjson;
 

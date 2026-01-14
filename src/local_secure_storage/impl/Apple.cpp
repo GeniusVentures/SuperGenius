@@ -12,6 +12,8 @@ namespace rj = rapidjson;
 
 namespace sgns
 {
+    AppleSecureStorage::AppleSecureStorage( std::string identifier ) : identifier_( std::string("SuperGenius_") + identifier ) {}
+
     outcome::result<rapidjson::Document> AppleSecureStorage::LoadJSON() const
     {
         CFMutableDictionaryRef query = CFDictionaryCreateMutable( kCFAllocatorDefault,
@@ -19,12 +21,14 @@ namespace sgns
                                                                   &kCFTypeDictionaryKeyCallBacks,
                                                                   &kCFTypeDictionaryValueCallBacks );
         CFDictionarySetValue( query, kSecClass, kSecClassGenericPassword );
-        CFDictionarySetValue( query,
-                              kSecAttrService,
-                              CFStringCreateWithCString( kCFAllocatorDefault, "SuperGenius", kCFStringEncodingUTF8 ) );
-        CFDictionarySetValue( query,
-                              kSecAttrAccount,
-                              CFStringCreateWithCString( kCFAllocatorDefault, "SuperGenius", kCFStringEncodingUTF8 ) );
+        CFDictionarySetValue(
+            query,
+            kSecAttrService,
+            CFStringCreateWithCString( kCFAllocatorDefault, identifier_.c_str(), kCFStringEncodingUTF8 ) );
+        CFDictionarySetValue(
+            query,
+            kSecAttrAccount,
+            CFStringCreateWithCString( kCFAllocatorDefault, identifier_.c_str(), kCFStringEncodingUTF8 ) );
         CFDictionarySetValue( query, kSecReturnData, kCFBooleanTrue );
         CFDictionarySetValue( query, kSecMatchLimit, kSecMatchLimitOne );
 
@@ -63,12 +67,14 @@ namespace sgns
                                                                   &kCFTypeDictionaryValueCallBacks );
 
         CFDictionarySetValue( query, kSecClass, kSecClassGenericPassword );
-        CFDictionarySetValue( query,
-                              kSecAttrService,
-                              CFStringCreateWithCString( kCFAllocatorDefault, "SuperGenius", kCFStringEncodingUTF8 ) );
-        CFDictionarySetValue( query,
-                              kSecAttrAccount,
-                              CFStringCreateWithCString( kCFAllocatorDefault, "SuperGenius", kCFStringEncodingUTF8 ) );
+        CFDictionarySetValue(
+            query,
+            kSecAttrService,
+            CFStringCreateWithCString( kCFAllocatorDefault, identifier_.c_str(), kCFStringEncodingUTF8 ) );
+        CFDictionarySetValue(
+            query,
+            kSecAttrAccount,
+            CFStringCreateWithCString( kCFAllocatorDefault, identifier_.c_str(), kCFStringEncodingUTF8 ) );
 
         CFMutableDictionaryRef addQuery = CFDictionaryCreateMutableCopy( kCFAllocatorDefault, 0, query );
         CFDictionarySetValue( addQuery, kSecValueData, binaryData );

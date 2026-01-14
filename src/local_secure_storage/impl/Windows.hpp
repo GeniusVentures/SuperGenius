@@ -9,14 +9,18 @@ namespace sgns
     class WindowsSecureStorage : public JSONBackend
     {
     public:
+        explicit WindowsSecureStorage(std::string identifier);
+
         std::string GetName() override
         {
             return "WindowsSecureStorage";
         }
 
-    protected:
         outcome::result<rapidjson::Document> LoadJSON() const override;
 
         outcome::result<void> SaveJSON( rapidjson::Document document ) override;
+
+    private:
+        std::string identifier_;
     };
 }

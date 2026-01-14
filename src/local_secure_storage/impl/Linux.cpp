@@ -1,5 +1,7 @@
 #include "Linux.hpp"
 
+#include "crypto/hasher/hasher_impl.hpp"
+
 #include <iostream>
 
 #include <glib.h>
@@ -13,12 +15,15 @@ namespace rj = rapidjson;
 
 namespace sgns
 {
-    LinuxSecureStorage::LinuxSecureStorage() : schema( { "SuperGenius", SECRET_SCHEMA_NONE } ) {}
+    LinuxSecureStorage::LinuxSecureStorage( std::string identifier ) :
+        identifier_( std::move( identifier ) ), schema_( { identifier_.c_str(), SECRET_SCHEMA_NONE } )
+    {
+    }
 
     outcome::result<rj::Document> LinuxSecureStorage::LoadJSON() const
     {
         GError      *error  = nullptr;
-        SecretValue *result = secret_password_lookup_binary_sync( &schema, nullptr, &error, NULL );
+        SecretValue *result = secret_password_lookup_binary_sync( &schema_, nullptr, &error, NULL );
 
         if ( result == nullptr )
         {
@@ -58,7 +63,7 @@ namespace sgns
         GError      *error = nullptr;
         SecretValue *value = secret_value_new( password.GetString(), password.GetLength(), "application/json" );
 
-        if ( !secret_password_store_binary_sync( &schema,
+        if ( !secret_password_store_binary_sync( &schema_,
                                                  SECRET_COLLECTION_DEFAULT,
                                                  "SuperGenius",
                                                  value,
@@ -71,11 +76,11 @@ namespace sgns
                 std::cerr << "Error saving secret: " << error->message << '\n';
                 g_error_free( error );
             }
-            secret_value_unref(value);
+            secret_value_unref( value );
             return outcome::failure( std::errc::bad_message );
         }
-        
-        secret_value_unref(value);
+
+        secret_value_unref( value );
         return outcome::success();
     }
 }

@@ -24,7 +24,6 @@ namespace sgns
 
         outcome::result<bool> DeleteKey( const std::string &key ) override;
 
-    protected:
         virtual outcome::result<rapidjson::Document> LoadJSON() const = 0;
 
         virtual outcome::result<void> SaveJSON( rapidjson::Document document ) = 0;

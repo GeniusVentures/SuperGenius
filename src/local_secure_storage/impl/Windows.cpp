@@ -12,11 +12,13 @@ namespace rj = rapidjson;
 
 namespace sgns
 {
+    WindowsSecureStorage::WindowsSecureStorage( std::string identifier ) : identifier_( std::move( identifier ) ) {}
+
     outcome::result<rapidjson::Document> WindowsSecureStorage::LoadJSON() const
     {
-        PCREDENTIALW p_cred;
+        PCREDENTIALA p_cred;
 
-        auto exists = CredReadW( L"SuperGenius", CRED_TYPE_GENERIC, 0, &p_cred );
+        auto exists = CredReadA( identifier_.c_str(), CRED_TYPE_GENERIC, 0, &p_cred );
 
         if ( !exists )
         {
@@ -31,7 +33,7 @@ namespace sgns
         }
 
         rj::Document d;
-        d.Parse( reinterpret_cast<const char*>(p_cred->CredentialBlob), p_cred->CredentialBlobSize );
+        d.Parse( reinterpret_cast<const char *>( p_cred->CredentialBlob ), p_cred->CredentialBlobSize );
 
         CredFree( p_cred );
 
@@ -49,15 +51,15 @@ namespace sgns
         rj::Writer       writer( password );
         document.Accept( writer );
 
-        CREDENTIALW cred        = {};
+        CREDENTIALA cred        = {};
         cred.Type               = CRED_TYPE_GENERIC;
-        cred.TargetName         = L"SuperGenius";
-        cred.UserName           = L"";
+        cred.TargetName         = identifier_.c_str();
+        cred.UserName           = "";
         cred.CredentialBlobSize = password.GetLength();
-        cred.CredentialBlob     = reinterpret_cast<LPBYTE>(const_cast<char*>(password.GetString()));
+        cred.CredentialBlob     = reinterpret_cast<LPBYTE>( const_cast<char *>( password.GetString() ) );
         cred.Persist            = CRED_PERSIST_LOCAL_MACHINE;
 
-        if ( !CredWriteW( &cred, 0 ) )
+        if ( !CredWriteA( &cred, 0 ) )
         {
             return outcome::failure( std::errc::bad_message );
         }

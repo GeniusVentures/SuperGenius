@@ -9,6 +9,7 @@
 #include <string>
 #include <memory>
 #include <atomic>
+
 #include "IMigrationStep.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -34,7 +35,7 @@ namespace sgns
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
                                std::shared_ptr<GeniusAccount>                                  account );
-        ~Migration3_4_0To3_5_0();
+        ~Migration3_4_0To3_5_0() override;
 
         /**
          * @brief   Get the source version for this step.

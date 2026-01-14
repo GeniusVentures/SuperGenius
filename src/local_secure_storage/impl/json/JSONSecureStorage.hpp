@@ -9,8 +9,11 @@
 
 #include "../../ISecureStorage.hpp"
 
+#include <rapidjson/document.h>
+
 namespace sgns
 {
+    namespace rj = rapidjson;
 
     class JSONSecureStorage : public ISecureStorage
     {
@@ -29,6 +32,8 @@ namespace sgns
         {
             return "LocalSecureStorage";
         }
+
+        outcome::result<rj::Document> LoadJSON() const;
 
         static JSONSecureStorage &GetInstance();
 

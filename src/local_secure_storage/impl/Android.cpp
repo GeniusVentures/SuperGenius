@@ -39,8 +39,7 @@ namespace rj = rapidjson;
 
 namespace sgns
 {
-    AndroidSecureStorage::AndroidSecureStorage( JavaVM *jvm ) : jvm_( jvm )
-    {
+    AndroidSecureStorage::AndroidSecureStorage( std::string identifier, JavaVM *jvm ): jvm_(jvm) {
         if ( jvm_ == nullptr )
         {
             if ( g_jvm == nullptr )

@@ -9,7 +9,7 @@ namespace sgns
     class AndroidSecureStorage : public JSONBackend
     {
     public:
-        AndroidSecureStorage( JavaVM *jvm = nullptr );
+        explicit AndroidSecureStorage(std::string identifier, JavaVM *jvm = nullptr);
 
         ~AndroidSecureStorage() override;
 
@@ -18,7 +18,6 @@ namespace sgns
             return "AndroidSecureStorage";
         }
 
-    protected:
         outcome::result<rapidjson::Document> LoadJSON() const override;
 
         outcome::result<void> SaveJSON( rapidjson::Document document ) override;
