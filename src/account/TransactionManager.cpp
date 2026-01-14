@@ -674,6 +674,8 @@ namespace sgns
         auto [transaction_batch, maybe_crdt_transaction]          = item;
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
 
+        m_logger->info( "SendTransactionItem Happening" );
+
         if ( maybe_crdt_transaction.has_value() && maybe_crdt_transaction.value() )
         {
             crdt_transaction = std::move( maybe_crdt_transaction.value() );
@@ -769,7 +771,37 @@ namespace sgns
                                  full_node_m,
                                  expected_next_nonce,
                                  transaction->dag_st.nonce() );
-
+                
+                // If we're ahead of the network nonce, broadcast heads for all topics involved
+                // so full nodes can catch up and verify our transactions
+                if ( !full_node_m && transaction->dag_st.nonce() > expected_next_nonce )
+                {
+                    auto parsedTopics = ParseTransaction( transaction );
+                    if ( parsedTopics.has_value() )
+                    {
+                        std::vector<std::string> broadcast_topics;
+                        for ( const auto &topic : parsedTopics.value() )
+                        {
+                            //if ( topic != full_node_topic_m )
+                            //{
+                                broadcast_topics.push_back( topic );
+                            //}
+                        }
+                        
+                        if ( !broadcast_topics.empty() )
+                        {
+                            auto broadcast_result = globaldb_m->RequestHeadBroadcast( broadcast_topics );
+                            if ( broadcast_result.has_value() )
+                            {
+                                m_logger->info( "[{} - full: {}] Broadcasted heads for {} topics since we're ahead",
+                                                account_m->GetAddress().substr( 0, 8 ),
+                                                full_node_m,
+                                                broadcast_topics.size() );
+                            }
+                        }
+                    }
+                }
+                                 
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
@@ -812,6 +844,42 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
+
+        // If we're not a full node and have transactions going to VERIFYING state,
+        // we need to broadcast our heads so full nodes can see our updates
+        if ( !full_node_m )
+        {
+            // Collect topics to broadcast: our address + any other addresses involved in transactions
+            std::vector<std::string> broadcast_topics;
+            broadcast_topics.reserve( topicSet.size() );
+            for ( const auto &topic : topicSet )
+            {
+                // Don't broadcast to full_node_topic_m - that's just for listening
+                //if ( topic != full_node_topic_m )
+                //{
+                    broadcast_topics.push_back( topic );
+                //}
+            }
+
+            if ( !broadcast_topics.empty() )
+            {
+                auto broadcast_result = globaldb_m->RequestHeadBroadcast( broadcast_topics );
+                if ( broadcast_result.has_error() )
+                {
+                    m_logger->warn( "[{} - full: {}] Failed to broadcast heads for {} topics after transaction send",
+                                    account_m->GetAddress().substr( 0, 8 ),
+                                    full_node_m,
+                                    broadcast_topics.size() );
+                }
+                else
+                {
+                    m_logger->debug( "[{} - full: {}] Broadcasted heads for {} topics to help full nodes verify",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     broadcast_topics.size() );
+                }
+            }
+        }
 
         return nonces_set;
     }
