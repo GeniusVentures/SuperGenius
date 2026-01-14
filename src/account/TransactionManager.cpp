@@ -304,7 +304,21 @@ namespace sgns
                                          full_node_m );
                         break;
                     }
-                    tx_queue_m.pop_front();
+                    
+                    // Check if error was due to network timeout - if so, keep transaction in queue for retry
+                    // when full node becomes available
+                    if ( send_result.error() == boost::system::errc::make_error_code( boost::system::errc::timed_out ) )
+                    {
+                        m_logger->info( "[{} - full: {}] Network timeout - keeping transaction in queue for retry",
+                                        account_m->GetAddress().substr( 0, 8 ),
+                                        full_node_m );
+                        // Don't pop - transaction stays in queue for retry when we return to READY
+                    }
+                    else
+                    {
+                        // Other errors (like invalid_argument from nonce mismatch) - remove from queue
+                        tx_queue_m.pop_front();
+                    }
                     break;
                 }
                 auto nonces_sent = send_result.value();
