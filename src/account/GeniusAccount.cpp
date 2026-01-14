@@ -11,6 +11,9 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/pubsub_broadcaster_ext.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
+#include "primitives/cid/cid.hpp"
 
 namespace
 {
@@ -109,6 +112,21 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
+        methods.has_block_cid_ = [weakptr( weak_from_this() )]( const std::string &cid ) -> outcome::result<bool>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->has_cid_method_ )
+                {
+                    return self->has_cid_method_( cid );
+                }
+
+                return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
+            }
+
+            return outcome::failure( std::errc::owner_dead );
+        };
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
@@ -136,6 +154,32 @@ namespace sgns
                         return strong->AddSingleCIDInfo( cid, peer_id, address );
                     }
                     return false;
+                } );
+            SetHasBlockCidMethod(
+                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>( broadcaster ) }](
+                    const std::string &cid ) -> outcome::result<bool>
+                {
+                    if ( auto strong = weakptr.lock() )
+                    {
+                        auto cid_result = CID::fromString( cid );
+                        if ( cid_result.has_error() )
+                        {
+                            return outcome::failure( std::errc::invalid_argument );
+                        }
+                        auto dag_syncer =
+                            std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( strong->GetDagSyncer() );
+                        if ( !dag_syncer )
+                        {
+                            return outcome::failure( std::errc::no_such_device );
+                        }
+                        auto has_block = dag_syncer->HasBlock( cid_result.value() );
+                        if ( has_block.has_error() )
+                        {
+                            return outcome::failure( has_block.error() );
+                        }
+                        return has_block.value();
+                    }
+                    return outcome::failure( std::errc::owner_dead );
                 } );
             genius_account_logger()->debug( "Registered block response handler" );
             ret = true;
@@ -716,6 +760,20 @@ namespace sgns
         return messenger_;
     }
 
+    outcome::result<void> GeniusAccount::RequestRegularBlock(
+        uint64_t                                            timeout_ms,
+        const std::string                                  &cid,
+        std::function<void( outcome::result<std::string> )> callback ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting block by CID {}", cid );
+
+        return messenger_->RequestRegularBlock( timeout_ms, cid, std::move( callback ) );
+    }
+  
     void GeniusAccount::SetGetBlockChainCIDMethod(
         std::function<outcome::result<std::string>( uint8_t, const std::string & )> method )
     {
@@ -727,5 +785,17 @@ namespace sgns
     {
         std::lock_guard lock( get_cids_mutex_ );
         get_cids_method_ = nullptr;
+    }
+
+    void GeniusAccount::SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        has_cid_method_ = std::move( method );
+    }
+
+    void GeniusAccount::ClearHasBlockCidMethod( void )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        has_cid_method_ = nullptr;
     }
 }

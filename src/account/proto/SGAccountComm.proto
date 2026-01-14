@@ -9,6 +9,7 @@ message AccountMessage {
     SignedBlockRequest block_request = 3;    // changed: generic block request with index
     SignedBlockResponse block_response = 4;
     SignedHeadRequest head_request = 5;
+    SignedBlockCidRequest block_cid_request = 5;
   }
 }
 
@@ -47,6 +48,18 @@ message BlockRequest {
 
 message SignedBlockRequest {
   BlockRequest data = 1;
+  bytes signature = 2;
+}
+
+message BlockCidRequest {
+  string requester_address = 1;
+  uint64 request_id = 2;
+  uint64 timestamp = 3;
+  string cid = 4;
+}
+
+message SignedBlockCidRequest {
+  BlockCidRequest data = 1;
   bytes signature = 2;
 }
 

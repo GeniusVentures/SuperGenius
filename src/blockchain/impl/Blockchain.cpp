@@ -6,6 +6,7 @@
  */
 #include <chrono>
 #include "blockchain/Blockchain.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include <primitives/cid/cid.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
@@ -33,6 +34,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
             return "Failed to serialize/deserialize account creation block";
         case Error::ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK:
             return "Account creation block not properly linked to genesis";
+        case Error::VALIDATOR_REGISTRY_CREATION_FAILED:
+            return "Couldn't create validator registry";
+        case Error::BLOCKCHAIN_NOT_INITIALIZED:
+            return "Blockchain not fully initialized";
     }
     return "Unknown error";
 }
@@ -79,10 +84,61 @@ namespace sgns
                 }
                 return std::nullopt;
             } );
-        (void)genesis_filter_initialized;
-        (void)account_creation_filter_initialized;
 
-        (void)instance->db_->RegisterNewElementCallback(
+        instance->validator_registry_ = blockchain::ValidatorRegistry::New(
+            instance->db_,
+            2,
+            3,
+            blockchain::ValidatorRegistry::WeightConfig{},
+            GetAuthorizedFullNodeAddress(),
+
+            [weak_ptr( std::weak_ptr<Blockchain>(
+                instance ) )]( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                }
+            },
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->validator_registry_initialized_.store( initialized );
+                    if ( !initialized )
+                    {
+                        strong->logger_->error( "[{}] Validator registry not initialized yet",
+                                               strong->account_->GetAddress().substr( 0, 8 ) );
+                    }
+                }
+            } );
+
+        if ( !instance->validator_registry_ )
+        {
+            instance->logger_->error( "[{}] Failed to create validator registry",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
+        }
+
+        auto ensure_registry_result = instance->EnsureValidatorRegistry();
+        if ( ensure_registry_result.has_error() )
+        {
+            instance->logger_->error( "[{}] Failed to ensure validator registry during init",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+
+        if ( !genesis_filter_initialized )
+        {
+            instance->logger_->error( "[{}] Failed to initialize genesis filter",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+        if ( !account_creation_filter_initialized )
+        {
+            instance->logger_->error( "[{}] Failed to initialize account creation filter",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+
+        const bool genesis_callback_registered = instance->db_->RegisterNewElementCallback(
             "/?" + std::string( GENESIS_KEY ),
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
@@ -93,7 +149,7 @@ namespace sgns
                 }
             } );
 
-        (void)instance->db_->RegisterNewElementCallback(
+        const bool account_creation_callback_registered = instance->db_->RegisterNewElementCallback(
             "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
                                                                  const std::string                     &cid )
@@ -103,6 +159,11 @@ namespace sgns
                     strong->AccountCreationReceivedCallback( std::move( new_data ), cid );
                 }
             } );
+
+        instance->filters_registered_   = genesis_filter_initialized && account_creation_filter_initialized;
+        instance->callbacks_registered_ = genesis_callback_registered && account_creation_callback_registered;
+        instance->created_successfully_ = instance->filters_registered_ && instance->callbacks_registered_ &&
+                                          instance->validator_registry_;
         instance->account_->SetGetBlockChainCIDMethod(
             [weak_ptr( std::weak_ptr<Blockchain>(
                 instance ) )]( uint8_t block_index, const std::string &address ) -> outcome::result<std::string>
@@ -173,6 +234,19 @@ namespace sgns
 
     outcome::result<void> Blockchain::Start()
     {
+        if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
+             !validator_registry_initialized_.load() )
+        {
+            logger_->warn(
+                "[{}] Blockchain start deferred (created: {}, filters: {}, callbacks: {}, validator_registry: {})",
+                account_->GetAddress().substr( 0, 8 ),
+                created_successfully_,
+                filters_registered_,
+                callbacks_registered_,
+                validator_registry_initialized_.load() );
+            return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+        }
+
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
@@ -195,6 +269,7 @@ namespace sgns
                            account_->GetAddress().substr( 0, 8 ) );
             OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
             OUTCOME_TRY( InitGenesisCID() );
+            OUTCOME_TRY( EnsureValidatorRegistry() );
             OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
             OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
 
@@ -261,6 +336,7 @@ namespace sgns
                 logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
                 OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
                 OUTCOME_TRY( InitGenesisCID() );
+                OUTCOME_TRY( EnsureValidatorRegistry() );
 
                 logger_->info( "[{}] Genesis block verification completed successfully",
                                account_->GetAddress().substr( 0, 8 ) );
@@ -335,6 +411,25 @@ namespace sgns
             return outcome::success();
         }
         return outcome::failure( std::errc::no_such_file_or_directory );
+    }
+
+    outcome::result<void> Blockchain::EnsureValidatorRegistry()
+    {
+        if ( account_->GetAddress() != GetAuthorizedFullNodeAddress() )
+        {
+            return outcome::success();
+        }
+
+        auto registry_result = validator_registry_->StoreGenesisRegistry(
+            GetAuthorizedFullNodeAddress(),
+            [this]( std::vector<uint8_t> data ) { return account_->Sign( std::move( data ) ); } );
+        if ( registry_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to ensure validator registry", account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
+        }
+
+        return outcome::success();
     }
 
     outcome::result<void> Blockchain::InitAccountCreationCID( const std::string &address )
@@ -691,6 +786,16 @@ namespace sgns
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
+        auto registry_result = validator_registry_->StoreGenesisRegistry(
+            GetAuthorizedFullNodeAddress(),
+            [this]( std::vector<uint8_t> data ) { return account_->Sign( std::move( data ) ); } );
+        if ( registry_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to store validator registry in CRDT", account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::VALIDATOR_REGISTRY_CREATION_FAILED );
+        }
+        logger_->info( "[{}] Validator registry initialized", account_->GetAddress().substr( 0, 8 ) );
+
         logger_->info( "[{}] Genesis block created and stored successfully", account_->GetAddress().substr( 0, 8 ) );
         return outcome::success();
     }
@@ -976,9 +1081,8 @@ namespace sgns
         do
         {
             sgns::blockchain::GenesisBlock new_genesis;
-            if ( !new_genesis.ParseFromArray(
-                     reinterpret_cast<const uint8_t *>( element.value().data() ),
-                     static_cast<int>( element.value().size() ) ) )
+            if ( !new_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
+                                              static_cast<int>( element.value().size() ) ) )
             {
                 logger_->warn( "[{}] Failed to parse incoming genesis block, rejecting: {}",
                                account_->GetAddress().substr( 0, 8 ),
@@ -1011,9 +1115,8 @@ namespace sgns
             }
 
             sgns::blockchain::GenesisBlock existing_genesis;
-            if ( !existing_genesis.ParseFromArray(
-                     reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
-                     static_cast<int>( existing_serialized.size() ) ) )
+            if ( !existing_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
+                                                   static_cast<int>( existing_serialized.size() ) ) )
             {
                 logger_->warn( "[{}] Stored genesis block is not parsable, accepting new candidate",
                                account_->GetAddress().substr( 0, 8 ) );
@@ -1053,17 +1156,15 @@ namespace sgns
         return std::nullopt;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> Blockchain::FilterAccountCreation(
-        const crdt::pb::Element &element )
+    std::optional<std::vector<crdt::pb::Element>> Blockchain::FilterAccountCreation( const crdt::pb::Element &element )
     {
         bool reject = false;
 
         do
         {
             sgns::blockchain::AccountCreationBlock new_block;
-            if ( !new_block.ParseFromArray(
-                     reinterpret_cast<const uint8_t *>( element.value().data() ),
-                     static_cast<int>( element.value().size() ) ) )
+            if ( !new_block.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
+                                            static_cast<int>( element.value().size() ) ) )
             {
                 logger_->warn( "[{}] Failed to parse incoming account creation block, rejecting: {}",
                                account_->GetAddress().substr( 0, 8 ),
@@ -1116,9 +1217,8 @@ namespace sgns
             }
 
             sgns::blockchain::AccountCreationBlock existing_block;
-            if ( !existing_block.ParseFromArray(
-                     reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
-                     static_cast<int>( existing_serialized.size() ) ) )
+            if ( !existing_block.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
+                                                 static_cast<int>( existing_serialized.size() ) ) )
             {
                 logger_->warn( "[{}] Stored account creation block for {} is not parsable, accepting new candidate",
                                account_->GetAddress().substr( 0, 8 ),
@@ -1126,8 +1226,8 @@ namespace sgns
                 break;
             }
 
-            const bool existing_genesis_ok =
-                !genesis_known || existing_block.genesis_block_cid() == cids_.genesis_.value();
+            const bool existing_genesis_ok = !genesis_known ||
+                                             existing_block.genesis_block_cid() == cids_.genesis_.value();
             const bool existing_signature_ok = VerifySignature( existing_block );
 
             if ( !( existing_genesis_ok && existing_signature_ok ) )

@@ -134,11 +134,37 @@ namespace sgns
                         strong->blockchain_status_.store( Status::ST_SUCCESS );
                     }
                 } );
-            blockchain_->Start();
         }
+
+        auto retry_duration       = std::chrono::minutes( 2 );
+        auto retry_interval       = std::chrono::seconds( 5 );
+        auto retry_start_time     = std::chrono::steady_clock::now();
+        auto last_log_time        = retry_start_time;
+        outcome::result<void> start_result =
+            outcome::failure( Blockchain::Error::BLOCKCHAIN_NOT_INITIALIZED );
+        do
+        {
+            start_result = blockchain_->Start();
+            if ( start_result.has_error() )
+            {
+                logger_->error( "Error starting blockchain: {}", start_result.error().message() );
+            }
+
+            auto current_time = std::chrono::steady_clock::now();
+            if ( current_time - last_log_time >= std::chrono::seconds( 30 ) )
+            {
+                auto elapsed_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>( current_time - retry_start_time ).count();
+                logger_->info( "{}: Retrying blockchain start (elapsed: {}s)", __func__, elapsed_seconds );
+                last_log_time = current_time;
+            }
+            std::this_thread::sleep_for( retry_interval );
+        } while ( std::chrono::steady_clock::now() - retry_start_time < retry_duration &&
+                  start_result.has_error() );
+
         auto timeout_duration     = std::chrono::minutes( 4 );
         auto start_time           = std::chrono::steady_clock::now();
-        auto last_log_time        = start_time;
+        last_log_time             = start_time;
         bool blockchain_succeeded = false;
 
         while ( std::chrono::steady_clock::now() - start_time < timeout_duration )

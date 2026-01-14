@@ -417,6 +417,7 @@ namespace sgns
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
+        auto loggerValidator       = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
@@ -457,6 +458,7 @@ namespace sgns
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator       = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
