@@ -205,6 +205,7 @@ namespace sgns
                     break;
                 case accountComm::AccountMessage::kHeadRequest:
                     HandleHeadRequest( acc_msg.head_request() );
+                    break;
                 case accountComm::AccountMessage::kBlockCidRequest:
                     HandleBlockCidRequest( acc_msg.block_cid_request() );
                     break;
@@ -346,7 +347,9 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
         req.set_cid( cid );
-
+        logger_->debug( "[{}] Requesting block by CID {} with req_id {}",
+                        address_.substr( 0, 8 ),
+                        cid, req_id );
         std::string encoded;
         if ( !req.SerializeToString( &encoded ) )
         {
@@ -408,6 +411,10 @@ namespace sgns
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+        logger_->debug( "[{}] Preparing BlockResponse for req_id {} with requester address {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.requester_address() );
 
         if ( have_cid )
         {
@@ -522,6 +529,10 @@ namespace sgns
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+        logger_->debug( "[{}] Preparing BlockResponse for req_id {} with requester address {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.requester_address() );
 
         if ( have_cid )
         {
