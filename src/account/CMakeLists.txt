@@ -61,7 +61,7 @@ add_library(genius_node
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
-    Migration3_5_0To3_6_0.cpp
+        Migration3_5_0To3_5_1.cpp
 )
 
 set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)

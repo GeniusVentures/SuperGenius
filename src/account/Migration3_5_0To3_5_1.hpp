@@ -8,10 +8,10 @@
 
 namespace sgns
 {
-    class Migration3_5_0To3_6_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_5_0To3_6_0>
+    class Migration3_5_0To3_5_1 : public IMigrationStep, public std::enable_shared_from_this<Migration3_5_0To3_5_1>
     {
     public:
-        Migration3_5_0To3_6_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
+        Migration3_5_0To3_5_1( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
@@ -27,8 +27,7 @@ namespace sgns
         outcome::result<bool> IsRequired() const override;
 
     private:
-        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb();
-        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitTargetDb();
+        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb() const;
 
         base::Logger logger_ = base::createLogger( "MigrationStep" ); ///< Logger for this step.
 
@@ -41,7 +40,6 @@ namespace sgns
         std::string base58key_;                                                     ///< Key to build legacy paths.
         
         std::shared_ptr<crdt::GlobalDB> db_3_5_0_; ///< Legacy DB
-        std::shared_ptr<crdt::GlobalDB> db_3_6_0_; ///< Target GlobalDB.
         std::shared_ptr<sgns::JSONSecureStorage> json_storage_;
         std::shared_ptr<sgns::SecureStorageImpl> secure_storage_;
     };
