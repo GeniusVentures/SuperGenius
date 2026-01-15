@@ -366,8 +366,12 @@ set_target_properties(TrustWalletCore PROPERTIES IMPORTED_LOCATION "${TrustWalle
 
 target_include_directories(TrustWalletCore INTERFACE "${TrustWalletCore_INCLUDE_DIR}")
 
-if(${IOS})
+if (APPLE)
+    find_library(CORE_FOUNDATION CoreFoundation)
     find_library(SECURITY_FRAMEWORK Security)
+endif()
+
+if(${IOS})
     target_link_libraries(TrustWalletCore INTERFACE ${SECURITY_FRAMEWORK})
 endif()
 

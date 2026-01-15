@@ -21,10 +21,8 @@ else()
 endif()
 
 addtest(migration_sync_test
-migration_sync_test.cpp
-    )
-
-target_include_directories(migration_sync_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+    migration_sync_test.cpp
+)
 
 target_link_libraries(migration_sync_test
     genius_node
@@ -36,18 +34,15 @@ elseif(APPLE)
     target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
     target_link_options(migration_sync_test PUBLIC
-        "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
-        "-Wl,--no-whole-archive"
+            "-Wl,--whole-archive"
+            "$<TARGET_FILE:genius_node>"
+            "-Wl,--no-whole-archive"
     )
 endif()
 
-
 addtest(transaction_crash_test
-transaction_crash_test.cpp
-    )
-
-target_include_directories(transaction_crash_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+    transaction_crash_test.cpp
+)
 
 target_link_libraries(transaction_crash_test
     genius_node

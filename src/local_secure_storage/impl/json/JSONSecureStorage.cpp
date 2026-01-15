@@ -4,25 +4,26 @@
  * @date       2024-06-06
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+
 #include <cstdio>
 #include <array>
-#include <rapidjson/document.h>
+
 #include <rapidjson/writer.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/filewritestream.h>
 #include "singleton/CComponentFactory.hpp"
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include <boost/filesystem.hpp>
 
 namespace sgns
 {
-    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key )
+    outcome::result<rj::Document> JSONSecureStorage::LoadJSON() const
     {
         auto fullpath = directory_ + "secure_storage.json";
         auto file     = std::fopen( fullpath.data(), "r" );
         if ( !file )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::no_such_file_or_directory );
         }
 
         std::array<char, 512>     buff{};
@@ -34,12 +35,18 @@ namespace sgns
         document.ParseStream( input_stream );
         if ( document.HasParseError() )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::bad_message );
         }
 
+        return document;
+    }
+
+    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key )
+    {
+        OUTCOME_TRY( auto document, LoadJSON() );
         auto maybe_field = document.FindMember( "GeniusAccount" );
 
-        if ( maybe_field == document.MemberEnd() )
+        if ( maybe_field == document.MemberEnd() || !maybe_field->value.IsObject() )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -89,5 +96,10 @@ namespace sgns
         std::fclose( file );
 
         return outcome::success();
+    }
+
+    outcome::result<bool> JSONSecureStorage::DeleteKey( const std::string &key )
+    {
+        return outcome::failure( std::errc::operation_not_supported );
     }
 }

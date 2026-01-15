@@ -48,8 +48,8 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED; ///< Predefined ElGamal public key
-        static constexpr uint64_t NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
+        static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
          * @brief       Factory constructor of new GeniusAccount
@@ -279,6 +279,7 @@ namespace sgns
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             ISecureStorage &storage,
             const char     *eth_private_key );
+
     protected:
         friend class Blockchain;
         void SetGetBlockChainCIDMethod(
@@ -296,22 +297,24 @@ namespace sgns
         std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address
         mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
 
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
         std::shared_ptr<ISecureStorage>                 storage_;          ///< Secure storage instance
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
-        
+
         // Nonce request tracking
-        mutable std::mutex                              nonce_request_mutex_;   ///< Mutex for nonce request tracking
-        mutable std::condition_variable                 nonce_request_cv_;      ///< Condition variable for waiting on nonce requests
-        mutable bool                                    nonce_request_in_progress_; ///< Flag indicating if a nonce request is in progress
-        mutable std::optional<outcome::result<uint64_t>> cached_nonce_result_;  ///< Cached result from in-progress request
-        mutable std::chrono::steady_clock::time_point   cached_nonce_timestamp_; ///< Timestamp when cached nonce was obtained
-        std::mutex                                      get_cids_mutex_;        ///< Mutex for the genesis method
+        mutable std::mutex              nonce_request_mutex_; ///< Mutex for nonce request tracking
+        mutable std::condition_variable nonce_request_cv_;    ///< Condition variable for waiting on nonce requests
+        mutable bool nonce_request_in_progress_;              ///< Flag indicating if a nonce request is in progress
+        mutable std::optional<outcome::result<uint64_t>>
+            cached_nonce_result_; ///< Cached result from in-progress request
+        mutable std::chrono::steady_clock::time_point
+                   cached_nonce_timestamp_; ///< Timestamp when cached nonce was obtained
+        std::mutex get_cids_mutex_;         ///< Mutex for the genesis method
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
         std::function<outcome::result<bool>( const std::string & )> has_cid_method_; ///< Function to check CID presence

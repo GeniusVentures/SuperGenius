@@ -1,4 +1,4 @@
-set(PROJECT_VERSION 3.5.0)
+set(PROJECT_VERSION 3.5.1)
 
 if(NOT SGNS_NETWORK STREQUAL "release")
     add_compile_definitions(DEV_NET)

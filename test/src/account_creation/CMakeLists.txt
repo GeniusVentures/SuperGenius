@@ -6,6 +6,7 @@ target_include_directories(account_creation_test PRIVATE ${AsyncIOManager_INCLUD
 
 target_link_libraries(account_creation_test
     genius_node
+    json_secure_storage
 )
 
 if(MSVC)

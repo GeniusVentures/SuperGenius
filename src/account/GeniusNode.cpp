@@ -4,6 +4,10 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+
+#include <mutex>
+#include <stdexcept>
+
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -20,8 +24,7 @@
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-//#include "processing/processors/processing_processor_mnn_image.hpp"
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/SecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -143,7 +146,7 @@ namespace sgns
                             bool                is_full_node,
                             bool                use_upnp ) :
         account_( GeniusAccount::New( dev_config.TokenID,
-                                      std::make_shared<JSONSecureStorage>( dev_config.BaseWritePath ),
+                                      std::make_shared<SecureStorageImpl>( dev_config.BaseWritePath ),
                                       eth_private_key,
                                       is_full_node ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
@@ -155,13 +158,11 @@ namespace sgns
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
-        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         use_upnp_( use_upnp )
-
     {
-        
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
         InitOpenSSL();
@@ -464,13 +465,13 @@ namespace sgns
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         //AsyncIOManager Loggers
-        auto asioFileCommon         = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
-        auto asioFileManager        = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
-        auto asioHttpCommon         = ConfigureLogger( "HTTPCommon", logdir, spdlog::level::err );
-        auto asioIpfsCommon         = ConfigureLogger( "IPFSCommon", logdir, spdlog::level::err );
-        auto asioIpfsLoader         = ConfigureLogger( "IPFSLoader", logdir, spdlog::level::err );
-        auto asioFileLoader         = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
-        auto asioWSCommon           = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
+        auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
+        auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
+        auto asioHttpCommon  = ConfigureLogger( "HTTPCommon", logdir, spdlog::level::err );
+        auto asioIpfsCommon  = ConfigureLogger( "IPFSCommon", logdir, spdlog::level::err );
+        auto asioIpfsLoader  = ConfigureLogger( "IPFSLoader", logdir, spdlog::level::err );
+        auto asioFileLoader  = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
+        auto asioWSCommon    = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
 #endif
 
         // Logger initialization complete
@@ -881,7 +882,6 @@ namespace sgns
         }
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
-        
         auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
         {
@@ -899,9 +899,9 @@ namespace sgns
 
         //Make a small json to insert without extra indentation and spacing.
         json smalljson;
-        sgns::to_json( smalljson, procmgr->GetProcessingData());
+        sgns::to_json( smalljson, procmgr->GetProcessingData() );
         task.set_ipfs_block_id( uuidstring );
-        task.set_json_data( smalljson.dump(-1) );
+        task.set_json_data( smalljson.dump( -1 ) );
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
         //Get Processing Data
@@ -910,7 +910,7 @@ namespace sgns
         //Split into subtasks
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
-        //Make Copies, trying to use references for passes/input nodes may cause problems. 
+        //Make Copies, trying to use references for passes/input nodes may cause problems.
         auto passes = procdata.get_passes();
         for ( const auto &pass : passes )
         {
@@ -919,21 +919,21 @@ namespace sgns
             {
                 json modeljson;
                 sgns::to_json( modeljson, model );
-                auto   index   = procmgr->GetInputIndex( model.get_source().value() );
+                auto   index = procmgr->GetInputIndex( model.get_source().value() );
                 size_t nChunks =
                     procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
-                rapidjson::StringBuffer buffer;
+                rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
                 taskSplitter.SplitTask( task,
                                         subTasks,
-                                        modeljson.dump(-1),
+                                        modeljson.dump( -1 ),
                                         nChunks,
                                         false,
                                         pubsub_->GetHost()->getId().toBase58() );
             }
         }
-        if (subTasks.size() <= 0)
+        if ( subTasks.size() <= 0 )
         {
             return outcome::failure( Error::INVALID_JSON );
         }
@@ -966,7 +966,6 @@ namespace sgns
 
         return tx_id;
     }
-
 
     uint64_t GeniusNode::GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr )
     {

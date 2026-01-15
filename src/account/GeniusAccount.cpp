@@ -54,8 +54,8 @@ namespace sgns
             instance = std::shared_ptr<GeniusAccount>(
                 new GeniusAccount( std::move( token_id ), std::move( storage ), full_node ) );
 
-            instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
-            instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
+            instance->eth_keypair_ = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
+            instance->elgamal_address_ = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
         }
 
         return instance;
@@ -127,7 +127,7 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
-        messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
+        messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
 
@@ -166,8 +166,7 @@ namespace sgns
                         {
                             return outcome::failure( std::errc::invalid_argument );
                         }
-                        auto dag_syncer =
-                            std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( strong->GetDagSyncer() );
+                        auto dag_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( strong->GetDagSyncer() );
                         if ( !dag_syncer )
                         {
                             return outcome::failure( std::errc::no_such_device );
@@ -200,7 +199,7 @@ namespace sgns
 
     std::string GeniusAccount::GetAddress() const
     {
-        return eth_keypair->GetEntirePubValue();
+        return eth_keypair_->GetEntirePubValue();
     }
 
     uint64_t GeniusAccount::GetBalance( const std::string &address ) const
@@ -411,7 +410,7 @@ namespace sgns
     {
         std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
 
-        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_keypair->get_private_key() );
+        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_keypair_->get_private_key() );
         std::vector<std::uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
 
         nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
@@ -434,10 +433,12 @@ namespace sgns
         nil::crypto3::multiprecision::uint256_t key_seed;
         if ( load_res )
         {
+            genius_account_logger()->trace( "Key seed: {}", load_res.value() );
             key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
         }
         else
         {
+            genius_account_logger()->trace( "Key seed random" );
             if ( eth_private_key == nullptr )
             {
                 return outcome::failure( std::errc::invalid_argument );
@@ -498,7 +499,7 @@ namespace sgns
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
         genius_account_logger()->debug( "Setting local confirmed nonce to {}", nonce );
-        SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
+        SetPeerConfirmedNonce( nonce, eth_keypair_->GetEntirePubValue() );
         std::lock_guard lock( nonce_mutex_ );
     }
 
@@ -513,7 +514,7 @@ namespace sgns
         auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
         confirmed_nonces_[address] = updated_nonce;
 
-        if ( address == eth_keypair->GetEntirePubValue() )
+        if ( address == eth_keypair_->GetEntirePubValue() )
         {
             if ( !local_confirmed_nonce_ || updated_nonce > local_confirmed_nonce_.value() )
             {
@@ -553,7 +554,7 @@ namespace sgns
             }
         }
 
-        if ( address == eth_keypair->GetEntirePubValue() )
+        if ( address == eth_keypair_->GetEntirePubValue() )
         {
             if ( local_confirmed_nonce_.has_value() && ( nonce == local_confirmed_nonce_.value() ) )
             {
@@ -617,7 +618,7 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
     {
-        return GetPeerNonce( eth_keypair->GetEntirePubValue() );
+        return GetPeerNonce( eth_keypair_->GetEntirePubValue() );
     }
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
