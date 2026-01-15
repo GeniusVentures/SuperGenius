@@ -11,6 +11,8 @@
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
+#include <rocksdb/db.h>
+
 #include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
@@ -65,7 +67,6 @@ namespace sgns::crdt
     using IpfsRocksDb        = ipfs_lite::rocksdb;
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
-    using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
     outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
         std::shared_ptr<boost::asio::io_context>                              context,
@@ -106,8 +107,14 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
-        m_broadcaster->Stop();
-        m_crdtDatastore->Close();
+        if ( m_broadcaster )
+        {
+            m_broadcaster->Stop();
+        }
+        if ( m_crdtDatastore )
+        {
+            m_crdtDatastore->Close();
+        }
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -134,10 +141,32 @@ namespace sgns::crdt
             options.level_compaction_dynamic_level_bytes = false;
             try
             {
-                if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                     dataStoreResult.has_value() )
+                auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                
+                // If database open fails with corruption, try to repair it
+                if ( !dataStoreResult.has_value() )
                 {
-                    dataStore = dataStoreResult.value();
+                    std::string errorMsg = dataStoreResult.error().message();
+                    if ( errorMsg.find( "corruption" ) != std::string::npos || 
+                         errorMsg.find( "Corruption" ) != std::string::npos )
+                    {
+                        m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
+                        auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
+                        if ( repairStatus.ok() )
+                        {
+                            m_logger->info( "Database repair successful, retrying open" );
+                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                        }
+                        else
+                        {
+                            m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
+                        }
+                    }
+                }
+                
+                if ( dataStoreResult.has_value() )
+                {
+                    dataStore = std::move( dataStoreResult.value() );
                 }
                 else
                 {
@@ -216,22 +245,22 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
     }
 
-    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
         AtomicTransaction batch( m_crdtDatastore );
@@ -249,11 +278,11 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
+    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
     {
         if ( !started_ )
         {
-            m_logger->error( "GlobalDB Not Started" );
+            m_logger->error( "{}: GlobalDB Not Started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
@@ -269,43 +298,28 @@ namespace sgns::crdt
                                                                      const std::string &middle_part,
                                                                      const std::string &remainder_prefix )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "GlobalDB Not Started" );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
-
         return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
     }
 
     outcome::result<std::string> GlobalDB::KeyToString( const Buffer &key ) const
     {
         // @todo cache the prefix and suffix
-        auto keysPrefix = m_crdtDatastore->GetKeysPrefix();
-        if ( !keysPrefix.has_value() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+        auto keysPrefix  = m_crdtDatastore->GetKeysPrefix();
         auto valueSuffix = m_crdtDatastore->GetValueSuffix();
-        if ( !valueSuffix.has_value() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
 
         auto sKey = std::string( key.toString() );
 
-        size_t prefixPos = ( !keysPrefix.value().empty() ) ? sKey.find( keysPrefix.value(), 0 ) : 0;
-        if ( prefixPos != 0 )
+        if ( auto prefixPos = keysPrefix.empty() ? 0 : sKey.find( keysPrefix, 0 ); prefixPos != 0 )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        size_t keyPos    = keysPrefix.value().size();
-        auto   suffixPos = ( !valueSuffix.value().empty() ) ? sKey.rfind( valueSuffix.value(), std::string::npos )
-                                                            : sKey.size();
-        if ( ( suffixPos == std::string::npos ) || ( suffixPos < keyPos ) )
+        size_t keyPos = keysPrefix.size();
+
+        auto suffixPos = valueSuffix.empty() ? sKey.size() : sKey.rfind( valueSuffix, std::string::npos );
+        if ( suffixPos == std::string::npos || suffixPos < keyPos )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
         return sKey.substr( keyPos, suffixPos - keyPos );
@@ -314,16 +328,6 @@ namespace sgns::crdt
     void GlobalDB::PrintDataStore()
     {
         m_crdtDatastore->PrintDataStore();
-    }
-
-    void GlobalDB::AddTopicName( std::string topicName )
-    {
-        m_crdtDatastore->AddTopicName( topicName );
-    }
-
-    void GlobalDB::SetFullNode( bool full_node )
-    {
-        m_crdtDatastore->SetFullNode( std::move( full_node ) );
     }
 
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
@@ -339,6 +343,7 @@ namespace sgns::crdt
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
         m_broadcaster->AddListenTopic( topicName );
+        m_crdtDatastore->AddTopicName( topicName );
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
@@ -346,9 +351,52 @@ namespace sgns::crdt
         return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
     }
 
+    bool GlobalDB::RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback )
+    {
+        return m_crdtDatastore->RegisterNewElementCallback( pattern, std::move( callback ) );
+    }
+
+    bool GlobalDB::RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback )
+    {
+        return m_crdtDatastore->RegisterDeletedElementCallback( pattern, std::move( callback ) );
+    }
+
     std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()
     {
         return m_datastore;
     }
 
+    outcome::result<GlobalDB::CRDTHeadListResult> GlobalDB::GetCRDTHeadList()
+    {
+        return m_crdtDatastore->GetHeadList();
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->GetHeadHeight( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadRemove( const CID &aCid, const std::string &topic )
+    {
+        return m_crdtDatastore->RemoveHead( aCid, topic );
+    }
+
+    outcome::result<void> GlobalDB::CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority )
+    {
+        return m_crdtDatastore->AddHead( aCid, topic, priority );
+    }
+
+    std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
+    {
+        return m_broadcaster;
+    }
+
+    outcome::result<crdt::CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
+    {
+        if ( !m_crdtDatastore )
+        {
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return m_crdtDatastore->GetJobStatus( cid );
+    }
 }

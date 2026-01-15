@@ -25,6 +25,19 @@ namespace sgns::crdt
         *this = aSet;
     }
 
+    bool CrdtSet::operator==( const CrdtSet &aSet ) const
+    {
+        bool returnEqual  = true;
+        returnEqual      &= this->dataStore_ == aSet.dataStore_;
+        returnEqual      &= this->namespaceKey_ == aSet.namespaceKey_;
+        return returnEqual;
+    }
+
+    bool CrdtSet::operator!=( const CrdtSet &aSet ) const
+    {
+        return !( *this == aSet );
+    }
+
     CrdtSet &CrdtSet::operator=( const CrdtSet &aSet )
     {
         if ( this != &aSet )
@@ -37,20 +50,7 @@ namespace sgns::crdt
         return *this;
     }
 
-    bool CrdtSet::operator==( const CrdtSet &aSet )
-    {
-        bool returnEqual  = true;
-        returnEqual      &= this->dataStore_ == aSet.dataStore_;
-        returnEqual      &= this->namespaceKey_ == aSet.namespaceKey_;
-        return returnEqual;
-    }
-
-    bool CrdtSet::operator!=( const CrdtSet &aSet )
-    {
-        return !( *this == aSet );
-    }
-
-    outcome::result<std::string> CrdtSet::GetValueFromDatastore( const HierarchicalKey &aKey )
+    outcome::result<std::string> CrdtSet::GetValueFromDatastore( const HierarchicalKey &aKey ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -66,14 +66,14 @@ namespace sgns::crdt
             return outcome::failure( bufferValueResult.error() );
         }
 
-        std::string strValue = std::string( bufferValueResult.value().toString() );
+        std::string strValue( bufferValueResult.value().toString() );
         return strValue;
     }
 
     outcome::result<std::shared_ptr<CrdtSet::Delta>> CrdtSet::CreateDeltaToAdd( const std::string &aKey,
                                                                                 const std::string &aValue )
     {
-        auto delta   = std::make_shared<CrdtSet::Delta>();
+        auto delta   = std::make_shared<Delta>();
         auto element = delta->add_elements();
         element->set_key( aKey );
         element->set_value( aValue );
@@ -81,25 +81,21 @@ namespace sgns::crdt
         return delta;
     }
 
-    outcome::result<std::shared_ptr<CrdtSet::Delta>> CrdtSet::CreateDeltaToRemove( const std::string &aKey )
+    outcome::result<std::shared_ptr<CrdtSet::Delta>> CrdtSet::CreateDeltaToRemove( const std::string &aKey ) const
     {
-        auto delta = std::make_shared<CrdtSet::Delta>();
+        auto delta = std::make_shared<Delta>();
         // /namespace/s/<key>
         auto prefix         = this->ElemsPrefix( aKey );
         auto strElemsPrefix = prefix.GetKey();
 
         Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( strElemsPrefix );
-        auto queryResult = this->dataStore_->query( keyPrefixBuffer );
-        if ( queryResult.has_failure() )
-        {
-            return outcome::failure( queryResult.error() );
-        }
+        OUTCOME_TRY( auto queryResult, this->dataStore_->query( keyPrefixBuffer ) );
 
-        for ( const auto &bufferKeyAndValue : queryResult.value() )
+        for ( const auto &[key, _] : queryResult )
         {
-            std::string keyWithPrefix = std::string( bufferKeyAndValue.first.toString() );
-            std::string id            = keyWithPrefix.erase( 0, strElemsPrefix.size() );
+            std::string keyWithPrefix( key.toString() );
+            std::string id = keyWithPrefix.erase( 0, strElemsPrefix.size() );
 
             auto hId = HierarchicalKey( id );
 
@@ -122,7 +118,7 @@ namespace sgns::crdt
         return delta;
     }
 
-    outcome::result<CrdtSet::Buffer> CrdtSet::GetElement( const std::string &aKey )
+    outcome::result<CrdtSet::Buffer> CrdtSet::GetElement( const std::string &aKey ) const
     {
         // We can only GET an element if it's part of the Set (in
         // "elements" and not in "tombstones").
@@ -167,7 +163,7 @@ namespace sgns::crdt
 
     outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements(
         const std::string &aPrefix,
-        const QuerySuffix &aSuffix /*=QuerySuffix::QUERY_ALL*/ )
+        const QuerySuffix &aSuffix /*=QuerySuffix::QUERY_ALL*/ ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -205,7 +201,7 @@ namespace sgns::crdt
                 continue;
             }
 
-            std::string key = std::string( element.first.toString() );
+            std::string key( element.first.toString() );
             switch ( aSuffix )
             {
                 case QuerySuffix::QUERY_ALL:
@@ -234,7 +230,7 @@ namespace sgns::crdt
     outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements( const std::string &prefix_base,
                                                                   const std::string &middle_part,
                                                                   const std::string &remainder_prefix,
-                                                                  const QuerySuffix &aSuffix )
+                                                                  const QuerySuffix &aSuffix ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -254,8 +250,7 @@ namespace sgns::crdt
         // /namespace/k/<prefix>
         auto prefixKeysKey = this->KeysKey( prefix_base );
 
-
-        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey()+ "/", middle_part, remainder_prefix );
+        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey() + "/", middle_part, remainder_prefix );
         if ( queryResult.has_failure() )
         {
             return outcome::failure( queryResult.error() );
@@ -271,7 +266,7 @@ namespace sgns::crdt
                 continue;
             }
 
-            std::string key = std::string( element.first.toString() );
+            std::string key( element.first.toString() );
             switch ( aSuffix )
             {
                 case QuerySuffix::QUERY_ALL:
@@ -297,7 +292,7 @@ namespace sgns::crdt
         return elements;
     }
 
-    outcome::result<bool> CrdtSet::IsValueInSet( const std::string &aKey )
+    outcome::result<bool> CrdtSet::IsValueInSet( const std::string &aKey ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -326,7 +321,7 @@ namespace sgns::crdt
         return inElemsNotTombstonedResult.value();
     }
 
-    outcome::result<bool> CrdtSet::InElemsNotTombstoned( const std::string &aKey )
+    outcome::result<bool> CrdtSet::InElemsNotTombstoned( const std::string &aKey ) const
     {
         // /namespace/elems/<key>
         auto prefix         = this->ElemsPrefix( aKey );
@@ -345,11 +340,11 @@ namespace sgns::crdt
             return true;
         }
 
-        for ( const auto &bufferKeyAndValue : queryResult.value() )
+        for ( const auto &[key, _] : queryResult.value() )
         {
-            std::string keyWithPrefix = std::string( bufferKeyAndValue.first.toString() );
-            std::string id            = keyWithPrefix.erase( 0, strElemsPrefix.size() );
-            auto        hId           = HierarchicalKey( id );
+            std::string keyWithPrefix( key.toString() );
+            std::string id  = keyWithPrefix.erase( 0, strElemsPrefix.size() );
+            auto        hId = HierarchicalKey( id );
             if ( !hId.IsTopLevel() )
             {
                 // our prefix matches blocks from other keys i.e. our
@@ -370,48 +365,47 @@ namespace sgns::crdt
         return false;
     }
 
-    HierarchicalKey CrdtSet::KeyPrefix( const std::string &aKey )
+    HierarchicalKey CrdtSet::KeyPrefix( const std::string &aKey ) const
     {
         // /namespace/<key>
         return this->namespaceKey_.ChildString( aKey );
     }
 
-    HierarchicalKey CrdtSet::ElemsPrefix( const std::string &aKey )
+    HierarchicalKey CrdtSet::ElemsPrefix( const std::string &aKey ) const
     {
         // /namespace/s/<key>
         return this->KeyPrefix( std::string( elemsNamespace_ ) ).ChildString( aKey );
     }
 
-    HierarchicalKey CrdtSet::TombsPrefix( const std::string &aKey )
+    HierarchicalKey CrdtSet::TombsPrefix( const std::string &aKey ) const
     {
         // /namespace/t/<key>
         return this->KeyPrefix( std::string( tombsNamespace_ ) ).ChildString( aKey );
     }
 
-    HierarchicalKey CrdtSet::KeysKey( const std::string &aKey )
+    HierarchicalKey CrdtSet::KeysKey( const std::string &aKey ) const
     {
         // /namespace/k/<key>
         return this->KeyPrefix( std::string( keysNamespace_ ) ).ChildString( aKey );
     }
 
-    HierarchicalKey CrdtSet::ValueKey( const std::string &aKey )
+    HierarchicalKey CrdtSet::ValueKey( const std::string &aKey ) const
     {
         // /namespace/k/<key>/v
         return this->KeysKey( aKey ).ChildString( GetValueSuffix() );
     }
 
-    HierarchicalKey CrdtSet::PriorityKey( const std::string &aKey )
+    HierarchicalKey CrdtSet::PriorityKey( const std::string &aKey ) const
     {
         // /namespace/k/<key>/p
         return this->KeysKey( aKey ).ChildString( GetPrioritySuffix() );
     }
 
-    outcome::result<uint64_t> CrdtSet::GetPriority( const std::string &aKey )
+    outcome::result<uint64_t> CrdtSet::GetPriority( const std::string &aKey ) const
     {
-        uint64_t priority    = 0;
-        auto     prioK       = this->PriorityKey( aKey );
-        auto     valueResult = this->GetValueFromDatastore( prioK );
-        if ( !valueResult.has_failure() )
+        uint64_t priority     = 0;
+        auto     priority_key = this->PriorityKey( aKey );
+        if ( auto valueResult = this->GetValueFromDatastore( priority_key ); !valueResult.has_failure() )
         {
             try
             {
@@ -437,12 +431,12 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto prioK = this->PriorityKey( aKey );
+        auto priority_key = this->PriorityKey( aKey );
 
         std::string strPriority = std::to_string( aPriority + 1 );
 
         Buffer keyBuffer;
-        keyBuffer.put( prioK.GetKey() );
+        keyBuffer.put( priority_key.GetKey() );
 
         Buffer valueBuffer;
         valueBuffer.put( strPriority );
@@ -520,10 +514,7 @@ namespace sgns::crdt
                 return outcome::failure( valueResult.error() );
             }
 
-            // if bytes.Compare(valueResult.value(), aValue) >= 0 {
-            // comparing two data lexicographically,  valueResult >= aValue, no need to store value
-            if ( !boost::lexicographical_compare<std::string, std::string>( valueResult.value(),
-                                                                            std::string( aValue.toString() ) ) )
+            if ( valueResult.value() == std::string( aValue.toString() ) )
             {
                 return outcome::success();
             }
@@ -533,23 +524,15 @@ namespace sgns::crdt
         Buffer valueKeyBuffer;
         valueKeyBuffer.put( valueK.GetKey() );
 
-        auto putResult = aDataStore->put( valueKeyBuffer, aValue );
-        if ( putResult.has_failure() )
-        {
-            return outcome::failure( putResult.error() );
-        }
+        OUTCOME_TRY( aDataStore->put( valueKeyBuffer, aValue ) );
 
         // store priority
-        auto setPriorityResult = this->SetPriority( aKey, aPriority );
-        if ( setPriorityResult.has_failure() )
-        {
-            return outcome::failure( setPriorityResult.error() );
-        }
+        OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
 
         // trigger add hook
-        if ( this->putHookFunc_ != nullptr )
+        if ( putHookFunc_ != nullptr )
         {
-            putHookFunc_( aKey, aValue );
+            putHookFunc_( aKey, aValue, aID );
         }
 
         return outcome::success();
@@ -583,11 +566,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
-            if ( putResult.has_error() )
-            {
-                return outcome::failure( putResult.error() );
-            }
+            OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
             // update the value if applicable:
             // * higher priority than we currently have.
             // * not tombstoned before.
@@ -608,7 +587,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs, const std::string &aID )
+    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs, const std::string &aID ) const
     {
         if ( aTombs.empty() )
         {
@@ -636,11 +615,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
-            if ( putResult.has_error() )
-            {
-                return outcome::failure( putResult.error() );
-            }
+            OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
 
             // run delete hook only once for all
             // versions of the same element tombstoned
@@ -648,42 +623,28 @@ namespace sgns::crdt
             deletedKeys.push_back( key );
         }
 
-        auto commitResult = batchDatastore->commit();
-        if ( commitResult.has_failure() )
-        {
-            return outcome::failure( commitResult.error() );
-        }
+        OUTCOME_TRY( batchDatastore->commit() );
 
         if ( deleteHookFunc_ )
         {
             for ( const auto &key : deletedKeys )
             {
-                deleteHookFunc_( key );
+                deleteHookFunc_( key, aID );
             }
         }
 
         return outcome::success();
     }
 
-    outcome::result<void> CrdtSet::Merge( const std::shared_ptr<Delta> &aDelta, const std::string &aID )
+    outcome::result<void> CrdtSet::Merge( const Delta &aDelta, const std::string &aID )
     {
-        if ( aDelta == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+        OUTCOME_TRY( this->PutTombs( std::vector( aDelta.tombstones().cbegin(), aDelta.tombstones().cend() ), aID ) );
 
-        auto putTombsResult = this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ),
-                                              aID );
-        if ( putTombsResult.has_failure() )
-        {
-            return outcome::failure( putTombsResult.error() );
-        }
-
-        std::vector<Element> elements( aDelta->elements().begin(), aDelta->elements().end() );
-        return this->PutElems( elements, aID, aDelta->priority() );
+        std::vector elements( aDelta.elements().cbegin(), aDelta.elements().cend() );
+        return this->PutElems( elements, aID, aDelta.priority() );
     }
 
-    outcome::result<bool> CrdtSet::InTombsKeyID( const std::string &aKey, const std::string &aID )
+    outcome::result<bool> CrdtSet::InTombsKeyID( const std::string &aKey, const std::string &aID ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -712,12 +673,14 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        // Put all Hierarchical key to database.
+
         if ( aKeyList.size() != 4 )
         {
             // Vector hierarchicalkey need enough element.
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::invalid_argument );
         }
+
+        // Put all Hierarchical key to database.
         std::string aKey = aKeyList.at( 0 ).GetKey();
         std::string aID  = aKeyList.at( 1 ).GetKey();
         Buffer      aValue;
@@ -726,27 +689,7 @@ namespace sgns::crdt
         return SetValue( aKey, aID, aValue, aPriority.value() );
     }
 
-    void CrdtSet::PrintTombs( const std::vector<Element> &aTombs )
-    {
-        std::cout << "Tombs" << std::endl;
-        for ( const auto &tomb : aTombs )
-        {
-            // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
-        }
-    }
-
-    void CrdtSet::PrintElements( const std::vector<Element> &aElems )
-    {
-        std::cout << "Elems" << std::endl;
-        for ( const auto &tomb : aElems )
-        {
-            // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
-        }
-    }
-
-    void CrdtSet::PrintDataStore()
+    void CrdtSet::PrintDataStore() const
     {
         if ( dataStore_ )
         {
@@ -766,6 +709,16 @@ namespace sgns::crdt
 
             logFile.close();
             std::cout << "Data successfully written to crdt_data.log" << std::endl;
+        }
+    }
+
+    void CrdtSet::PrintTombs( const std::vector<Element> &aTombs )
+    {
+        std::cout << "Tombs" << std::endl;
+        for ( const auto &tomb : aTombs )
+        {
+            // /namespace/tombs/<key>/<id>
+            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
         }
     }
 }

@@ -17,7 +17,7 @@ namespace sgns::processing
         SubTaskEnqueuerImpl( std::shared_ptr<ProcessingTaskQueue> taskQueue );
 
         outcome::result<SGProcessing::Task>  EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks ) override;
-
+        void                                MarkTaskBad( const std::string &taskKey ) override;
     private:
         std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
         sgns::base::Logger                   m_logger = sgns::base::createLogger( "SubTaskEnqueuerImpl" );

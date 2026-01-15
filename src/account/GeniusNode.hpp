@@ -2,6 +2,10 @@
 #define _GENIUS_NODE_HPP_
 #include <memory>
 #include <cstdint>
+#include <functional>
+#include <vector>
+#include <thread>
+#include <optional>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -19,8 +23,10 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
+#include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <processingbase/ProcessingManager.hpp>
 
 typedef struct DevConfig
 {
@@ -38,17 +44,30 @@ extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {
-    class GeniusNode : public IComponent
+    class GeniusNode : public IComponent, public std::enable_shared_from_this<GeniusNode>
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config,
-                    const char         *eth_private_key,
-                    bool                autodht      = true,
-                    bool                isprocessor  = true,
-                    uint16_t            base_port    = 40001,
-                    bool                is_full_node = false );
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+                                                const char         *eth_private_key,
+                                                bool                autodht      = true,
+                                                bool                isprocessor  = true,
+                                                uint16_t            base_port    = 40001,
+                                                bool                is_full_node = false,
+                                                bool                use_upnp     = true );
 
         ~GeniusNode() override;
+
+        enum class NodeState
+        {
+            CREATING = 0,
+            MIGRATING_DATABASE,
+            INITIALIZING_DATABASE,
+            INITIALIZING_PROCESSING,
+            INITIALIZING_BLOCKCHAIN,
+            INITIALIZING_TRANSACTIONS,
+            INITIALIZING_DHT,
+            READY,
+        };
 
         /**
          * @brief      GeniusNode Error class
@@ -65,8 +84,9 @@ namespace sgns
             PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
             INVALID_JSON             = 9,  ///< JSON cannot be parsed>
             INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///< No processor for this type>
-            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
+            NO_PROCESSOR             = 11, ///< No processor for this type
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus
+            TRANSACTIONS_NOT_READY   = 13, ///< Transactions aren't ready
         };
 
 #ifdef SGNS_DEBUG
@@ -74,15 +94,14 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
         static constexpr uint64_t TIMEOUT_MINT       = 50000;
 #else
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 10000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 10000;
-        static constexpr uint64_t TIMEOUT_MINT       = 10000;
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 30000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
+        static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
-        uint64_t GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );
 
         outcome::result<double> GetGNUSPrice();
 
@@ -91,9 +110,8 @@ namespace sgns
             return "GeniusNode";
         }
 
-        std::string GetVersion( void );
+        std::string GetVersion();
 
-        void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
@@ -106,19 +124,32 @@ namespace sgns
             TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
-        void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport );
+        void AddPeer( const std::string &peer );
+        void RefreshUPNP( uint16_t pubsubport );
+
         uint64_t GetBalance();
-        uint64_t GetBalance( const TokenID token_id);
+        uint64_t GetBalance( TokenID token_id );
+        uint64_t GetBalance( const std::string &address );
+        uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
-            return transaction_manager_->GetInTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetInTransactions();
         }
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
         {
-            return transaction_manager_->GetOutTransactions();
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetOutTransactions();
         }
 
         std::string GetAddress() const
@@ -131,11 +162,20 @@ namespace sgns
             return dev_config_.TokenID;
         }
 
-        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
-            uint64_t                  amount,
-            const std::string        &destination,
-            TokenID                   token_id,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+        [[nodiscard]] processing::ProcessingServiceImpl::ProcessingStatus GetProcessingStatus() const
+        {
+            return processing_service_ == nullptr 
+                ? processing::ProcessingServiceImpl::ProcessingStatus(
+                    processing::ProcessingServiceImpl::Status::DISABLED, 0.0f)
+                : processing_service_->GetProcessingStatus();
+        }
+
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,
+                                                                         const std::string        &destination,
+                                                                         TokenID                   token_id,
+                                                                         std::chrono::milliseconds timeout );
+
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
@@ -169,8 +209,6 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
 
-        static std::vector<uint8_t> GetImageByCID( const std::string &cid );
-
         void PrintDataStore();
         void StopProcessing();
         void StartProcessing();
@@ -184,16 +222,42 @@ namespace sgns
             int64_t                         from,
             int64_t                         to );
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionOutgoing( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                    std::chrono::milliseconds timeout );
+
+        TransactionManager::State GetTransactionManagerState() const;
+
+        TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
+
+        /**
+         * @brief Set the authorized full node address for blockchain genesis verification
+         * @param pub_address The public address that is authorized to create genesis blocks
+         */
+        void SetAuthorizedFullNodeAddress( const std::string &pub_address );
+
+        /**
+         * @brief Get the current authorized full node public address
+         * @return The authorized full node public address
+         */
+        const std::string &GetAuthorizedFullNodeAddress() const;
+
+        NodeState GetState() const
+        {
+            return state_.load();
+        }
 
     protected:
         friend class TransactionSyncTest;
 
         void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
+
         std::shared_ptr<GeniusAccount> account_;
 
     private:
@@ -206,15 +270,44 @@ namespace sgns
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>               logging_system;
+        std::shared_ptr<soralog::LoggingSystem>               logging_system_;
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
-        base::Logger                                          node_logger;
+        bool                                                  is_full_node_;
+        base::Logger                                          node_logger_;
         DevConfig_st                                          dev_config_;
         std::string                                           gnus_network_full_path_;
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
+        uint16_t                                              pubsubport_;
+        std::shared_ptr<Blockchain>                           blockchain_;
+
+        GeniusNode( const DevConfig_st &dev_config,
+                    const char         *eth_private_key,
+                    bool                autodht,
+                    bool                isprocessor,
+                    uint16_t            base_port,
+                    bool                is_full_node,
+                    bool                use_upnp );
+        void         InitOpenSSL();
+        bool         InitLoggers( const std::string &base_path );
+        base::Logger ConfigureLogger( const std::string        &tag,
+                                      const std::string        &logdir,
+                                      spdlog::level::level_enum level );
+        bool         InitNetwork( uint16_t base_port, bool is_full_node );
+        bool         InitUPNP();
+        bool         InitDatabase();
+        bool         InitProcessingModules();
+        void         BeginDBInitialization();
+        void         StateTransition( NodeState next_state );
+        void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
+        void         ScheduleMigrationRetry();
+        void         ScheduleBlockchainRetry();
+        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+        outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
+
+        void DHTInit();
 
         struct PriceInfo
         {
@@ -227,9 +320,22 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
-        std::thread       io_thread;
-        std::thread       upnp_thread;
-        std::atomic<bool> stop_upnp{ false };
+        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+        static constexpr unsigned                                       DEFAULT_IO_THREADS = 4;
+        unsigned                                                        io_thread_count_{ DEFAULT_IO_THREADS };
+        std::optional<IoWorkGuard>                                      io_work_guard_;
+        std::vector<std::thread>                                        io_threads_;
+        std::thread                                                     upnp_thread;
+        std::atomic<bool>                                               stop_upnp{ false };
+        std::string                                                     base58key_;
+        std::shared_ptr<libp2p::protocol::AsioScheduler>                scheduler_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_;
+
+        std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
+
+        std::atomic<NodeState> state_{ NodeState::CREATING };
+        bool                   use_upnp_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,
@@ -240,6 +346,7 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
+        void RotateLogFiles( const std::string &base_path );
         /**
          * @brief Parse and sum all "block_len" values from the JSON.
          * @param json_data JSON string containing an "input" array.
@@ -247,13 +354,16 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        static constexpr std::string_view db_path_                = "bc-%d/";
-        static constexpr std::uint16_t    MAIN_NET                = 369;
-        static constexpr std::uint16_t    TEST_NET                = 963;
-        static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
-        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
+        void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
+
+        static constexpr std::string_view db_path_        = "bc-%d/";
+        static constexpr std::uint16_t    MAIN_NET        = 369;
+        static constexpr std::uint16_t    TEST_NET        = 963;
+        static constexpr std::size_t      MAX_NODES_COUNT = 1;
+
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.Channel";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.Processing.Channel";
+        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.Node";
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
@@ -267,7 +377,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: debug
+      level: error
       children:
         - name: libp2p
         - name: Gossip
@@ -279,7 +389,6 @@ groups:
             return config;
         }
     };
-
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );

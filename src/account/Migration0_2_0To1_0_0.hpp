@@ -46,8 +46,7 @@ namespace sgns
          * @param   writeBasePath Base path for writing legacy DB files.
          * @param   base58key     Base58-encoded peer key to form legacy paths.
          */
-        Migration0_2_0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                 newDb,
-                               std::shared_ptr<boost::asio::io_context>                        ioContext,
+        Migration0_2_0To1_0_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
@@ -67,6 +66,8 @@ namespace sgns
          */
         std::string ToVersion() const override;
 
+        outcome::result<void> Init() override;
+
         /**
          * @brief   Check if this migration should run.
          * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
@@ -79,11 +80,19 @@ namespace sgns
          */
         outcome::result<void> Apply() override;
 
+        outcome::result<void> ShutDown() override;
+
     private:
+        /**
+         * @brief       Opens the target database to migrate into
+         * @return      The pointer to the database of Error
+         */
+        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitTargetDb();
+
         /**
          * @brief   Open a legacy GlobalDB given a suffix ("out" or "in").
          * @param   suffix  Suffix string for legacy path.
-         * @return  outcome::result<std::shared_ptr<crdt::GlobalDB>>  opened DB or error.
+         * @return  Opened DB, nullptr if the legacy path is absent, or error.
          */
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb( const std::string &suffix );
 
@@ -96,8 +105,10 @@ namespace sgns
         outcome::result<uint32_t> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
                                              const std::shared_ptr<crdt::GlobalDB> &newDb );
 
-        std::shared_ptr<crdt::GlobalDB>                                 newDb_;     ///< Target GlobalDB.
-        std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
+        std::shared_ptr<crdt::GlobalDB>                                 db_1_0_0_;     ///< Target GlobalDB.
+        std::shared_ptr<crdt::GlobalDB>                                 db_0_0_2_out_; ///< Target GlobalDB.
+        std::shared_ptr<crdt::GlobalDB>                                 db_0_0_2_in_;  ///< Target GlobalDB.
+        std::shared_ptr<boost::asio::io_context>                        ioContext_;    ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
         std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.

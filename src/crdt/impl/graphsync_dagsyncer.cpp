@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <thread>
+#include <deque>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 {
@@ -18,7 +19,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
             return "The peer who has the CID is blacklisted";
         case sgns::crdt::GraphsyncDAGSyncer::Error::TIMED_OUT:
             return "The request has timed out";
-        case sgns::crdt::GraphsyncDAGSyncer::Error::DAGSYNCHER_NOT_STARTED:
+        case sgns::crdt::GraphsyncDAGSyncer::Error::DAGSYNCER_NOT_STARTED:
             return "The Start method was never called, or StopSync was called";
         case sgns::crdt::GraphsyncDAGSyncer::Error::GRAPHSYNC_IS_NULL:
             return "The graphsync member is null";
@@ -35,21 +36,20 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
-        logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>( this ) );
+        logger_->debug( "GraphSyncer created {} ", reinterpret_cast<size_t>( this ) );
     }
 
-    GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId                    &peer,
-                                                                  const std::vector<Multiaddress> &address ) const
+    GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId             &peer,
+                                                                  std::vector<Multiaddress> address )
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         // Check if peer already exists in the registry
-        auto it = peer_index_.find( peer );
-        if ( it != peer_index_.end() )
+        if ( auto it = peer_index_.find( peer ); it != peer_index_.end() )
         {
-            // Peer already registered, update addresses if needed
+            // Peer already registered, update addresses
             PeerKey key                = it->second;
-            peer_registry_[key].second = address; // Update the addresses
+            peer_registry_[key].second = address;
             return key;
         }
 
@@ -64,10 +64,11 @@ namespace sgns::crdt
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetPeerById( PeerKey id ) const
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         if ( id >= peer_registry_.size() )
         {
+            logger_->error( "No route for the requested PeerID  {}", id );
             return outcome::failure( Error::ROUTE_NOT_FOUND );
         }
 
@@ -83,50 +84,43 @@ namespace sgns::crdt
             return outcome::failure( Error::HOST_IS_NULL );
         }
 
-        auto listen_res = host_->listen( listen_to );
-        if ( listen_res.has_failure() )
-        {
-            return listen_res.error();
-        }
+        OUTCOME_TRY( host_->listen( listen_to ) );
 
         auto startResult = this->StartSync();
-        if ( startResult.has_failure() )
-        {
-            return startResult.error();
-        }
 
-        return outcome::success();
+        return startResult;
     }
 
-    outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::RequestNode(
+    outcome::result<ipfs_lite::ipfs::graphsync::Subscription> GraphsyncDAGSyncer::RequestNode(
         const PeerId                              &peer,
         boost::optional<std::vector<Multiaddress>> address,
         const CID                                 &root_cid ) const
     {
         if ( !started_ )
         {
-            return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
+            logger_->error( "DagSyncer not started" );
+            return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
         }
 
         if ( graphsync_ == nullptr )
         {
+            logger_->error( "graphsyncer is null" );
             return outcome::failure( Error::GRAPHSYNC_IS_NULL );
         }
-        std::vector<Extension> extensions;
-        ResponseMetadata       response_metadata{};
-        Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
-        extensions.push_back( response_metadata_extension );
 
-        std::vector<CID> cids;
-        Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
+        Extension              response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( {} );
+        std::vector<Extension> extensions{ response_metadata_extension };
+
+        Extension do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( {} );
         extensions.push_back( do_not_send_cids_extension );
+
         auto subscription = graphsync_->makeRequest(
             peer,
             std::move( address ),
             root_cid,
             {},
             extensions,
-            [weakptr = weak_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
+            [weakptr = weak_from_this()]( const ResponseStatusCode code, const std::vector<Extension> &extensions )
             {
                 if ( auto self = weakptr.lock() )
                 {
@@ -134,23 +128,23 @@ namespace sgns::crdt
                 }
             } );
 
-        // keeping subscriptions alive, otherwise they cancel themselves
         logger_->debug( "Requesting Node {} on this {}",
                         root_cid.toString().value(),
                         reinterpret_cast<size_t>( this ) );
-        return std::make_shared<Subscription>( std::move( subscription ) );
+
+        return subscription;
     }
 
-    void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address )
+    void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> address )
     {
         // Register the peer (or get existing key if already registered)
-        PeerKey peerKey = RegisterPeer( peer, address );
+        PeerKey peerKey = RegisterPeer( peer, std::move( address ) );
 
         // Add the CID route to the routing table
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
+        std::lock_guard lock( routing_mutex_ );
         routing_[cid] = peerKey;
 
-        logger_->trace( "Added route for CID {} to peer {} (key {})",
+        logger_->debug( "Added route for CID {} to peer {} (key {})",
                         cid.toString().value(),
                         peer.toBase58(),
                         peerKey );
@@ -158,7 +152,20 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
-        return AddNodeToMerkleDAG( std::move( node ) );
+        std::lock_guard lock( dagMutex_ );
+        auto            cid = node->getCID();
+        auto            ret = dagService_.addNode( std::move( node ) );
+
+        if ( !ret.has_error() )
+        {
+            logger_->debug( "{}: Added node {} on dagService ", __func__, cid.toString().value() );
+            EraseRoute( cid );
+        }
+        else
+        {
+            logger_->error( "{}: ERROR Adding node {} on dagService ", __func__, cid.toString().value() );
+        }
+        return ret;
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
@@ -182,58 +189,84 @@ namespace sgns::crdt
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
-        auto initial_state = graphsync_->getRequestState( cid );
-        if ( initial_state )
+
+        bool already_requested = false;
+
+        if ( auto initial_state = graphsync_->getRequestState( cid ) )
         {
             if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
             {
-                logger_->error( "We already started trying to get this CID {}", cid.toString().value() );
-                return outcome::failure( Error::ROUTE_NOT_FOUND );
+                already_requested = true;
+                logger_->debug( "We already started trying to get this CID {}", cid.toString().value() );
             }
         }
-        // Get the peer info from our routing system
+        ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
+
         OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
         auto &peerID  = peerEntry.first;
         auto &address = peerEntry.second;
-
-        OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+        // Check if this peer recently failed to provide this specific CID
+        if ( HasRecentCIDFailure( peerID, cid ) )
+        {
+            logger_->error( "Skipping request for CID {} from peer {} due to recent failure",
+                            cid.toString().value(),
+                            peerID.toBase58() );
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
+        if ( already_requested == false )
+        {
+            logger_->debug( "Requesting CID {}", cid.toString().value() );
+            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+            curr_subscription = std::move( subscription );
+        }
 
         while ( true )
         {
             if ( is_stopped_ )
             {
-                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.",
-                               cid.toString().value() );
-                return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
+                logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
+                                cid.toString().value() );
+                return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
             }
             // Check request state
             auto state_result = graphsync_->getRequestState( cid );
             if ( !state_result )
             {
-                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check a GrabCIDBlock
-                auto result = GrabCIDBlock( cid );
-                if ( result )
+                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check cache or storage to see if we have the block
+                if ( auto result = GrabCIDBlock( cid ) )
                 {
                     logger_->debug( "Return node for CID {} instance={}",
                                     cid.toString().value(),
                                     reinterpret_cast<size_t>( this ) );
                     return result;
                 }
-                logger_->warn( "Request state not found for CID {}", cid.toString().value() );
-                BlackListPeer( peerID );
+                if ( auto result = GetNodeWithoutRequest( cid ) )
+                {
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
+                    return result;
+                }
+                logger_->error( "Request state not found for CID {}", cid.toString().value() );
+                OUTCOME_TRY( BlackListPeer( peerID ) );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
-            Graphsync::RequestState state = state_result.value();
-            switch ( state )
+            switch ( state_result.value() )
             {
                 case Graphsync::RequestState::COMPLETED:
                 {
                     // Request completed but we don't have the block?
                     // Try one more cache grab
-                    auto result = GrabCIDBlock( cid );
-                    if ( result )
+                    if ( auto result = GrabCIDBlock( cid ) )
+                    {
+                        logger_->debug( "Return node for CID {} instance={}",
+                                        cid.toString().value(),
+                                        reinterpret_cast<size_t>( this ) );
+                        return result;
+                    }
+                    if ( auto result = GetNodeWithoutRequest( cid ) )
                     {
                         logger_->debug( "Return node for CID {} instance={}",
                                         cid.toString().value(),
@@ -241,19 +274,26 @@ namespace sgns::crdt
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
-                    logger_->warn( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}",
+                                    cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:
                 {
-                    // Request explicitly failed, don't keep waiting
-                    logger_->debug( "Request explicitly failed for CID {}", cid.toString().value() );
-                    BlackListPeer( peerID );
+                    // Request explicitly failed - record that this peer doesn't have this specific CID
+                    // but don't blacklist the entire peer since they might have other content
+                    logger_->debug( "Request failed for CID {} from peer {} - recording CID-specific failure",
+                                    cid.toString().value(),
+                                    peerID.toBase58() );
+                    RecordCIDFailure( peerID, cid );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::IN_PROGRESS:
                 {
                     // Still in progress, keep waiting
+                    logger_->trace( "Request for CID {} from peer {} - In Progress",
+                                    cid.toString().value(),
+                                    peerID.toBase58() );
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                     break;
                 }
@@ -263,7 +303,8 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
     {
-        return RemoveNodeFromMerkleDAG( cid );
+        std::lock_guard lock( dagMutex_ );
+        return dagService_.removeNode( cid );
     }
 
     outcome::result<size_t> GraphsyncDAGSyncer::select(
@@ -271,7 +312,8 @@ namespace sgns::crdt
         gsl::span<const uint8_t>                                                     selector,
         std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
     {
-        return SelectFromMerkleDAG( std::move( root_cid ), std::move( selector ), std::move( handler ) );
+        std::lock_guard lock( dagMutex_ );
+        return dagService_.select( root_cid, selector, handler );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> GraphsyncDAGSyncer::fetchGraph(
@@ -344,7 +386,7 @@ namespace sgns::crdt
 
         auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
 
-        BlockCallback blockCallback = [weakptr = weak_from_this()]( const CID &cid, sgns::common::Buffer buffer )
+        BlockCallback blockCallback = [weakptr = weak_from_this()]( const CID &cid, common::Buffer buffer )
         {
             if ( auto self = weakptr.lock() )
             {
@@ -396,30 +438,21 @@ namespace sgns::crdt
         return outcome::failure( boost::system::error_code{} );
     }
 
-    namespace
-    {
-        std::string formatExtensions( const std::vector<GraphsyncDAGSyncer::Extension> &extensions )
-        {
-            std::string s;
-            for ( const auto &item : extensions )
-            {
-                s += fmt::format( "({}: 0x{}) ", item.name, common::Buffer( item.data ).toHex() );
-            }
-            return s;
-        }
-    }
-
     void GraphsyncDAGSyncer::RequestProgressCallback( ResponseStatusCode            code,
                                                       const std::vector<Extension> &extensions ) const
     {
-        logger_->debug( "request progress: code={}, extensions={}",
-                        statusCodeToString( code ),
-                        formatExtensions( extensions ) );
+        std::string s;
+        for ( const auto &[name, data] : extensions )
+        {
+            s += fmt::format( "({}: 0x{}) ", name, common::Buffer( data ).toHex() );
+        }
+
+        logger_->debug( "request progress: code={}, extensions={}", statusCodeToString( code ), s );
     }
 
-    void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer )
+    void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, common::Buffer buffer )
     {
-        logger_->trace( "Block received: cid={}, extensions={}", cid.toString().value(), buffer.toHex() );
+        logger_->trace( "Block received: cid={}", cid.toString().value() );
         auto hb = HasBlock( cid );
 
         if ( hb.has_failure() )
@@ -429,161 +462,200 @@ namespace sgns::crdt
         }
         logger_->debug( "HasBlock: {}, cid: {}", hb.value(), cid.toString().value() );
 
-        auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
-        if ( !hb.value() )
+        if ( hb.value() )
         {
-            if ( node.has_failure() )
-            {
-                logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
-                return;
-            }
-
-            auto ret = AddCIDBlock( cid, node.value() );
-            if ( ret )
-            {
-                logger_->error( " Block received without CRDT asking for it explicitly " );
-            }
-            std::stringstream sslinks;
-            for ( const auto &link : node.value()->getLinks() )
-            {
-                sslinks << "[";
-                sslinks << link.get().getCID().toString().value();
-                sslinks << link.get().getName();
-                sslinks << "], ";
-            }
-            logger_->debug( "Node added to dagService. CID: {}, links: [{}]",
-                            node.value()->getCID().toString().value(),
-                            sslinks.str() );
-        }
-        else
-        {
-            logger_->debug( "We already had this node {}", cid.toString().value() );
+            logger_->debug( "We already have this node {}", cid.toString().value() );
             return;
         }
 
-        // @todo performance optimization is required
+        auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
+        if ( node.has_failure() )
+        {
+            logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
+            return;
+        }
 
-        logger_->debug( "Request found {}", cid.toString().value() );
+        if ( AddCIDBlock( cid, node.value() ) )
+        {
+            logger_->error( " Block received without CRDT asking for it explicitly " );
+        }
 
-        auto maybe_route_info = GetRoute( cid );
-        if ( maybe_route_info )
+        std::stringstream sslinks;
+        for ( const auto &link : node.value()->getLinks() )
+        {
+            sslinks << "[";
+            sslinks << link.get().getCID().toString().value();
+            sslinks << link.get().getName();
+            sslinks << "], ";
+        }
+        logger_->debug( "Node added to dagService. CID: {}, links: [{}]",
+                        node.value()->getCID().toString().value(),
+                        sslinks.str() );
+
+        if ( auto maybe_route_info = GetRoute( cid ) )
         {
             auto &[peerID, address] = maybe_route_info.value();
             logger_->debug( "Seeing if peer {} has links to AddRoute", peerID.toBase58() );
-            if ( !IsOnBlackList( peerID ) )
-            {
-                // Record successful data reception
-                RecordSuccessfulConnection( peerID );
-                auto [links_to_fetch, dont_care_known] = TraverseCIDsLinks( node.value() );
-                for ( const auto &[cid, dont_care_name] : links_to_fetch )
-                {
-                    logger_->trace( "Adding route for peer {} and CID {}", peerID.toBase58(), cid.toString().value() );
-
-                    // Use a non-const copy of the address for AddRoute
-                    std::vector<Multiaddress> addr_copy = address;
-                    AddRoute( cid, peerID, addr_copy );
-                }
-            }
-            else
+            if ( IsOnBlackList( peerID ) )
             {
                 //I don't think it should ever land here
                 logger_->debug( "Peer {} was blacklisted", peerID.toBase58() );
             }
+            else
+            {
+                RecordSuccessfulConnection( peerID );
+
+                // Clear any CID failure record for this peer and CID since they successfully provided it
+                ClearCIDFailure( peerID, cid );
+
+                auto [links_to_fetch, _1] = TraverseCIDsLinks( *node.value() );
+                for ( const auto &[cid, _2] : links_to_fetch )
+                {
+                    logger_->trace( "Adding route for peer {} and CID {}", peerID.toBase58(), cid.toString().value() );
+                    AddRoute( cid, peerID, address );
+                }
+            }
         }
-        EraseRoute( cid );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(
-        const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-        std::string                                       link_name,
-        DAGSyncer::LinkInfoSet                            visited_links,
-        bool                                              skip_if_visited_root,
-        int                                               max_depth ) const
+        ipfs_lite::ipld::IPLDNode &node,
+        std::string                link_name,
+        LinkInfoSet                visited ) const
     {
-        DAGSyncer::LinkInfoSet links_to_fetch;
-        DAGSyncer::LinkInfoSet visited = std::move( visited_links );
+        LinkInfoSet links_to_fetch;
 
-        const CID &root_cid = node->getCID();
-
-        if ( skip_if_visited_root )
+        // Use iterative approach with a work queue to avoid stack overflow
+        // Each work item contains the node to process
+        struct WorkItem
         {
-            bool already_seen_root = std::any_of( visited.begin(),
-                                                  visited.end(),
-                                                  [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
+            std::shared_ptr<ipfs_lite::ipld::IPLDNode> node;
+        };
 
-            if ( already_seen_root )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already recorded)",
-                                root_cid.toString().value() );
-                return { std::move( links_to_fetch ), std::move( visited ) };
-            }
+        std::deque<WorkItem> work_queue;
+        
+        // Start with the root node
+        const CID &root_cid = node.getCID();
+
+        auto tree_resolved_res = isResolved( root_cid );
+        if ( tree_resolved_res.has_failure() )
+        {
+            logger_->error( "{}: isResolved failed: {}, cid: {}",
+                            __func__,
+                            tree_resolved_res.error().message().c_str(),
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
+        }
+
+        if ( tree_resolved_res.value() )
+        {
+            logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already resolved)",
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
         }
 
         logger_->info( "TraverseCIDsLinks: Checking links on {{ cid=\"{}\", name=\"{}\" }}",
                        root_cid.toString().value(),
                        link_name );
 
-        for ( const auto &link : node->getLinks() )
+        // Add the root node to the work queue
+        // Create a shared_ptr from the reference - note this assumes the node is already managed
+        work_queue.push_back( WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
+
+        // Process the queue iteratively
+        while ( !work_queue.empty() )
         {
-            const CID         &child = link.get().getCID();
-            const std::string &name  = link.get().getName();
-            LinkInfoPair       pair{ child, name };
+            WorkItem current_item = std::move( work_queue.front() );
+            work_queue.pop_front();
 
-            logger_->trace( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
-            if ( !link_name.empty() && name != link_name )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
-                continue;
-            }
+            auto &current_node = *current_item.node;
+            const CID &current_cid = current_node.getCID();
 
-            if ( !visited.insert( pair ).second )
+            logger_->trace( "TraverseCIDsLinks: Processing node {}", current_cid.toString().value() );
+
+            // Process all links in the current node
+            for ( const auto &link : current_node.getLinks() )
             {
-                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                const CID         &child = link.get().getCID();
+                const std::string &name  = link.get().getName();
+                LinkInfoPair       pair{ child, name };
+
+                logger_->trace( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
+                if ( !link_name.empty() && name != link_name )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
+                    continue;
+                }
+
+                if ( !visited.insert( pair ).second )
+                {
+                    logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                                   child.toString().value(),
+                                   name );
+                    continue;
+                }
+
+                auto child_resolved_res = isResolved( child );
+                if ( child_resolved_res.has_failure() )
+                {
+                    logger_->error( "{}: isResolved failed: {}, cid: {}",
+                                    __func__,
+                                    child_resolved_res.error().message().c_str(),
+                                    child.toString().value() );
+                }
+                else if ( child_resolved_res.value() )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Skipping traversal of resolved child {}",
+                                    child.toString().value() );
+                    continue;
+                }
+
+                logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
                                child.toString().value(),
-                               name );
-                continue;
-            }
+                               name,
+                               link.get().getSize() );
 
-            logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                           child.toString().value(),
-                           name,
-                           link.get().getSize() );
+                auto get_child_result = GetNodeWithoutRequest( child );
+                if ( get_child_result.has_failure() )
+                {
+                    logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
+                                    child.toString().value() );
+                    links_to_fetch.insert( pair );
+                    continue;
+                }
 
-            auto get_child_result = GetNodeWithoutRequest( child );
-            if ( get_child_result.has_failure() )
-            {
-                logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
-                                child.toString().value() );
-                links_to_fetch.insert( pair );
-                continue;
-            }
-
-            if ( max_depth == 0 )
-            {
-                logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
+                // Add the child node to the front of the work queue for depth-first processing
+                // This ensures children are resolved before their parents, maintaining the original
+                // recursive behavior where we don't mark a CID as complete until all its children are processed
+                work_queue.push_front( WorkItem{ get_child_result.value() } );
+                
+                logger_->trace( "TraverseCIDsLinks: Added child {} to work queue (queue size: {})",
                                 child.toString().value(),
-                                name );
-                continue;
+                                work_queue.size() );
             }
-
-            auto [child_links, child_visited] = TraverseCIDsLinks( get_child_result.value(),
-                                                                   link_name,
-                                                                   visited,
-                                                                   skip_if_visited_root,
-                                                                   max_depth - 1 );
-
-            links_to_fetch.merge( child_links );
-            visited.merge( child_visited );
-
-            logger_->info( "TraverseCIDsLinks: Merging data" );
         }
+
+        logger_->info( "TraverseCIDsLinks: Completed traversal. Links to fetch: {}, Visited: {}",
+                       links_to_fetch.size(),
+                       visited.size() );
 
         return { std::move( links_to_fetch ), std::move( visited ) };
     }
 
+    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( dagMutex_ );
+        return dagService_.markResolved( cid );
+    }
+
+    outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( dagMutex_ );
+        return dagService_.isResolved( cid );
+    }
+
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
         lru_cid_cache_.init( cid );
         logger_->debug( "Block initialized without content to LRU cache: CID {}, cache size: {}",
                         cid.toString().value(),
@@ -592,8 +664,7 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
-        bool                        was_created = lru_cid_cache_.add( cid, block );
+        bool was_created = lru_cid_cache_.add( cid, block );
 
         if ( was_created )
         {
@@ -611,17 +682,14 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::IsCIDInCache( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
         return lru_cid_cache_.contains( cid );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GrabCIDBlock( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
         if ( lru_cid_cache_.hasContent( cid ) )
         {
-            auto node = lru_cid_cache_.get( cid );
-            if ( node )
+            if ( auto node = lru_cid_cache_.get( cid ) )
             {
                 logger_->trace( "Block retrieved from LRU cache: CID {}", cid.toString().value() );
                 return node;
@@ -632,23 +700,20 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::DeleteCIDBlock( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
         if ( lru_cid_cache_.remove( cid ) )
         {
             logger_->debug( "Block removed from LRU cache: CID {}", cid.toString().value() );
-            return outcome::success();
         }
-        return outcome::failure( Error::CID_NOT_FOUND );
+        return outcome::success();
     }
 
     void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
     {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        std::lock_guard lock( blacklist_mutex_ );
 
-        uint64_t now        = GetCurrentTimestamp();
-        auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) );
+        uint64_t now = GetCurrentTimestamp();
 
-        if ( !inserted )
+        if ( auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) ); !inserted )
         {
             BlacklistEntry &entry   = it->second;
             uint64_t        timeout = getBackoffTimeout( entry.failures, entry.ever_connected );
@@ -665,7 +730,7 @@ namespace sgns::crdt
         }
     }
 
-    uint64_t GraphsyncDAGSyncer::getBackoffTimeout( uint64_t failures, bool ever_connected ) const
+    uint64_t GraphsyncDAGSyncer::getBackoffTimeout( uint64_t failures, bool ever_connected )
     {
         if ( ever_connected )
         {
@@ -679,24 +744,21 @@ namespace sgns::crdt
             uint64_t timeout = base_seconds * ( 1ULL << failures );
             return std::min( timeout, max_seconds );
         }
-        else
-        {
-            // For never-connected peers:
-            // - Start with 10 seconds
-            // - Cap at 1800 seconds (30 minutes)
-            uint64_t base_seconds = 10;
-            uint64_t max_seconds  = 1800;
+        // For never-connected peers:
+        // - Start with 10 seconds
+        // - Cap at 1800 seconds (30 minutes)
+        uint64_t base_seconds = 10;
+        uint64_t max_seconds  = 1800;
 
-            // Calculate exponential backoff
-            uint64_t timeout = base_seconds * ( 1ULL << failures );
-            return std::min( timeout, max_seconds );
-        }
+        // Calculate exponential backoff
+        uint64_t timeout = base_seconds * ( 1ULL << failures );
+        return std::min( timeout, max_seconds );
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
     {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        bool                        ret = false;
+        bool            ret = false;
+        std::lock_guard lock( blacklist_mutex_ );
         do
         {
             auto it = blacklist_.find( peer.toMultihash() );
@@ -744,11 +806,10 @@ namespace sgns::crdt
     }
 
     // Record successful connections
-    void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer ) const
+    void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer )
     {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        auto                        it = blacklist_.find( peer.toMultihash() );
-        if ( it != blacklist_.end() )
+        std::lock_guard lock( blacklist_mutex_ );
+        if ( auto it = blacklist_.find( peer.toMultihash() ); it != blacklist_.end() )
         {
             BlacklistEntry &entry  = it->second;
             entry.ever_connected   = true;
@@ -771,30 +832,8 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeFromMerkleDAG(
         const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard lock( dagMutex_ );
         return dagService_.getNode( cid );
-    }
-
-    outcome::result<void> GraphsyncDAGSyncer::AddNodeToMerkleDAG(
-        std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
-    {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        return dagService_.addNode( std::move( node ) );
-    }
-
-    outcome::result<void> GraphsyncDAGSyncer::RemoveNodeFromMerkleDAG( const CID &cid )
-    {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        return dagService_.removeNode( cid );
-    }
-
-    outcome::result<size_t> GraphsyncDAGSyncer::SelectFromMerkleDAG(
-        gsl::span<const uint8_t>                                                     root_cid,
-        gsl::span<const uint8_t>                                                     selector,
-        std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
-    {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        return dagService_.select( root_cid, selector, handler );
     }
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
@@ -802,10 +841,11 @@ namespace sgns::crdt
         PeerKey peerKey;
         // First find the peer key in the routing table
         {
-            std::lock_guard<std::mutex> lock( routing_mutex_ );
-            auto                        it = routing_.find( cid );
+            std::lock_guard lock( routing_mutex_ );
+            auto            it = routing_.find( cid );
             if ( it == routing_.end() )
             {
+                logger_->error( "No route for the requested CID  {}", cid.toString().value() );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
@@ -819,61 +859,106 @@ namespace sgns::crdt
     {
         // First find the peer key in the peer index
         PeerKey peerKeyToRemove;
-        bool    peerFound = false;
 
         {
-            std::lock_guard<std::mutex> registry_lock( registry_mutex_ );
-            auto                        it = peer_index_.find( peer );
+            std::lock_guard registry_lock( registry_mutex_ );
+            auto            it = peer_index_.find( peer );
             if ( it == peer_index_.end() )
             {
                 // Peer not found in registry, nothing to erase
                 return;
             }
             peerKeyToRemove = it->second;
-            peerFound       = true;
         }
 
-        if ( peerFound )
+        // Remove all routes that point to this peer
+        std::lock_guard routing_lock( routing_mutex_ );
+        for ( auto it = routing_.begin(); it != routing_.end(); )
         {
-            // Remove all routes that point to this peer
-            std::lock_guard<std::mutex> routing_lock( routing_mutex_ );
-            for ( auto it = routing_.begin(); it != routing_.end(); )
+            if ( it->second == peerKeyToRemove )
             {
-                if ( it->second == peerKeyToRemove )
-                {
-                    logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
-                    it = routing_.erase( it );
-                }
-                else
-                {
-                    ++it;
-                }
+                logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
+                it = routing_.erase( it );
+            }
+            else
+            {
+                ++it;
             }
         }
     }
 
-    void GraphsyncDAGSyncer::EraseRoute( const CID &cid ) const
+    void GraphsyncDAGSyncer::EraseRoute( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
-        auto                        it = routing_.find( cid );
-        if ( it != routing_.end() )
+        std::lock_guard lock( routing_mutex_ );
+        if ( auto it = routing_.find( cid ); it != routing_.end() )
         {
             routing_.erase( it );
         }
     }
 
-    uint64_t GraphsyncDAGSyncer::GetCurrentTimestamp() const
+    uint64_t GraphsyncDAGSyncer::GetCurrentTimestamp()
     {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
     }
 
+    void GraphsyncDAGSyncer::RecordCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        cid_failures_[key]              = GetCurrentTimestamp();
+        logger_->debug( "Recorded CID failure: peer {} cannot provide CID {}",
+                        peer.toBase58(),
+                        cid.toString().value() );
+    }
+
+    bool GraphsyncDAGSyncer::HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        auto                        it  = cid_failures_.find( key );
+
+        if ( it == cid_failures_.end() )
+        {
+            return false; // No failure recorded
+        }
+
+        // Consider failure "recent" for 5 minutes (300 seconds)
+        // This prevents immediate re-requests but allows retry after some time
+        uint64_t       now             = GetCurrentTimestamp();
+        uint64_t       failure_age     = now - it->second;
+        const uint64_t FAILURE_TIMEOUT = 300; // 5 minutes
+
+        if ( failure_age > FAILURE_TIMEOUT )
+        {
+            // Failure is old, remove it and allow retry
+            cid_failures_.erase( it );
+            return false;
+        }
+
+        return true; // Recent failure exists
+    }
+
+    void GraphsyncDAGSyncer::ClearCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        auto                        it  = cid_failures_.find( key );
+        if ( it != cid_failures_.end() )
+        {
+            cid_failures_.erase( it );
+            logger_->debug( "Cleared CID failure record: peer {} can now be tried again for CID {}",
+                            peer.toBase58(),
+                            cid.toString().value() );
+        }
+    }
+
     void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )
     {
+        std::lock_guard lock( mutex_ );
         // Check if the item already exists
-        auto it = cache_map_.find( cid );
-        if ( it != cache_map_.end() )
+        if ( auto it = cache_map_.find( cid ); it != cache_map_.end() )
         {
             // Already exists, just update its position in LRU list
             lru_list_.erase( it->second.second );
@@ -901,9 +986,9 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::LRUCIDCache::add( const CID &cid, std::shared_ptr<ipfs_lite::ipld::IPLDNode> node )
     {
+        std::lock_guard lock( mutex_ );
         // Check if the item already exists
-        auto it = cache_map_.find( cid );
-        if ( it != cache_map_.end() )
+        if ( auto it = cache_map_.find( cid ); it != cache_map_.end() )
         {
             // Existing entry - update it
             // Move the CID to the front of the LRU list
@@ -934,7 +1019,8 @@ namespace sgns::crdt
 
     std::shared_ptr<ipfs_lite::ipld::IPLDNode> GraphsyncDAGSyncer::LRUCIDCache::get( const CID &cid )
     {
-        auto it = cache_map_.find( cid );
+        std::lock_guard lock( mutex_ );
+        auto            it = cache_map_.find( cid );
         if ( it == cache_map_.end() )
         {
             return nullptr;
@@ -953,7 +1039,8 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::LRUCIDCache::remove( const CID &cid )
     {
-        auto it = cache_map_.find( cid );
+        std::lock_guard lock( mutex_ );
+        auto            it = cache_map_.find( cid );
         if ( it == cache_map_.end() )
         {
             return false;
@@ -970,13 +1057,15 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::LRUCIDCache::contains( const CID &cid ) const
     {
+        std::lock_guard lock( mutex_ );
         return cache_map_.find( cid ) != cache_map_.end();
     }
 
     // Check if CID exists and has content
     bool GraphsyncDAGSyncer::LRUCIDCache::hasContent( const CID &cid ) const
     {
-        auto it = cache_map_.find( cid );
+        std::lock_guard lock( mutex_ );
+        auto            it = cache_map_.find( cid );
         return it != cache_map_.end() && it->second.first != nullptr;
     }
 
@@ -984,5 +1073,7 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
+        graphsync_->stop();
     }
+
 }

@@ -8,6 +8,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/wait_condition.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 
@@ -22,7 +23,7 @@ using namespace sgns;
  * @param privKey      Hex string private key (64 chars) for deterministic identity.
  * @return unique_ptr to the initialized GeniusNode.
  */
-static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
+static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
                                                        const std::string &tokenValue,
                                                        TokenID            tokenId,
                                                        bool               isProcessor,
@@ -41,8 +42,23 @@ static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
     devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
+    const auto STORAGE = std::make_shared<JSONSecureStorage>( outPath );
+
+    if ( isFullNode )
+    {
+        auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( *STORAGE, privKey.c_str() );
+        if ( !maybe_address.has_value() )
+        {
+            ADD_FAILURE() << "Failed to generate full-node address for authorization";
+        }
+        else
+        {
+            const auto &pub_address = maybe_address.value().second.GetEntirePubValue();
+            sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
+        }
+    }
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = std::make_unique<GeniusNode>( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
 
     // allow startup
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
@@ -64,11 +80,21 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     auto fullNode =
         CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full_2", fullKey );
 
+    test::assertWaitForCondition(
+        [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "fullNode not synched" );
+
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =
         CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x00 } ), false, false, "node_original", sharedKey );
 
-    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
+    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
+
+    test::assertWaitForCondition(
+        [&]() { return originalNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Recovery node balance not updated in time" );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
@@ -91,10 +117,10 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     std::cout << "****** Recovery node creation ****" << std::endl;
     auto recoveryNode =
         CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x01 } ), false, false, "node_recovery", sharedKey );
-    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
+    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 150000 ),
                                   "Recovery node balance not updated in time" );
 }

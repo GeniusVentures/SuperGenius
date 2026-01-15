@@ -7,6 +7,14 @@ on:
         description: 'Tag to create releases for'
         required: true
         type: string
+      thirdparty_tag:
+        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified)'
+        required: false
+        type: string
+      zkllvm_tag:
+        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -31,7 +39,7 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
           - target: Linux
-            host: ubuntu-22.04
+            host: gv-Linux-large
             abi: "x86_64"
             build-type: "Debug"
           - target: Linux
@@ -47,7 +55,7 @@ jobs:
           - target: Windows
             host: windows-latest
           - target: OSX
-            host: macos-latest
+            host: gv-OSX-Large
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
@@ -72,6 +80,51 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      - name: Clean workspace (self-hosted runners)
+        if: ${{ runner.environment == 'self-hosted' }}
+        run: |
+          echo "=== PRE-CLEANUP DEBUG ==="
+          echo "Current working directory: $(pwd)"
+          echo "Workspace: ${{github.workspace}}"
+          
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Changed to workspace directory: $(pwd)"
+            echo "Contents:"
+            ls -la
+            
+            # Check for SuperGenius subdirectory and clean git repo
+            if [ -d "SuperGenius/.git" ]; then
+              echo "Git repository detected in SuperGenius/, performing deep clean..."
+              cd SuperGenius
+              git clean -xfd
+              git submodule foreach --recursive git clean -xfd
+              git reset --hard
+              git submodule foreach --recursive git reset --hard
+              echo "Git clean completed"
+              cd "${{github.workspace}}"
+            else
+              echo "No git repository found in SuperGenius/, skipping git clean"
+            fi
+            
+            # Remove thirdparty and zkLLVM directories if they exist
+            echo "Removing thirdparty directory..."
+            rm -rf thirdparty
+            
+            echo "Removing zkLLVM directory..."
+            rm -rf zkLLVM
+          else
+            echo "Workspace directory does not exist yet, skipping cleanup"
+          fi
+          
+          echo "=== POST-CLEANUP DEBUG ==="
+          if [ -d "${{github.workspace}}" ]; then
+            cd "${{github.workspace}}"
+            echo "Final workspace contents:"
+            ls -la
+          fi
+        shell: bash
+
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
         with:
@@ -93,7 +146,9 @@ jobs:
         working-directory: ${{github.workspace}}
         run: |
           TAG_NAME="${{ github.event.inputs.tag }}"
+          THIRDPARTY_TAG="${{ github.event.inputs.thirdparty_tag || github.event.inputs.tag }}"
           echo "Building for tag: ${TAG_NAME}"
+          echo "Using thirdparty tag: ${THIRDPARTY_TAG}"
 
           if [ '${{matrix.abi}}' ]; then
             FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${{matrix.build-type}}.tar.gz
@@ -105,10 +160,10 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
-          # Download from the tag's release
-          echo "Downloading thirdparty from tag: ${TAG_NAME}"
+          # Download from the specified thirdparty tag's release
+          echo "Downloading thirdparty from tag: ${THIRDPARTY_TAG}"
 
-          gh release download ${TAG_NAME} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          gh release download ${THIRDPARTY_TAG} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
@@ -125,11 +180,13 @@ jobs:
         working-directory: ${{github.workspace}}
         run: |
           TAG_NAME="${{ github.event.inputs.tag }}"
+          ZKLLVM_TAG="${{ github.event.inputs.zkllvm_tag || github.event.inputs.tag }}"
+          echo "Using zkLLVM tag: ${ZKLLVM_TAG}"
           
           mkdir zkLLVM
           cd zkLLVM
 
-          echo "Downloading zkLLVM from tag: ${TAG_NAME}"
+          echo "Downloading zkLLVM from tag: ${ZKLLVM_TAG}"
 
           if [ "${{ matrix.target }}" = "Windows" ]; then
               ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
@@ -142,7 +199,7 @@ jobs:
               ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
           fi
 
-          gh release download ${TAG_NAME} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+          gh release download ${ZKLLVM_TAG} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
 
@@ -176,9 +233,18 @@ jobs:
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
         run: |
-          brew install ccache ninja bash
-          PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
-          echo "PATH=$PATH" >> $GITHUB_ENV
+          brew install ccache ninja bash gnu-tar
+          # Ensure GNU tar is first in PATH - check both possible Homebrew locations
+          if [ -d "/opt/homebrew/opt/gnu-tar/libexec/gnubin" ]; then
+            echo "PATH=/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+            echo "Using GNU tar from /opt/homebrew"
+          elif [ -d "/usr/local/opt/gnu-tar/libexec/gnubin" ]; then
+            echo "PATH=/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+            echo "Using GNU tar from /usr/local"
+          else
+            echo "WARNING: GNU tar installation not found in expected locations"
+            echo "Available tar: $(which tar)"
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain
@@ -206,27 +272,27 @@ jobs:
       - name: Configure CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Configure CMake for Mac
         if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Configure CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}}  -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}}  -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}

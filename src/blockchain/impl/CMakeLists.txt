@@ -1,4 +1,6 @@
 add_proto_library(SGBlocksProto proto/SGBlocks.proto)
+add_proto_library(SGBlockchainProto proto/SGBlockchain.proto)
+add_proto_library(ValidatorRegistryProto proto/ValidatorRegistry.proto)
 
 add_library(blockchain_common
     types.cpp
@@ -19,15 +21,25 @@ target_link_libraries(blockchain_common
 )
 supergenius_install(blockchain_common)
 
-add_library(block_tree
-    block_tree_impl.cpp
-    block_tree_impl.hpp
+
+add_library(blockchain_genesis
+    Blockchain.cpp
+    ../ValidatorRegistry.cpp
 )
-target_link_libraries(block_tree
+
+target_link_libraries(blockchain_genesis
     PUBLIC
-    block_tree_error
-    blockchain_common
-    block_header_repository
+    outcome
+    crdt_globaldb
+    sgns_version
+    buffer
     hasher
+    hexutil
+    logger
+    sgns_genius_account
+    PRIVATE
+    SGBlockchainProto
+    ValidatorRegistryProto
 )
-supergenius_install(block_tree)
+
+supergenius_install(blockchain_genesis)

@@ -34,7 +34,7 @@ namespace sgns::processing
                                        std::shared_ptr<boost::asio::io_context>       context,
                                        const std::string                             &localNodeId,
                                        std::function<void( const std::string & )>     processingErrorSink,
-                                       uint64_t delayBetweenProcessingMs = 20);
+                                       uint64_t                                       delayBetweenProcessingMs = 20 );
         ~ProcessingSubTaskQueueManager();
 
         /** Set a timeout for subtask processing
@@ -51,7 +51,7 @@ namespace sgns::processing
         bool CreateQueue( std::list<SGProcessing::SubTask> &subTasks );
 
         /** Asynchronous getting of a subtask from the queue
-        * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
+        * @param onSubTaskGrabbedCallback a callback that is called when a grabbed iosubtask is locked by the local node
         */
         void GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback );
 
@@ -61,7 +61,7 @@ namespace sgns::processing
         bool MoveOwnershipTo( const std::string &nodeId );
 
         /** Checks id the local processing node owns the queue
-        * @return true is the lolca node owns the queue
+        * @return true is the local node owns the queue
         */
         bool HasOwnership() const;
 
@@ -117,9 +117,9 @@ namespace sgns::processing
          *
          * @param maxSubtasksPerOwnership The maximum number of subtasks that can be assigned to a single ownership instance.
          */
-        void SetMaxSubtasksPerOwnership(size_t maxSubtasksPerOwnership)
+        void SetMaxSubtasksPerOwnership( size_t maxSubtasksPerOwnership )
         {
-           m_defaultMaxSubtasksPerOwnership = maxSubtasksPerOwnership;
+            m_defaultMaxSubtasksPerOwnership = maxSubtasksPerOwnership;
         }
 
     private:
@@ -139,7 +139,7 @@ namespace sgns::processing
          * Check if the queue has any current work to do
          * @return bool if there is work to be done
          */
-        bool HasAvailableWork(bool checkOwnershipQuota = true) const;
+        bool HasAvailableWork( bool checkOwnershipQuota = true ) const;
         /**
          * Updates m_queue_timestamp_ based on current ownership duration
          */
@@ -163,51 +163,52 @@ namespace sgns::processing
          * Updates the list of unprocessed subtask indices and
          * @return if any unprocessed subtasks are available
          */
-        bool UpdateUnprocessedSubTaskIndices(const SGProcessing::SubTaskQueue* queue,
-                                              std::vector<int>& unprocessedSubTaskIndices) const;
+        std::vector<int> UpdateUnprocessedSubTaskIndices( const SGProcessing::SubTaskQueue *queue ) const;
 
         std::shared_ptr<ProcessingSubTaskQueueChannel> m_queueChannel;
         std::shared_ptr<boost::asio::io_context>       m_context;
         std::string                                    m_localNodeId;
 
-        std::shared_ptr<SGProcessing::SubTaskQueue>    m_queue;
-        mutable std::recursive_mutex                   m_queueMutex;
-        std::list<SubTaskGrabbedCallback>              m_onSubTaskGrabbedCallbacks;
+        std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
+        mutable std::recursive_mutex                m_queueMutex;
+        std::list<SubTaskGrabbedCallback>           m_onSubTaskGrabbedCallbacks;
 
         std::function<void( const std::vector<std::string> & )> m_subTaskQueueAssignmentEventSink;
-        std::set<std::string>                          m_processedSubTaskIds;
+        std::set<std::string>                                   m_processedSubTaskIds;
 
-        boost::asio::deadline_timer                    m_dltQueueResponseTimeout;
-        boost::posix_time::time_duration               m_queueResponseTimeout;
+        boost::asio::deadline_timer      m_dltQueueResponseTimeout;
+        boost::posix_time::time_duration m_queueResponseTimeout;
 
-        boost::asio::deadline_timer                    m_dltGrabSubTaskTimeout;
+        boost::asio::deadline_timer m_dltGrabSubTaskTimeout;
 
-        ProcessingSubTaskQueue                         m_processingQueue;
-        std::chrono::system_clock::duration            m_processingTimeout;
-        std::function<void( const std::string & )>     m_processingErrorSink;
+        ProcessingSubTaskQueue                     m_processingQueue;
+        std::chrono::system_clock::duration        m_processingTimeout;
+        std::function<void( const std::string & )> m_processingErrorSink;
 
-        uint64_t m_queue_timestamp_ =  0;            // Aggregate time counter for the queue
-        uint64_t m_ownership_acquired_at_ = 0;      // When this node acquired ownership (in ms)
-        uint64_t m_ownership_last_delta_time_ = 0;   // When this node last updated the queue timestamp
+        uint64_t m_queue_timestamp_           = 0; // Aggregate time counter for the queue
+        uint64_t m_ownership_acquired_at_     = 0; // When this node acquired ownership (in ms)
+        uint64_t m_ownership_last_delta_time_ = 0; // When this node last updated the queue timestamp
 
         // Add to private section of ProcessingSubTaskQueueManager
-        struct OwnershipRequest {
+        struct OwnershipRequest
+        {
             std::string node_id;
-            uint64_t timestamp;  // Timestamp when request was received
+            uint64_t    timestamp; // Timestamp when request was received
         };
+
         std::queue<OwnershipRequest> m_ownershipRequestQueue;
 
-        base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
-        std::chrono::steady_clock::time_point m_lastQueueUpdateTime =  std::chrono::steady_clock::now();
+        base::Logger                          m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
+        std::chrono::steady_clock::time_point m_lastQueueUpdateTime = std::chrono::steady_clock::now();
 
-        size_t m_processedSubtasksInCurrentOwnership = 0;
-        size_t m_defaultMaxSubtasksPerOwnership = 1;
-        size_t m_maxSubtasksPerOwnership;
+        size_t         m_processedSubtasksInCurrentOwnership = 0;
+        size_t         m_defaultMaxSubtasksPerOwnership      = 1;
+        size_t         m_maxSubtasksPerOwnership;
         const uint64_t m_delayBetweenProcessingMs;
 
         std::chrono::steady_clock::time_point m_lastActiveCountCheck = std::chrono::steady_clock::now();
-        uint64_t m_waitTimeBeforeReset = 3000; // Initial wait time of 3000ms
-        bool m_initialDelayPassed = false;    // Track if initial delay has passed
+        uint64_t                              m_waitTimeBeforeReset  = 3000;  // Initial wait time of 3000ms
+        bool                                  m_initialDelayPassed   = false; // Track if initial delay has passed
     };
 }
 

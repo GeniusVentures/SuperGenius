@@ -18,17 +18,6 @@ using namespace sgns::processing;
 
 namespace
 {
-    class SubTaskStateStorageImpl : public SubTaskStateStorage
-    {
-    public:
-        void ChangeSubTaskState( const std::string &subTaskId, SGProcessing::SubTaskState::Type state ) override {}
-
-        std::optional<SGProcessing::SubTaskState> GetSubTaskState( const std::string &subTaskId ) override
-        {
-            return std::nullopt;
-        }
-    };
-
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
@@ -40,24 +29,6 @@ namespace
             m_maximalProcessingSubTaskCount( maximalProcessingSubTaskCount ),
             m_processingSubTaskCount( 0 )
         {
-        }
-
-        bool SetProcessingTypeFromJson( std::string jsondata ) override
-        {
-            return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
-        }
-
-        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>
-        GetCidForProc( std::string json_data, std::string base_json ) override
-        {
-            return nullptr;
-        }
-
-        void GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
-                               std::string                              url,
-                               std::shared_ptr<std::vector<char>>       results ) override
-        {
-            return;
         }
 
         outcome::result<SGProcessing::SubTaskResult> ProcessSubTask( const SGProcessing::SubTask &subTask,
@@ -352,7 +323,6 @@ int main( int argc, char *argv[] )
     ProcessingServiceImpl processingService( pubs,
                                              maximalNodesCount,
                                              enqueuer,
-                                             std::make_shared<SubTaskStateStorageImpl>(),
                                              std::make_shared<SubTaskResultStorageImpl>( globalDB, "test" ),
                                              processingCore );
 

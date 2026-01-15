@@ -1,9 +1,6 @@
 #include "IGeniusTransactions.hpp"
 
-#include <crypto/hasher/hasher_impl.hpp>
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
@@ -47,80 +44,53 @@ namespace sgns
         dag_st.set_signature( std::move( signature ) );
     }
 
-    std::vector<uint8_t> IGeniusTransactions::MakeSignature( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    bool IGeniusTransactions::CheckHash()
+    {
+        auto signature = dag_st.signature();
+        auto hash      = dag_st.data_hash();
+        dag_st.clear_signature();
+        dag_st.clear_data_hash();
+
+        auto hasher_         = std::make_shared<crypto::HasherImpl>();
+        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector() );
+        dag_st.set_data_hash( hash );
+        dag_st.set_signature( std::move( signature ) );
+
+        return hash == calculated_hash.toReadableString();
+    }
+
+    std::vector<uint8_t> IGeniusTransactions::MakeSignature( GeniusAccount& account )
     {
         dag_st.clear_signature();
-        auto                 size = dag_st.ByteSizeLong();
-        std::vector<uint8_t> serialized( size );
-        dag_st.SerializeToArray( serialized.data(), size );
+        auto serialized = SerializeByteVector();
 
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( serialized );
-
-        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_key->get_private_key() );
         std::vector<std::uint8_t> signed_vector( 64 );
 
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
-                                                  signed_vector.begin(),
-                                                  signed_vector.begin() + 32 );
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<1>( signature ),
-                                                  signed_vector.begin() + 32,
-                                                  signed_vector.end() );
-
-        nil::crypto3::multiprecision::cpp_int r;
-        nil::crypto3::multiprecision::cpp_int s;
-
-        import_bits( r, signed_vector.cbegin(), signed_vector.cbegin() + 32 );
-        import_bits( s, signed_vector.cbegin() + 32, signed_vector.cbegin() + 64 );
+        signed_vector = account.Sign( serialized );
 
         dag_st.set_signature( signed_vector.data(), signed_vector.size() );
         return signed_vector;
     }
 
-    bool IGeniusTransactions::CheckDAGStructSignature( SGTransaction::DAGStruct dag_st )
+    bool IGeniusTransactions::CheckSignature()
     {
-        bool         ret                = false;
-        auto         str_signature      = dag_st.signature();
-        const size_t SIGNATURE_EXP_SIZE = 64;
-        do
-        {
-            if ( str_signature.size() != SIGNATURE_EXP_SIZE )
-            {
-                break;
-            }
-            std::vector<uint8_t> vec_sig( str_signature.cbegin(), str_signature.cend() );
+        auto str_signature = dag_st.signature();
+        dag_st.clear_signature();
+        auto serialized = SerializeByteVector();
+        dag_st.set_signature( str_signature );
 
-            dag_st.clear_signature();
-            auto                 size = dag_st.ByteSizeLong();
-            std::vector<uint8_t> serialized( size );
-            dag_st.SerializeToArray( serialized.data(), size );
+        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
+    }
 
-            std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( serialized );
+    bool IGeniusTransactions::CheckDAGSignatureLegacy()
+    {
+        auto str_signature = dag_st.signature();
+        dag_st.clear_signature();
+        auto                 size = dag_st.ByteSizeLong();
+        std::vector<uint8_t> serialized( size );
+        dag_st.SerializeToArray( serialized.data(), size );
+        dag_st.set_signature( str_signature );
 
-            auto [r_success, r] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin(),
-                    vec_sig.cbegin() + 32 );
-
-            if ( !r_success )
-            {
-                break;
-            }
-            auto [s_success, s] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin() + 32,
-                    vec_sig.cbegin() + 64 );
-
-            if ( !s_success )
-            {
-                break;
-            }
-            ethereum::signature_type sig( r, s );
-            auto eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( dag_st.source_addr() );
-            ret             = nil::crypto3::verify( hashed, sig, eth_pubkey );
-        } while ( 0 );
-
-        return ret;
+        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
 }

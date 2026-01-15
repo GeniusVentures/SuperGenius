@@ -12,8 +12,6 @@ set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 # Set config of GTest
 set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
-set(BUILD_WITH_PROOFS ON CACHE BOOL "Whether proofs are being generated/verified or not")
-
 add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -336,17 +334,19 @@ set_target_properties(marshalling::crypto3_zk PROPERTIES
 set(zkLLVM_INCLUDE_DIR "${ZKLLVM_BUILD_DIR}/zkLLVM/include")
 include_directories(${zkLLVM_INCLUDE_DIR})
 
-if (BUILD_WITH_PROOFS)
-    # circifier
-    # set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
-    # set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
-    set(LLVM_DIR "${ZKLLVM_BUILD_DIR}/zkLLVM/lib/cmake/llvm")
-    find_package(LLVM CONFIG REQUIRED)
-endif()
+
+# circifier
+set(LLVM_DIR "${ZKLLVM_BUILD_DIR}/zkLLVM/lib/cmake/llvm")
+find_package(LLVM CONFIG REQUIRED)
+
 
 # gnus_upnp
 set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
 find_package(gnus_upnp CONFIG REQUIRED)
+
+#json.hpp
+set(nlohmann_json_DIR "${_THIRDPARTY_BUILD_DIR}/json/share/cmake/nlohmann_json")
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
@@ -381,6 +381,9 @@ include_directories(
     ${PROJECT_ROOT}/ProofSystem
 )
 include_directories(
+    ${PROJECT_ROOT}/SGProcessingManager
+)
+include_directories(
     ${PROJECT_ROOT}/app
 )
 
@@ -407,6 +410,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
+add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
@@ -466,6 +470,7 @@ install_hfile(${PROJECT_ROOT}/app/integration)
 install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
 install_hfile(${PROJECT_ROOT}/src/singleton)
 install_hfile(${PROJECT_ROOT}/src/coinprices)
+install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
 
 # install proto header files
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)

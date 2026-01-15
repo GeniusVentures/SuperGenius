@@ -31,9 +31,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static sgns::GeniusNode *node_main;
-    static sgns::GeniusNode *node_proc1;
-    static sgns::GeniusNode *node_proc2;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -43,7 +43,11 @@ protected:
 
     static void SetUpTestSuite()
     {
+        std::string full_node_pub_address =
+            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
         std::string binary_path = boost::dll::program_location().parent_path().string();
+        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node1/" ).c_str(),
                       sizeof( DEV_CONFIG.BaseWritePath ) );
@@ -59,28 +63,47 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = new sgns::GeniusNode( DEV_CONFIG,
-                                          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                          false,
-                                          false );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true,
+                                            40054,
+                                            true );
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc1 not ready" );
+
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
-                                           true );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = new sgns::GeniusNode( DEV_CONFIG3,
-                                           "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           true );
+                                           false );
+
+        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                            false,
+                                            true,
+                                            40060,
+                                            true );
 
         //Connect to each other
-        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                      node_proc2->GetPubSub()->GetLocalAddress() };
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
+                                      node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_proc2->GetPubSub()->GetLocalAddress() };
+        bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        test::assertWaitForCondition(
+            [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_main not ready" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 30000 ),
+            "node_proc2 not ready" );
+
+        //Connect to each other
 
         //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
         //node_proc2->GetPubSub()->AddPeers( bootstrappers );
@@ -89,21 +112,21 @@ protected:
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
-        delete node_main;
+        node_main.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete main node files\n";
         // }
 
         std::cout << "Tear down 2" << std::endl;
-        delete node_proc1;
+        node_proc1.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 2 files\n";
         // }
 
         std::cout << "Tear down 3" << std::endl;
-        delete node_proc2;
+        node_proc2.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 3 files\n";
@@ -112,9 +135,9 @@ protected:
 };
 
 // Static member initialization
-sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
-sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
-sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
+std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",
@@ -151,9 +174,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 {
-    std::string address_main  = node_main->GetPubSub()->GetLocalAddress();
-    std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
-    std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
+    std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
+    std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -165,7 +188,19 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } )  );
+    test::assertWaitForCondition(
+        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Main node not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 1 not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 2 not synched" );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
@@ -189,46 +224,140 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
 TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
 {
     std::string json_data = R"(
-                {
-                "data": {
-                    "type": "file",
-                    "URL": "file://[basepath]../../../../test/src/processing_nodes/"
-                },
-                "model": {
-                    "name": "mnnimage",
-                    "file": "model.mnn"
-                },
-                "input": [
-                    {
-                        "image": "data/ballet.data",
-                        "block_len": 4860000 ,
-                        "block_line_stride": 5400,
-                        "block_stride": 0,
-                        "chunk_line_stride": 1080,
-                        "chunk_offset": 0,
-                        "chunk_stride": 4320,
-                        "chunk_subchunk_height": 5,
-                        "chunk_subchunk_width": 5,
-                        "chunk_count": 25,
-                        "channels": 4
-                    },
-                    {
-                        "image": "data/frisbee3.data",
-                        "block_len": 786432 ,
-                        "block_line_stride": 1536,
-                        "block_stride": 0,
-                        "chunk_line_stride": 384,
-                        "chunk_offset": 0,
-                        "chunk_stride": 1152,
-                        "chunk_subchunk_height": 4,
-                        "chunk_subchunk_width": 4,
-                        "chunk_count": 16,
-                        "channels": 3
-                    }
-                ]
-                }
-               )";
-    auto        cost      = node_main->GetProcessCost( json_data );
+{
+  "name": "posenet-inference",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "PoseNet inference on multiple image inputs using MNN model",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+
+  "inputs": [
+    {
+      "name": "ballet_image",
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25
+      },
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image", 
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16
+      },
+      "format": "RGB8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor", 
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference", 
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D", 
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints", 
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}
+       )";
+    auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    auto        cost      = node_main->GetProcessCost( procmgr.value() );
     ASSERT_EQ( 18, cost );
 }
 
@@ -237,57 +366,152 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
     std::string json_data = R"(
                 garbage
                )";
-    auto        cost      = node_main->GetProcessCost( json_data );
+    auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    auto        cost      = node_main->GetProcessCost( procmgr.value() );
     ASSERT_EQ( 0, cost );
 }
 
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     bin_path += "../";
 #endif
     std::string json_data = R"(
-                {
-                "data": {
-                    "type": "file",
-                    "URL": "file://[basepath]../../../../test/src/processing_nodes/"
-                },
-                "model": {
-                    "name": "mnnimage",
-                    "file": "model.mnn"
-                },
-                "input": [
-                    {
-                        "image": "data/ballet.data",
-                        "block_len": 4860000 ,
-                        "block_line_stride": 5400,
-                        "block_stride": 0,
-                        "chunk_line_stride": 1080,
-                        "chunk_offset": 0,
-                        "chunk_stride": 4320,
-                        "chunk_subchunk_height": 5,
-                        "chunk_subchunk_width": 5,
-                        "chunk_count": 25,
-                        "channels": 4
-                    },
-                    {
-                        "image": "data/frisbee3.data",
-                        "block_len": 786432 ,
-                        "block_line_stride": 1536,
-                        "block_stride": 0,
-                        "chunk_line_stride": 384,
-                        "chunk_offset": 0,
-                        "chunk_stride": 1152,
-                        "chunk_subchunk_height": 4,
-                        "chunk_subchunk_width": 4,
-                        "chunk_count": 16,
-                        "channels": 3
-                    }
-                ]
-                }
-               )";
-    auto        cost      = node_main->GetProcessCost( json_data );
+{
+  "name": "posenet-inference",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "PoseNet inference on multiple image inputs using MNN model",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+
+  "inputs": [
+    {
+      "name": "ballet_image",
+	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25
+      },
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image", 
+	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16
+      },
+      "format": "RGB8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor", 
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference", 
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D", 
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints", 
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}
+       )";
+    auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
@@ -299,9 +523,8 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
-    EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ) );
-
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+    EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
+               TransactionManager::TransactionStatus::CONFIRMED );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;

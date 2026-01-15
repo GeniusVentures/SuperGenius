@@ -1,8 +1,3 @@
-/**
-* Header file for processing data storage interface
-* @author creativeid00
-*/
-
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUTASK_RESULT_STORAGE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUTASK_RESULT_STORAGE_HPP
 
@@ -11,7 +6,7 @@
 namespace sgns::processing
 {
     /** Handles subtask results storage
-*/
+     */
     class SubTaskResultStorage
     {
     public:

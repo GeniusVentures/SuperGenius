@@ -8,3 +8,6 @@
 [submodule "ProofSystem"]
 	path = ProofSystem
 	url = ../ProofSystem
+[submodule "SGProcessingManager"]
+	path = SGProcessingManager
+	url = ../SGProcessingManager.git

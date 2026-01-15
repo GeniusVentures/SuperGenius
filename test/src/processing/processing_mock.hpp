@@ -2,6 +2,7 @@
 #ifndef PROCESSINGMOCK_HPP
 #define PROCESSINGMOCK_HPP
 
+#include "processing/processing_subtask_queue_channel.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_validation_core.hpp"
 #include "processing/processing_core.hpp"
@@ -10,23 +11,12 @@
 #include "processing/processing_engine.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
-#include "processing/processing_subtask_state_storage.hpp"
 
 using namespace sgns::base;
 using namespace sgns::processing;
 
 namespace sgns::test
 {
-    class SubTaskStateStorageMock: public SubTaskStateStorage
-    {
-    public:
-        void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
-        std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
-        {
-            return std::nullopt;
-        }
-    };
-
     class SubTaskResultStorageMock : public SubTaskResultStorage
     {
     public:
@@ -62,20 +52,6 @@ namespace sgns::test
     public:
         ProcessingCoreImpl(size_t processingMillisec = 50)
             : m_processingMillisec(processingMillisec)
-        {
-        }
-
-        bool SetProcessingTypeFromJson(std::string jsondata) override
-        {
-            return true;
-        }
-
-        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override
-        {
-            return nullptr;
-        }
-
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::vector<char>> results) override
         {
         }
 
@@ -161,6 +137,11 @@ namespace sgns::test
         {
             return nullptr;
         }
+
+        void MarkTaskBad( const std::string &taskKey ) override
+        {
+            return;
+        }
     };
 
     class ProcessingSubTaskQueueChannelImpl : public ProcessingSubTaskQueueChannel
@@ -169,6 +150,10 @@ namespace sgns::test
         typedef std::function<void(const std::string& nodeId)> QueueOwnershipRequestSink;
         typedef std::function<void(std::shared_ptr<SGProcessing::SubTaskQueue> queue)> QueuePublishingSink;
 
+        ~ProcessingSubTaskQueueChannelImpl() override
+        {
+            std::cout << "Destroy subtask channel" << std::endl;
+        }
         void RequestQueueOwnership(const std::string& nodeId) override
         {
             if (queueOwnershipRequestSink)

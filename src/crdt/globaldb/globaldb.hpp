@@ -21,9 +21,10 @@ namespace sgns::crdt
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
     {
     public:
-        using Buffer      = base::Buffer;
-        using QueryResult = CrdtDatastore::QueryResult;
-        using RocksDB     = storage::rocksdb;
+        using Buffer             = base::Buffer;
+        using QueryResult        = CrdtDatastore::QueryResult;
+        using RocksDB            = storage::rocksdb;
+        using CRDTHeadListResult = CrdtHeads::CRDTListResult;
 
         /**
          * @brief       Factory method to create a GlobalDB instance
@@ -55,7 +56,9 @@ namespace sgns::crdt
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
         /// CRDT Filter callback type
-        using GlobalDBFilterCallback = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBFilterCallback         = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBNewElementCallback     = CrdtDatastore::CRDTNewElementCallback;
+        using GlobalDBDeletedElementCallback = CrdtDatastore::CRDTDeletedElementCallback;
 
         /**
          * @enum        Error
@@ -78,14 +81,14 @@ namespace sgns::crdt
          * @param[in] value The value to store.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
-        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
+        outcome::result<CID> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
          * @return      outcome::failure on error or success otherwise
          */
-        outcome::result<void> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
+        outcome::result<CID> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
 
         /** Gets a value that corresponds to specified key.
         * @param key - value key
@@ -97,7 +100,7 @@ namespace sgns::crdt
         * @param key to remove from storage
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
+        outcome::result<CID> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
         * @param prefix - keys prefix to match. An empty prefix matches any key.
@@ -131,14 +134,22 @@ namespace sgns::crdt
         void AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
-        void AddTopicName( std::string topicName );
-        void SetFullNode( bool full_node );
 
-        std::shared_ptr<RocksDB> GetDataStore();
+        std::shared_ptr<RocksDB>                          GetDataStore();
+        std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
+        bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
+        bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
 
         void Start();
+
+        outcome::result<CRDTHeadListResult> GetCRDTHeadList();
+
+        outcome::result<uint64_t> GetCRDTHeadHeight( const CID &aCid, const std::string &topic );
+        outcome::result<void>     CRDTHeadRemove( const CID &aCid, const std::string &topic );
+        outcome::result<void>     CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority );
+        outcome::result<crdt::CrdtDatastore::JobStatus> GetCIDJobStatus( const CID &cid ) const;
 
     private:
         /**

@@ -156,7 +156,6 @@ namespace sgns
             ByteCodeMap[proof_type] = std::move( bytecode );
         }
 
-    protected:
         /**
          * @brief       Deserializes a BaseProofProto from the provided proof data.
          * @param[in]   proof_data The byte vector representing the proof data.

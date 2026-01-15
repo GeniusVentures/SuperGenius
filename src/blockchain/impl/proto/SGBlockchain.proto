@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package sgns.blockchain;
+
+
+message GenesisBlock {
+  // Unique identifier for the blockchain network
+  string chain_id = 1;
+  
+  // Creation timestamp
+  uint64 timestamp = 2;
+
+  bytes hash = 3;
+  
+  // Public key of the authorized genesis creator (hex encoded)
+  bytes creator_public_key = 4;
+  
+  // Digital signature over the genesis block data
+  bytes signature = 5;
+ 
+  // Version of the genesis block format
+  string version = 6;
+}
+
+// Response for genesis block operations
+message GenesisBlockResponse {
+  bool success = 1;
+  string error_message = 2;
+  GenesisBlock genesis_block = 3;
+}
+
+message AccountCreationBlock {
+    string account_address = 1;      // The account address being created
+    string genesis_block_cid = 2;    // CID of the genesis block this links to
+    uint64 timestamp = 3;            // Creation timestamp
+    string version = 4;              // Version of the software
+    bytes signature = 5;             // Signature by the account owner
+    string hash = 6;                 // Block hash (optional)
+}

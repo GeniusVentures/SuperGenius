@@ -47,7 +47,6 @@ namespace sgns
         uint64_t    amount  = tx_struct.amount();
         std::string chainid = tx_struct.chain_id();
         TokenID     tokenid = TokenID::FromBytes( tx_struct.token_id().data(), tx_struct.token_id().size() );
-        //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
         return std::make_shared<MintTransaction>(
             MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) ); // Return new instance
@@ -63,15 +62,13 @@ namespace sgns
         return token_id;
     }
 
-    MintTransaction MintTransaction::New( uint64_t                                        new_amount,
-                                          std::string                                     chain_id,
-                                          TokenID                                         token_id,
-                                          SGTransaction::DAGStruct                        dag,
-                                          std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    MintTransaction MintTransaction::New( uint64_t                 new_amount,
+                                          std::string              chain_id,
+                                          TokenID                  token_id,
+                                          SGTransaction::DAGStruct dag )
     {
         MintTransaction instance( new_amount, std::move( chain_id ), std::move( token_id ), std::move( dag ) );
         instance.FillHash();
-        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 }

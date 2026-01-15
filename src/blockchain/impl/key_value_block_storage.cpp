@@ -266,7 +266,8 @@ namespace sgns::blockchain
         OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, number ) );
 
         //TODO - For now one block data per block header. Revisit this
-        return db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, {"topic"} );
+        OUTCOME_TRY(db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, {"topic"} ));
+        return outcome::success();
     }
 
     outcome::result<primitives::BlockHash> KeyValueBlockStorage::getGenesisBlockHash() const

@@ -7,10 +7,8 @@
 
 namespace sgns::processing
 {
-    ////////////////////////////////////////////////////////////////////////////////
     std::shared_ptr<ProcessingNode> ProcessingNode::New(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+        std::shared_ptr<GossipPubSub>                           gossipPubSub,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::shared_ptr<ProcessingCore>                         processingCore,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -24,7 +22,6 @@ namespace sgns::processing
     {
         // Create the shared_ptr using the protected constructor
         auto node = std::shared_ptr<ProcessingNode>( new ProcessingNode( std::move( gossipPubSub ),
-                                                                         std::move( subTaskStateStorage ),
                                                                          std::move( subTaskResultStorage ),
                                                                          std::move( processingCore ),
                                                                          std::move( taskResultProcessingSink ),
@@ -53,8 +50,7 @@ namespace sgns::processing
         return node;
     }
 
-    ProcessingNode::ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-                                    std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+    ProcessingNode::ProcessingNode( std::shared_ptr<GossipPubSub>                           gossipPubSub,
                                     std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                     std::shared_ptr<ProcessingCore>                         processingCore,
                                     std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
@@ -66,40 +62,62 @@ namespace sgns::processing
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_nodeId( std::move( node_id ) ),
         m_processingCore( std::move( processingCore ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) ),
         m_processingDoneSink( std::move( processingDoneSink ) ),
         m_creationTime( std::chrono::steady_clock::now() ),
-        m_ttl( ttl )
+        m_ttl( ttl ),
+        m_localContext( std::make_shared<boost::asio::io_context>() ),
+        m_localWorkGuard( m_localContext->get_executor() ),
+        m_localIoThread( [ctx = m_localContext]() { ctx->run(); } )
     {
         m_logger->debug( "[{}] Processing node CREATED", m_nodeId );
         if ( m_gossipPubSub )
         {
-            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_localContext );
         }
     }
 
     ProcessingNode::~ProcessingNode()
     {
         m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
+        if ( m_localContext )
+        {
+            m_localContext->stop();
+        }
+        if ( m_localWorkGuard )
+        {
+            m_localWorkGuard->reset();
+        }
+        if ( m_localIoThread.joinable() )
+        {
+            // Avoid joining from the same thread (would throw/terminate)
+            if ( std::this_thread::get_id() == m_localIoThread.get_id() )
+            {
+                m_localIoThread.detach();
+            }
+            else
+            {
+                m_localIoThread.join();
+            }
+        }
     }
 
-    void ProcessingNode::Initialize( const std::string &processingQueueChannelId, std::chrono::milliseconds msSubscriptionWaitingDuration )
+    void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
+                                     std::chrono::milliseconds msSubscriptionWaitingDuration )
     {
         // Subscribe to subtask queue channel
         auto processingQueueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( m_gossipPubSub,
                                                                                              processingQueueChannelId );
 
         m_subtaskQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( processingQueueChannel,
-                                                                                 m_gossipPubSub->GetAsioContext(),
+                                                                                 m_localContext,
                                                                                  m_nodeId,
                                                                                  m_processingErrorSink );
 
         m_subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>( m_gossipPubSub,
                                                                              m_subtaskQueueManager,
-                                                                             m_subTaskStateStorage,
                                                                              m_subTaskResultStorage,
                                                                              m_taskResultProcessingSink,
                                                                              m_processingErrorSink );
@@ -136,14 +154,14 @@ namespace sgns::processing
                                                                  m_processingDoneSink );
 
         // Run messages processing once all dependent object are created
-        processingQueueChannel->Listen( msSubscriptionWaitingDuration );
+        (void)processingQueueChannel->Listen( msSubscriptionWaitingDuration );
 
         // Keep the channel
         m_queueChannel = processingQueueChannel;
         m_logger->debug( "[{}] Processing node INITIALIZED", m_nodeId );
     }
 
-    bool ProcessingNode::AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
+    bool ProcessingNode::AttachTo( const std::string &processingQueueChannelId )
     {
         m_logger->debug( "[{}] Processing node AttachTo {} ", m_nodeId, processingQueueChannelId );
         bool ret = false;
@@ -176,6 +194,14 @@ namespace sgns::processing
     bool ProcessingNode::HasQueueOwnership() const
     {
         return m_subtaskQueueManager && m_subtaskQueueManager->HasOwnership();
+    }
+
+    float ProcessingNode::GetProgress() const
+    {
+        if (m_processingEngine) {
+            return m_processingEngine->GetProgress();
+        }
+        return 0.0f;
     }
 
     void ProcessingNode::InitTTL()
@@ -257,6 +283,4 @@ namespace sgns::processing
                 } );
         }
     }
-
-    ////////////////////////////////////////////////////////////////////////////////
 }

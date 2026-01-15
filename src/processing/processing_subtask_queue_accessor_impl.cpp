@@ -1,24 +1,26 @@
-#include <fmt/std.h>
 #include "processing_subtask_queue_accessor_impl.hpp"
+#include <fmt/std.h>
 #include <thread>
 #include <utility>
+#include "base/sgns_version.hpp"
 
 namespace sgns::processing
 {
     SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
-        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
         std::function<void( const std::string & )>              processingErrorSink ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
-        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) )
     {
+        m_localContext = std::make_shared<boost::asio::io_context>();
+        m_localWorkGuard.emplace( m_localContext->get_executor() );
+        m_localThread = std::thread( [ctx = m_localContext]() { ctx->run(); } );
         // @todo replace hardcoded channel identified with an input value
         m_logger->debug( "[CREATED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
@@ -27,6 +29,32 @@ namespace sgns::processing
 
     SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
     {
+        if ( m_stateTimer )
+        {
+            boost::system::error_code ec;
+            m_stateTimer->cancel( ec );
+            m_stateTimer.reset();
+        }
+        if ( m_localContext )
+        {
+            m_localContext->stop();
+        }
+        if ( m_localWorkGuard )
+        {
+            m_localWorkGuard->reset();
+        }
+        if ( m_localThread.joinable() )
+        {
+            // Avoid joining from the same thread (would throw/terminate)
+            if ( std::this_thread::get_id() == m_localThread.get_id() )
+            {
+                m_localThread.detach();
+            }
+            else
+            {
+                m_localThread.join();
+            }
+        }
         m_logger->debug( "[RELEASED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
                          std::this_thread::get_id() );
@@ -34,19 +62,20 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
     {
-        bool ret = false;
+        bool ret           = false;
+        auto results_topic = "RESULT_CHANNEL_ID_" + task_id + sgns::version::GetNetAndVersionAppendix();
         if ( !m_resultChannel )
         {
-            m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub,
-                                                                                "RESULT_CHANNEL_ID_" + task_id );
-            m_logger->debug( "Results channel created with \"RESULT_CHANNEL_ID_{}\"", task_id );
+            m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, results_topic );
+            m_logger->debug( "Results channel created with {}", results_topic );
             ret = true;
         }
         else
         {
-            m_logger->error( "Tried creating channel with \"RESULT_CHANNEL_ID_{}\" but channel already created",
-                             task_id );
+            m_logger->error( "Tried creating channel with {} but channel already created",
+                             results_topic );
         }
+        StartPeriodicStateBroadcast();
         return ret;
     }
 
@@ -84,10 +113,6 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::AssignSubTasks( std::list<SGProcessing::SubTask> &subTasks )
     {
-        for ( const auto &subTask : subTasks )
-        {
-            m_subTaskStateStorage->ChangeSubTaskState( subTask.subtaskid(), SGProcessing::SubTaskState::ENQUEUED );
-        }
         return m_subTaskQueueManager->CreateQueue( subTasks );
     }
 
@@ -120,8 +145,7 @@ namespace sgns::processing
     {
         // @todo Consider possibility to use the received subTaskIds instead of m_subTaskQueueManager->GetQueueSnapshot() call
         // Call it asynchronously to prevent multiple mutex locks
-        m_gossipPubSub->GetAsioContext()->post( [onSubTaskQueueConnectedEventSink]()
-                                                { onSubTaskQueueConnectedEventSink(); } );
+        m_localContext->post( [onSubTaskQueueConnectedEventSink]() { onSubTaskQueueConnectedEventSink(); } );
     }
 
     void SubTaskQueueAccessorImpl::GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback )
@@ -166,8 +190,28 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::CompleteSubTask( const std::string                 &subTaskId,
                                                     const SGProcessing::SubTaskResult &subTaskResult )
     {
+        m_logger->info( "CompleteSubTask called with subtask {}", subTaskResult.subtaskid() );
+        // Find the corresponding subtask
+        auto maybeSubTask = FindSubTaskById( subTaskId );
+        if ( !maybeSubTask )
+        {
+            m_logger->error( "Cannot find subtask {} for validation", subTaskId );
+            m_processingErrorSink( "Cannot find subtask for validation: " + subTaskId );
+            return;
+        }
+
+        // Validate before storing
+        if ( auto validation_res = m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult );
+             validation_res.has_error() )
+        {
+            m_logger->error( "Invalid result for subtask {}: {}, not storing",
+                             subTaskId,
+                             validation_res.error().message() );
+            m_processingErrorSink( "Invalid result for subtask: " + subTaskId );
+            return;
+        }
+
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
-        m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
         // tell local queue manager we completed this task as well.
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
 
@@ -185,12 +229,33 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
     {
+        m_logger->info( "OnResultReceived called with subtask {} {}",
+                        reinterpret_cast<size_t>( this ),
+                        subTaskResult.subtaskid() );
         bool should_have_finalized = false;
         if ( !m_subTaskQueueManager->IsQueueInit() )
         {
             return should_have_finalized;
         }
         std::string subTaskId = subTaskResult.subtaskid();
+
+        auto maybeSubTask = FindSubTaskById( subTaskResult.subtaskid() );
+        if ( !maybeSubTask )
+        {
+            m_logger->error( "Cannot find subtask {} for validation", subTaskResult.subtaskid() );
+            m_processingErrorSink( "Cannot find subtask for validation: " + subTaskResult.subtaskid() );
+            return false;
+        }
+
+        if ( auto validation_res = m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult );
+             validation_res.has_error() )
+        {
+            m_logger->error( "Rejecting invalid external result for subtask {}: {}",
+                             subTaskResult.subtaskid(),
+                             validation_res.error().message() );
+            m_processingErrorSink( "Invalid external result for subtask: " + subTaskResult.subtaskid() );
+            return false;
+        }
 
         // Results accumulation
         std::lock_guard<std::mutex> guard( m_mutexResults );
@@ -221,7 +286,8 @@ namespace sgns::processing
         const SGProcessing::SubTaskCollection &subTasks,
         std::set<std::string>                 &invalidSubTaskIds )
     {
-        bool valid = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        auto validate_res = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        bool valid        = !validate_res.has_error();
 
         FinalizationRetVal finalization_ret = FinalizationRetVal::NOT_FINALIZED;
         m_logger->debug( "RESULTS_VALIDATED: {}", valid ? "VALID" : "INVALID" );
@@ -299,9 +365,104 @@ namespace sgns::processing
 
                 rebroadcast_results = _this->OnResultReceived( std::move( result ) );
 
-                if ( rebroadcast_results )
+                //if ( rebroadcast_results )
+                //{
+                //    std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
+                //    _this->m_resultChannel->Publish( message->data);
+                //}
+            }
+        }
+    }
+
+    boost::optional<SGProcessing::SubTask> SubTaskQueueAccessorImpl::FindSubTaskById(
+        const std::string &subTaskId ) const
+    {
+        auto queue = m_subTaskQueueManager->GetQueueSnapshot();
+        if ( !queue )
+        {
+            return boost::none;
+        }
+
+        const auto &subTasks = queue->subtasks();
+        for ( int i = 0; i < subTasks.items_size(); ++i )
+        {
+            const auto &subTask = subTasks.items( i );
+            if ( subTask.subtaskid() == subTaskId )
+            {
+                return subTask;
+            }
+        }
+
+        return boost::none;
+    }
+
+    void SubTaskQueueAccessorImpl::StartPeriodicStateBroadcast()
+    {
+        // Every few seconds, if we have ownership and results, broadcast them
+        m_stateTimer = std::make_shared<boost::asio::steady_timer>( *m_localContext );
+        ScheduleStateBroadcast();
+    }
+
+    void SubTaskQueueAccessorImpl::ScheduleStateBroadcast()
+    {
+        if ( !m_stateTimer )
+        {
+            return;
+        }
+
+        m_stateTimer->expires_from_now( std::chrono::seconds( 2 ) );
+
+        // Capture weak_ptr to prevent use-after-destruction
+        std::weak_ptr<SubTaskQueueAccessorImpl> weakSelf = shared_from_this();
+
+        m_stateTimer->async_wait(
+            [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
                 {
-                    _this->m_resultChannel->Publish( message->data);
+                    return; // Timer was cancelled
+                }
+
+                auto self = weakSelf.lock();
+                if ( !self )
+                {
+                    // Object was destroyed, don't execute callback
+                    return;
+                }
+
+                self->PublishExistingResults();
+                self->StartPeriodicStateBroadcast(); // Schedule next
+            } );
+    }
+
+    void SubTaskQueueAccessorImpl::PublishExistingResults()
+    {
+        std::lock_guard<std::mutex> guard( m_mutexResults );
+        for ( const auto &[subTaskId, result] : m_results )
+        {
+            if ( m_resultChannel )
+            {
+                m_resultChannel->Publish( result.SerializeAsString() );
+                m_logger->debug( "Published existing result for {}", subTaskId );
+            }
+        }
+        // If I'm the owner and have results, try to finalize
+        if ( m_subTaskQueueManager->HasOwnership() && !m_results.empty() )
+        {
+            if ( m_subTaskQueueManager->IsProcessed() )
+            {
+                std::set<std::string> invalidSubTaskIds;
+                auto                  queue = m_subTaskQueueManager->GetQueueSnapshot();
+
+                auto finalized_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
+                if ( finalized_ret == FinalizationRetVal::FINALIZED )
+                {
+                    m_logger->debug( "Successfully finalized during periodic broadcast" );
+                    // Stop periodic broadcasting since we're done
+                    if ( m_stateTimer )
+                    {
+                        m_stateTimer->cancel();
+                    }
                 }
             }
         }

@@ -2,6 +2,8 @@
 #define SUPERGENIUS_BROADCASTER_HPP
 
 #include "base/buffer.hpp"
+#include <libp2p/peer/peer_info.hpp>
+#include <boost/optional.hpp>
 #include <tuple>
 #include <string>
 #include <optional>
@@ -25,9 +27,12 @@ namespace sgns::crdt
 
         /**
          * Send {@param buff} payload to other replicas.
+         * @param buff       Buffer containing the data to broadcast.
+         * @param topic      Topic to broadcast to.
+         * @param peerInfo   Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success or outcome::failure on error.
          */
-        virtual outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic ) = 0;
+        virtual outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) = 0;
 
         /**
          * Obtain the next payload and its topic received from the network.
@@ -42,6 +47,12 @@ namespace sgns::crdt
          * @return true if the broadcaster is subscribed to the topic, false otherwise.
          */
         virtual bool HasTopic( const std::string &topic ) = 0;
+
+        /**
+         * @brief Get the underlying DAG syncer (if available).
+         * @return Shared pointer to the DAG syncer, or nullptr if not available.
+         */
+        virtual std::shared_ptr<void> GetDagSyncer() const { return nullptr; }
     };
 } // namespace sgns::crdt
 

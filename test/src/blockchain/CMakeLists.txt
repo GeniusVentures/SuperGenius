@@ -33,3 +33,26 @@ target_link_libraries(block_storage_test
 if(FORCE_MULTIPLE)
     set_target_properties(block_storage_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
+
+addtest(blockchain_genesis_test
+    blockchain_genesis_test.cpp
+    )
+
+target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
+target_link_libraries(blockchain_genesis_test
+    genius_node
+)
+if(WIN32)
+    target_link_options(blockchain_genesis_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+
+elseif(APPLE)
+    target_link_options(blockchain_genesis_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+
+else()
+    target_link_options(blockchain_genesis_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()

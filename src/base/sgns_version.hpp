@@ -7,6 +7,11 @@ namespace sgns
 {
     namespace version
     {
+        static constexpr std::uint16_t    MAIN_NET_ID           = 369;
+        static constexpr std::uint16_t    TEST_NET_ID           = 963;
+        static constexpr std::uint16_t    DEV_NET_ID            = 144;
+        static constexpr std::string_view NET_ID_APPENDIX       = ".%hu";
+        static constexpr std::string_view SGNS_VERSION_APPENDIX = ".%hu.%hu";
         /**
          * @brief Retrieves the complete version number of SuperGenius.
          *
@@ -55,5 +60,10 @@ namespace sgns
          * @return std::string representing the version text.
          */
         std::string SuperGeniusVersionText();
+
+        uint16_t GetNetworkID();
+
+        std::string GetNetAndVersionAppendix();
+        std::string GetNetAndVersionAppendix( uint32_t version_major, uint32_t version_minor, uint16_t net_id );
     }
 }

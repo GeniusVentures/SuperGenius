@@ -41,15 +41,24 @@ namespace sgns::storage
         l->options_->env->SetBackgroundThreads( 4, ::rocksdb::Env::Priority::HIGH );
 
         // Open the RocksDB database
-        DB  *db     = nullptr;
-        auto status = DB::Open( *( l->options_ ), std::string( path ), &db );
+        DB *db      = nullptr;
+        l->path_    = std::string( path );
+        auto status = DB::Open( *( l->options_ ), l->path_, &db );
 
         if ( status.ok() )
         {
             // Wrap DB* into a shared_ptr with a custom deleter to ensure cleanup
-            l->db_ = std::shared_ptr<DB>( db );
+            l->db_ = std::shared_ptr<DB>( db,
+                                          []( DB *ptr )
+                                          {
+                                              if ( ptr )
+                                              {
+                                                  ptr->Close(); // Properly release RocksDB handles
+                                                  delete ptr;
+                                              }
+                                          } );
             // Create logger
-            l->logger_ = base::createLogger( "rocksdb" );
+            l->logger_  = base::createLogger( "rocksdb" );
             l->wo_.sync = true;
             l->setWriteOptions( l->wo_ );
             return l; // Return the shared_ptr

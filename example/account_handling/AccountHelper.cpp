@@ -5,11 +5,14 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/format.hpp>
+#include <memory>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -34,7 +37,9 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
+        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
+                                      std::make_shared<JSONSecureStorage>( "." ),
+                                      eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -87,6 +92,8 @@ namespace sgns
 
         globaldb_ = std::move( globaldc_ret.value() );
 
+        account_->InitMessenger( pubsub_ );
+
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->Start();
@@ -111,7 +118,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_ );
+        transaction_manager_ = TransactionManager::New( globaldb_, io_, account_, hasher_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

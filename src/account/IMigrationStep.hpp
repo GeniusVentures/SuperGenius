@@ -9,6 +9,8 @@
 #pragma once
 
 #include <string>
+#include <tuple>
+#include <sstream>
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -34,15 +36,50 @@ namespace sgns
         virtual std::string ToVersion() const = 0;
 
         /**
+         * @brief       Initializes internal variables after constructor
+         * @return      Outcome of the operation
+         */
+        virtual outcome::result<void> Init() = 0;
+        /**
          * @brief Execute the migration logic.
          * @return Outcome of the operation.
          */
         virtual outcome::result<void> Apply() = 0;
 
         /**
+         * @brief       Shuts down internal variables
+         * @return      Outcome of the operation
+         */
+        virtual outcome::result<void> ShutDown() = 0;
+
+        /**
          * @brief   Check if migration is required.
          * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
          */
         virtual outcome::result<bool> IsRequired() const = 0;
+
+        std::tuple<int, int, int> ParseVersion( const std::string &version ) const
+        {
+            int                major = 0, minor = 0, patch = 0;
+            char               dot;
+            std::istringstream iss( version );
+            iss >> major >> dot >> minor >> dot >> patch;
+            return { major, minor, patch };
+        }
+
+        bool IsVersionLessThan( const std::string &lhs, const std::string &rhs ) const
+        {
+            auto [lhs_major, lhs_minor, lhs_patch] = ParseVersion( lhs );
+            auto [rhs_major, rhs_minor, rhs_patch] = ParseVersion( rhs );
+            if ( lhs_major != rhs_major )
+            {
+                return lhs_major < rhs_major;
+            }
+            if ( lhs_minor != rhs_minor )
+            {
+                return lhs_minor < rhs_minor;
+            }
+            return lhs_patch < rhs_patch;
+        }
     };
 } // namespace sgns

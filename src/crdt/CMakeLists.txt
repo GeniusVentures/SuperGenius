@@ -24,6 +24,17 @@ supergenius_install(crdt_set)
 add_library(crdt_heads
     impl/crdt_heads.cpp
 )
+
+add_library(crdt_callback_manager
+    impl/crdt_callback_manager.cpp
+)
+
+target_link_libraries(crdt_callback_manager
+    PUBLIC
+    buffer
+    logger
+)
+
 target_link_libraries(crdt_heads
     PUBLIC
     hierarchical_key
@@ -31,6 +42,7 @@ target_link_libraries(crdt_heads
     ipfs-lite-cpp::cid
 )
 supergenius_install(crdt_heads)
+supergenius_install(crdt_callback_manager)
 
 add_library(crdt_graphsync_dagsyncer
     dagsyncer.hpp
@@ -67,6 +79,7 @@ target_link_libraries(crdt_datastore
     crdt_heads
     crdt_graphsync_dagsyncer
     crdt_data_filter
+    crdt_callback_manager
     logger
     PRIVATE
     crdt_bcast
