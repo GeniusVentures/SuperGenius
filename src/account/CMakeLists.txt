@@ -20,9 +20,8 @@ target_link_libraries(sgns_genius_account
     outcome
     logger
     crdt_globaldb
-    ipfs-pubsub    
+    ipfs-pubsub
     PRIVATE
-    json_secure_storage
     component_factory
     SGAccountCommProto
     ${WIN_API_LIBRARY}
@@ -36,7 +35,7 @@ target_link_libraries(sgns_genius_account
 
 target_include_directories(
     sgns_genius_account
-    PRIVATE
+    PUBLIC
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
@@ -62,6 +61,7 @@ add_library(genius_node
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
+        Migration3_5_0To3_5_1.cpp
 )
 
 set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)
@@ -80,9 +80,10 @@ target_link_libraries(genius_node
 	ProcessingBase
     PRIVATE
     json_secure_storage
+    secure_storage
     component_factory
     block_header_repository
-    block_storage    
+    block_storage
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
     p2p::p2p_default_network
@@ -95,7 +96,7 @@ target_link_libraries(genius_node
     p2p::p2p_identify
     p2p::p2p_ping
     Boost::Boost.DI
-    SGTransactionProto    
+    SGTransactionProto
     ScaledInteger
     sgns_version
     AsyncIOManager
@@ -110,12 +111,6 @@ target_link_libraries(genius_node
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
-)
-
-target_include_directories(
-    genius_node
-    PRIVATE
-    ${AsyncIOManager_INCLUDE_DIR}
 )
 
 set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")

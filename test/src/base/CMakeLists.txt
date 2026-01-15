@@ -1,4 +1,3 @@
-
 addtest(buffer_test
     buffer_test.cpp
 )

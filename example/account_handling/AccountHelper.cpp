@@ -4,10 +4,12 @@
  * @date       2024-05-15
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+ #include "AccountHelper.hpp"
+ 
+ #include <memory>
+
 #include <boost/format.hpp>
-#include <memory>
 #include <rapidjson/document.h>
-#include "AccountHelper.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include "account/TokenID.hpp"

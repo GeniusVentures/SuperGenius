@@ -1,5 +1,5 @@
 addtest(token_amount_test
-token_amount_test.cpp
+    token_amount_test.cpp
 )
 
 target_include_directories(token_amount_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
@@ -21,13 +21,14 @@ else()
 endif()
 
 addtest(account_balance_test
-account_balance_test.cpp
+    account_balance_test.cpp
 )
 
 target_include_directories(account_balance_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(account_balance_test
     genius_node
+    json_secure_storage
 )
 
 if(MSVC)

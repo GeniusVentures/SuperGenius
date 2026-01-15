@@ -110,14 +110,14 @@ protected:
         fs::remove_all( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        DevConfig_st devConfig = { "", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "" };
+        DevConfig_st devConfig = { "", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
         std::strncpy( devConfig.Addr, FULL_NODE_ADDR, sizeof( devConfig.Addr ) - 1 );
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
         devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance    = sgns::GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        auto     instance    = GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         std::cout << "Full node created" << std::endl;
         return instance;
@@ -135,16 +135,15 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
         [full_node]()
         { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "Full node not synched" );
+        "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
-    
+
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
-
     const std::string readiness_message = params.subdir + " node not ready";
-    sgns::test::assertWaitForCondition(
-        [node]() { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
+    test::assertWaitForCondition(
+        [node] { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
         readiness_message );
 

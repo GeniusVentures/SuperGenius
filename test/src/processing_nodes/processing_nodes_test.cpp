@@ -19,7 +19,6 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
