@@ -73,19 +73,23 @@ TEST_P( SecureStorageTest, WorksWithBinaryData )
     ASSERT_EQ( result_load.value(), binary );
 }
 
+static const std::string TEST_ID = "SGNSTest";
+
 #ifdef __ANDROID__
 
 #include "local_secure_storage/impl/Android.hpp"
 
 INSTANTIATE_TEST_SUITE_P( SecureStorage,
                           SecureStorageTest,
-                          testing::Values( std::make_shared<AndroidSecureStorage>() ) );
+                          testing::Values( std::make_shared<AndroidSecureStorage>( TEST_ID ) ) );
 
 #elif defined( __linux__ )
 
 #include "local_secure_storage/impl/Linux.hpp"
 
-INSTANTIATE_TEST_SUITE_P( SecureStorage, SecureStorageTest, testing::Values( std::make_shared<LinuxSecureStorage>() ) );
+INSTANTIATE_TEST_SUITE_P( SecureStorage,
+                          SecureStorageTest,
+                          testing::Values( std::make_shared<LinuxSecureStorage>( TEST_ID ) ) );
 
 #elif defined( _WIN32 )
 
@@ -93,12 +97,14 @@ INSTANTIATE_TEST_SUITE_P( SecureStorage, SecureStorageTest, testing::Values( std
 
 INSTANTIATE_TEST_SUITE_P( SecureStorage,
                           SecureStorageTest,
-                          testing::Values( std::make_shared<WindowsSecureStorage>() ) );
+                          testing::Values( std::make_shared<WindowsSecureStorage>( TEST_ID ) ) );
 
 #elif defined( __APPLE__ )
 
 #include "local_secure_storage/impl/Apple.hpp"
 
-INSTANTIATE_TEST_SUITE_P( SecureStorage, SecureStorageTest, testing::Values( std::make_shared<AppleSecureStorage>() ) );
+INSTANTIATE_TEST_SUITE_P( SecureStorage,
+                          SecureStorageTest,
+                          testing::Values( std::make_shared<AppleSecureStorage>( TEST_ID ) ) );
 
 #endif

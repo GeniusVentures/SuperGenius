@@ -20,7 +20,6 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>

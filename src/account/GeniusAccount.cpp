@@ -166,8 +166,7 @@ namespace sgns
                         {
                             return outcome::failure( std::errc::invalid_argument );
                         }
-                        auto dag_syncer =
-                            std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( strong->GetDagSyncer() );
+                        auto dag_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( strong->GetDagSyncer() );
                         if ( !dag_syncer )
                         {
                             return outcome::failure( std::errc::no_such_device );
@@ -439,7 +438,7 @@ namespace sgns
         }
         else
         {
-            genius_account_logger()->trace( "Key seed random");
+            genius_account_logger()->trace( "Key seed random" );
             if ( eth_private_key == nullptr )
             {
                 return outcome::failure( std::errc::invalid_argument );

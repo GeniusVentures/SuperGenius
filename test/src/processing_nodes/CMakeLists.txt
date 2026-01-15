@@ -29,8 +29,9 @@ addtest(child_tokens_test
 target_include_directories(child_tokens_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(child_tokens_test
-    mp_utils
     genius_node
+    mp_utils
+    json_secure_storage
 )
 if(WIN32)
     target_link_options(child_tokens_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
@@ -54,8 +55,9 @@ addtest(full_node_test
 target_include_directories(full_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(full_node_test
-    mp_utils
     genius_node
+    mp_utils
+    json_secure_storage
 )
 if(WIN32)
     target_link_options(full_node_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
@@ -73,14 +75,14 @@ endif()
 
 
 add_custom_command(TARGET child_tokens_test POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/data/"
-        "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/data"
-        COMMENT "Copying data"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/data/"
+    "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/data"
+    COMMENT "Copying data"
 )
 add_custom_command(TARGET child_tokens_test POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/model.mnn"
-        "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/"
-        COMMENT "Copying files"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/model.mnn"
+    "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/"
+    COMMENT "Copying files"
 )
