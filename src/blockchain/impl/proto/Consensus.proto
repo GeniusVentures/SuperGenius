@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package sgns.blockchain;
+
+message ConsensusSubject {
+  string subject_id = 1;
+  SubjectType type = 2;
+  string account_id = 3;
+
+  oneof payload {
+    NonceSubject nonce = 10;
+    TaskResultSubject task_result = 11;
+  }
+}
+
+enum SubjectType {
+  SUBJECT_UNSPECIFIED = 0;
+  SUBJECT_NONCE = 1;
+  SUBJECT_TASK_RESULT = 2;
+}
+
+message NonceSubject {
+  uint64 nonce = 1;
+  bytes tx_hash = 2;
+}
+
+message TaskResultSubject {
+  string escrow_path = 1;
+  bytes task_result_hash = 2;
+  uint64 result_epoch = 3;
+}
+
+message ConsensusProposal {
+  string proposal_id = 1;
+  string proposer_id = 2;
+  uint64 timestamp = 3;
+  string registry_cid = 4;
+  uint64 registry_epoch = 5;
+  ConsensusSubject subject = 6;
+  bytes signature = 7;
+}
+
+message ConsensusVote {
+  string proposal_id = 1;
+  string voter_id = 2;
+  bool approve = 3;
+  uint64 timestamp = 4;
+  bytes signature = 5;
+}
+
+message ConsensusVoteBundle {
+  string proposal_id = 1;
+  string aggregator_id = 2;
+  uint64 timestamp = 3;
+  repeated ConsensusVote votes = 4;
+  bytes signature = 5;
+}
+
+message ConsensusCertificate {
+  string proposal_id = 1;
+  string registry_cid = 2;
+  uint64 registry_epoch = 3;
+  uint64 total_weight = 4;
+  uint64 approved_weight = 5;
+  uint64 timestamp = 6;
+  repeated ConsensusVote votes = 7;
+}
+
+message ConsensusMessage {
+  oneof payload {
+    ConsensusProposal proposal = 1;
+    ConsensusVote vote = 2;
+    ConsensusVoteBundle vote_bundle = 3;
+    ConsensusCertificate certificate = 4;
+  }
+}
