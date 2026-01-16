@@ -226,6 +226,8 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::vector<std::string> &topics );
 
+        std::set<std::string> GetTopicNames() const;
+
     protected:
         friend class PubSubBroadcasterExt;
 

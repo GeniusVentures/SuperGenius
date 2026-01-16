@@ -976,13 +976,6 @@ namespace sgns::crdt
 
         for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            // Only broadcast topics that are registered in topicNames_
-            if ( topicNames_.find( topic_name ) == topicNames_.end() )
-            {
-                logger_->trace( "RebroadcastHeads: Skipping topic {} (not in registered topics)", topic_name );
-                continue;
-            }
-
             auto broadcastResult = Broadcast( cid_set, topic_name, peerInfo );
             if ( broadcastResult.has_failure() )
             {
@@ -1708,5 +1701,10 @@ namespace sgns::crdt
     void CrdtDatastore::AddTopicName( const std::string &topic )
     {
         topicNames_.emplace( topic );
+    }
+
+    std::set<std::string> CrdtDatastore::GetTopicNames() const
+    {
+        return topicNames_;
     }
 }
