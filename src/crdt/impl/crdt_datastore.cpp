@@ -946,7 +946,21 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        auto getListResult = heads_->GetList();
+        std::set<std::string> pending_topics;
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            pending_topics = pendingBroadcastTopics_;
+        }
+
+        std::set<std::string> topics_to_broadcast = topicNames_;
+        topics_to_broadcast.insert( pending_topics.begin(), pending_topics.end() );
+
+        if ( topics_to_broadcast.empty() )
+        {
+            return;
+        }
+
+        auto getListResult = heads_->GetList( topics_to_broadcast );
         if ( getListResult.has_failure() )
         {
             logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})", getListResult.error() );
@@ -991,6 +1005,15 @@ namespace sgns::crdt
                         logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
                     }
                 }
+            }
+        }
+
+        if ( !pending_topics.empty() )
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            for ( const auto &topic : pending_topics )
+            {
+                pendingBroadcastTopics_.erase( topic );
             }
         }
     }
@@ -1048,8 +1071,8 @@ namespace sgns::crdt
             else
             {
                 logger_->debug( "BroadcastHeadsForTopics: Broadcasted {} heads for topic {}",
-                               it->second.size(),
-                               topic_name );
+                                it->second.size(),
+                                topic_name );
             }
         }
 
@@ -1562,6 +1585,7 @@ namespace sgns::crdt
             logger_->error( "{}: Error, untracked head {}", __func__, rootCID.toString().value() );
             return;
         }
+        std::set<std::string> updated_topics;
         for ( const auto &[cid, topic] : it->second )
         {
             if ( cid == rootCID )
@@ -1582,6 +1606,7 @@ namespace sgns::crdt
                         logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
                     }
                 }
+                updated_topics.insert( topic );
                 if ( logger_->level() <= spdlog::level::debug )
                 {
                     logger_->debug( "{}: Marking Head CID {} as resolved", __func__, rootCID.toString().value() );
@@ -1629,9 +1654,14 @@ namespace sgns::crdt
                                     cid.toString().value(),
                                     rootCID.toString().value() );
                 }
+                updated_topics.insert( topic );
             }
         }
-        pendingHeadsByRootCID_.erase( it );
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            pendingBroadcastTopics_.insert( updated_topics.begin(), updated_topics.end() );
+        }
+
         rebroadcastCv_.notify_one();
     }
 

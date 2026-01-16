@@ -431,6 +431,8 @@ namespace sgns::crdt
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
+        std::mutex              pendingBroadcastMutex_;
+        std::set<std::string>   pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
 
