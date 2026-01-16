@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <tuple>
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <set>
@@ -54,19 +55,17 @@ namespace sgns
         /**
          * @brief       Factory constructor of new GeniusAccount
          * @param[in]   token_id Token ID of the account
-         * @param[in]   storage Secure storage instance
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
          * @return      Valid pointer if succeeds, nullptr otherwise
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                         token_id,
-                                                   std::shared_ptr<ISecureStorage> storage,
-                                                   const char                     *eth_private_key,
-                                                   bool                            full_node = false );
+        static std::shared_ptr<GeniusAccount> New( TokenID               token_id,
+                                                   const char           *eth_private_key,
+                                                   std::filesystem::path base_path,
+                                                   bool                  full_node = false );
 
         /**
          * @brief       Initialize the messenger for the account
          * @param[in]   pubsub pubsub instance
-         * @param[in]   full_node parameter to indicate if the account is a full node
          * @return      true if succeeds, false otherwise
          */
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
@@ -261,13 +260,13 @@ namespace sgns
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
          * @brief       Derives a Genius address from a given Ethereum private key
-         * @param[in]   base_path The base path to store/retrieve the key
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
+         * @param       base_path The base path to store/retrieve the key
          * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
          */
-        static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
-            ISecureStorage &storage,
-            const char     *eth_private_key );
+        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
+                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
+        GenerateGeniusAddress( const char *eth_private_key, std::filesystem::path base_path );
 
     protected:
         friend class Blockchain;

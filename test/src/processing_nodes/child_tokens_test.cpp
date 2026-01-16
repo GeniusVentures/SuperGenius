@@ -59,18 +59,16 @@ namespace
                              return hexChars[dist( rng )];
                          } );
 
-        const auto STORAGE = std::make_shared<JSONSecureStorage>( outPath );
-
         if ( setAsAuthorized )
         {
-            auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( *STORAGE, key.c_str() );
-            if ( !maybe_address.has_value() )
+            auto response = sgns::GeniusAccount::GenerateGeniusAddress( key.c_str(), outPath );
+            if ( !response.has_value() )
             {
                 ADD_FAILURE() << "Failed to generate full-node address for authorization";
             }
             else
             {
-                const auto &pub_address = maybe_address.value().second.GetEntirePubValue();
+                const auto &pub_address = response.value().second.second.GetEntirePubValue();
                 sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
             }
         }
