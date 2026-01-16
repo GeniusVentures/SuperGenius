@@ -156,7 +156,13 @@ namespace sgns::crdt
          * @param[in]   topics Vector of topic names to broadcast heads for
          * @return      outcome::success on success, or outcome::failure on error
          */
-        outcome::result<void> RequestHeadBroadcast( const std::vector<std::string> &topics );
+        outcome::result<void> RequestHeadBroadcast( const std::set<std::string> &topics );
+
+        /**
+         * @brief       Get the topics that are being listened to
+         * @return      A set of the monitored topic names 
+         */
+        outcome::result<std::set<std::string>> GetMonitoredTopics() const;
 
     private:
         /**

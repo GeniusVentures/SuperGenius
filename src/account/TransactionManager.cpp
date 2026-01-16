@@ -102,25 +102,6 @@ namespace sgns
                 } );
         }
 
-        // Register head request handler to bridge AccountMessenger -> GlobalDB -> CrdtDatastore
-        if ( auto messenger = instance->account_m->GetMessenger() )
-        {
-            messenger->RegisterHeadRequestHandler(
-                [weak_globaldb = std::weak_ptr<crdt::GlobalDB>( instance->globaldb_m )](
-                    const std::vector<std::string> &topics )
-                {
-                    if ( auto globaldb = weak_globaldb.lock() )
-                    {
-                        auto result = globaldb->RequestHeadBroadcast( topics );
-                        if ( result.has_error() )
-                        {
-                            auto logger = base::createLogger( "TransactionManager" );
-                            logger->error( "Failed to request head broadcast for {} topics", topics.size() );
-                        }
-                    }
-                } );
-        }
-
         return instance;
     }
 
@@ -304,7 +285,7 @@ namespace sgns
                                          full_node_m );
                         break;
                     }
-                    
+
                     // Check if error was due to network timeout - if so, keep transaction in queue for retry
                     // when full node becomes available
                     if ( send_result.error() == boost::system::errc::make_error_code( boost::system::errc::timed_out ) )
@@ -353,25 +334,27 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              time_since_last_periodic_sync.count() );
-            
-            std::vector<std::string> topics;
-            topics.push_back( account_m->GetAddress() );
-            if ( full_node_m )
+            auto topics_result = globaldb_m->GetMonitoredTopics();
+            if ( topics_result.has_value() )
             {
-                topics.push_back( full_node_topic_m );
-            }
-            
-            if ( account_m->RequestHeads( topics ) )
-            {
-                last_periodic_sync_time_ = now;
-                m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 topics.size() );
+                if ( account_m->RequestHeads( topics_result.value() ) )
+                {
+                    last_periodic_sync_time_ = now;
+                    m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     topics_result.value().size() );
+                }
+                else
+                {
+                    m_logger->warn( "[{} - full: {}] Periodic sync head request failed",
+                                    account_m->GetAddress().substr( 0, 8 ),
+                                    full_node_m );
+                }
             }
             else
             {
-                m_logger->warn( "[{} - full: {}] Periodic sync head request failed",
+                m_logger->warn( "[{} - full: {}] Could not get monitored topics for head request",
                                 account_m->GetAddress().substr( 0, 8 ),
                                 full_node_m );
             }
@@ -785,37 +768,7 @@ namespace sgns
                                  full_node_m,
                                  expected_next_nonce,
                                  transaction->dag_st.nonce() );
-                
-                // If we're ahead of the network nonce, broadcast heads for all topics involved
-                // so full nodes can catch up and verify our transactions
-                if ( !full_node_m && transaction->dag_st.nonce() > expected_next_nonce )
-                {
-                    auto parsedTopics = ParseTransaction( transaction );
-                    if ( parsedTopics.has_value() )
-                    {
-                        std::vector<std::string> broadcast_topics;
-                        for ( const auto &topic : parsedTopics.value() )
-                        {
-                            //if ( topic != full_node_topic_m )
-                            //{
-                                broadcast_topics.push_back( topic );
-                            //}
-                        }
-                        
-                        if ( !broadcast_topics.empty() )
-                        {
-                            auto broadcast_result = globaldb_m->RequestHeadBroadcast( broadcast_topics );
-                            if ( broadcast_result.has_value() )
-                            {
-                                m_logger->info( "[{} - full: {}] Broadcasted heads for {} topics since we're ahead",
-                                                account_m->GetAddress().substr( 0, 8 ),
-                                                full_node_m,
-                                                broadcast_topics.size() );
-                            }
-                        }
-                    }
-                }
-                                 
+
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
@@ -858,42 +811,6 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
-
-        // If we're not a full node and have transactions going to VERIFYING state,
-        // we need to broadcast our heads so full nodes can see our updates
-        if ( !full_node_m )
-        {
-            // Collect topics to broadcast: our address + any other addresses involved in transactions
-            std::vector<std::string> broadcast_topics;
-            broadcast_topics.reserve( topicSet.size() );
-            for ( const auto &topic : topicSet )
-            {
-                // Don't broadcast to full_node_topic_m - that's just for listening
-                //if ( topic != full_node_topic_m )
-                //{
-                    broadcast_topics.push_back( topic );
-                //}
-            }
-
-            if ( !broadcast_topics.empty() )
-            {
-                auto broadcast_result = globaldb_m->RequestHeadBroadcast( broadcast_topics );
-                if ( broadcast_result.has_error() )
-                {
-                    m_logger->warn( "[{} - full: {}] Failed to broadcast heads for {} topics after transaction send",
-                                    account_m->GetAddress().substr( 0, 8 ),
-                                    full_node_m,
-                                    broadcast_topics.size() );
-                }
-                else
-                {
-                    m_logger->debug( "[{} - full: {}] Broadcasted heads for {} topics to help full nodes verify",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     broadcast_topics.size() );
-                }
-            }
-        }
 
         return nonces_set;
     }
@@ -1880,10 +1797,10 @@ namespace sgns
                 // We're missing transactions - request heads to help sync faster
                 uint64_t gap = network_confirmed_nonce - account_m->GetProposedNonce() + 1;
                 m_logger->info( "[{} - full: {}] Missing transactions during init, gap: {}",
-                               account_m->GetAddress().substr( 0, 8 ),
-                               full_node_m,
-                               gap );
-                RequestRelevantHeads( gap );
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                gap );
+                RequestRelevantHeads();
             }
         }
         else
@@ -1968,12 +1885,12 @@ namespace sgns
             constexpr uint64_t SIGNIFICANT_GAP_THRESHOLD = 1;
             if ( nonce_gap >= SIGNIFICANT_GAP_THRESHOLD )
             {
-                RequestRelevantHeads( nonce_gap );
+                RequestRelevantHeads();
             }
         }
     }
 
-    void TransactionManager::RequestRelevantHeads( uint64_t nonce_gap )
+    void TransactionManager::RequestRelevantHeads()
     {
         // Rate limiting: don't request more than once per 30 seconds
         auto now = std::chrono::steady_clock::now();
@@ -1983,37 +1900,39 @@ namespace sgns
             if ( elapsed.count() < 30 )
             {
                 m_logger->trace( "[{} - full: {}] Skipping head request - too soon since last request ({}s ago)",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                elapsed.count() );
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 elapsed.count() );
                 return;
             }
         }
 
-        std::vector<std::string> topics_to_request;
-        topics_to_request.push_back( account_m->GetAddress() );
-        
-        if ( full_node_m )
+        auto topics_result = globaldb_m->GetMonitoredTopics();
+        if ( !topics_result.has_value() )
         {
-            topics_to_request.push_back( full_node_topic_m );
+            m_logger->warn( "[{} - full: {}] Could not get monitored topics for head request",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            return;
         }
+        m_logger->info( "[{} - full: {}] Requesting heads for {} topics",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        topics_result.value().size() );
 
-        m_logger->info( "[{} - full: {}] Requesting heads for {} topics due to nonce gap of {}",
-                       account_m->GetAddress().substr( 0, 8 ),
-                       full_node_m,
-                       topics_to_request.size(),
-                       nonce_gap );
-
-        auto result = account_m->RequestHeads( topics_to_request );
-        if ( result.has_error() )
+        if ( account_m->RequestHeads( topics_result.value() ) )
         {
-            m_logger->warn( "[{} - full: {}] Failed to request heads", 
-                           account_m->GetAddress().substr( 0, 8 ), 
-                           full_node_m );
+            last_head_request_time_ = now;
+            m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             topics_result.value().size() );
         }
         else
         {
-            last_head_request_time_ = now;
+            m_logger->warn( "[{} - full: {}] Failed to request heads",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
         }
     }
 

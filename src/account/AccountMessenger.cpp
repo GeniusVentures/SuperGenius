@@ -1326,10 +1326,10 @@ namespace sgns
         }
 
         // Get topics from request
-        std::vector<std::string> requested_topics;
+        std::set<std::string> requested_topics;
         for ( int i = 0; i < req.topics_size(); ++i )
         {
-            requested_topics.push_back( req.topics( i ) );
+            requested_topics.emplace( req.topics( i ) );
         }
 
         // Call the registered handler (typically will be handled by CrdtDatastore)

@@ -995,7 +995,7 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::vector<std::string> &topics )
+    outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
     {
         if ( topics.empty() )
         {

@@ -224,7 +224,7 @@ namespace sgns::crdt
          * @param[in]   topics Vector of topic names to broadcast heads for
          * @return      outcome::success on success, or outcome::failure on error
          */
-        outcome::result<void> BroadcastHeadsForTopics( const std::vector<std::string> &topics );
+        outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
         std::set<std::string> GetTopicNames() const;
 
