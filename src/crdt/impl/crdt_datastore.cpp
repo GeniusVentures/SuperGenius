@@ -816,7 +816,7 @@ namespace sgns::crdt
                                 links.size() );
             }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
-            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
+            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority(), job_to_process.created_by_self_ );
             {
                 std::unique_lock lk( dagWorkerMutex_ );
                 activeRootCID_.reset(); // this root fully done
@@ -1576,7 +1576,7 @@ namespace sgns::crdt
         crdt_cb_manager_.DeleteDataCallback( key, cid );
     }
 
-    void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority )
+    void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast )
     {
         std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
         auto                        it = pendingHeadsByRootCID_.find( rootCID );
@@ -1657,6 +1657,7 @@ namespace sgns::crdt
                 updated_topics.insert( topic );
             }
         }
+        if ( add_topics_to_broadcast )
         {
             std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
             pendingBroadcastTopics_.insert( updated_topics.begin(), updated_topics.end() );

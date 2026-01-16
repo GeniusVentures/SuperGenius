@@ -364,7 +364,7 @@ namespace sgns::crdt
         void PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid );
         void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
-        void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
+        void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast );
         bool EnqueueRootCID( const CID &cid );
 
         outcome::result<CID> WaitForJob( const CID &cid );
