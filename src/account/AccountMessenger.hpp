@@ -73,7 +73,7 @@ namespace sgns
             std::function<bool( const std::string &cid, const std::string &peer_id, const std::string &address )>;
 
         // Head request handler type: called when a head request is received for topics
-        using HeadRequestHandler = std::function<void( const std::vector<std::string> &topics )>;
+        using HeadRequestHandler = std::function<void( const std::set<std::string> &topics )>;
 
         /**
          * @brief       Factory constructor of new AccountMessenger
@@ -154,7 +154,7 @@ namespace sgns
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::vector<std::string> &topics );
+        outcome::result<void> RequestHeads( const std::set<std::string> &topics );
 
     private:
         /// Basis of the account receiving topic
