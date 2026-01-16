@@ -11,7 +11,6 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
-#include "crdt/globaldb/pubsub_broadcaster_ext.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "primitives/cid/cid.hpp"
 
@@ -139,15 +138,16 @@ namespace sgns
         return ret;
     }
 
-    bool GeniusAccount::ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster )
+    bool GeniusAccount::ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db )
     {
         bool ret = false;
         if ( messenger_ )
         {
-            //messenger_->ClearBlockResponseHandler();
             messenger_->RegisterBlockResponseHandler(
-                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>(
-                    broadcaster ) }]( const std::string &cid, const std::string &peer_id, const std::string &address )
+                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>( global_db->GetBroadcaster() ) }](
+                    const std::string &cid,
+                    const std::string &peer_id,
+                    const std::string &address )
                 {
                     if ( auto strong = weakptr.lock() )
                     {
@@ -155,8 +155,24 @@ namespace sgns
                     }
                     return false;
                 } );
+
+            messenger_->RegisterHeadRequestHandler(
+                [weak_globaldb = std::weak_ptr<crdt::GlobalDB>( global_db )](
+                    const std::set<std::string> &topics )
+                {
+                    if ( auto globaldb = weak_globaldb.lock() )
+                    {
+                        auto result = globaldb->RequestHeadBroadcast( topics );
+                        if ( result.has_error() )
+                        {
+                            auto logger = base::createLogger( "GeniusAccount" );
+                            logger->error( "Failed to request head broadcast for {} topics", topics.size() );
+                        }
+                    }
+                } );
+
             SetHasBlockCidMethod(
-                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>( broadcaster ) }](
+                [weakptr{ std::weak_ptr<crdt::PubSubBroadcasterExt>( global_db->GetBroadcaster() ) }](
                     const std::string &cid ) -> outcome::result<bool>
                 {
                     if ( auto strong = weakptr.lock() )
@@ -743,6 +759,17 @@ namespace sgns
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
         return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
+    }
+
+    outcome::result<void> GeniusAccount::RequestHeads( const std::set<std::string> &topics ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting heads broadcast for {} topics", topics.size() );
+
+        return messenger_->RequestHeads( topics );
     }
 
     outcome::result<void> GeniusAccount::RequestRegularBlock(

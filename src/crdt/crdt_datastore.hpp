@@ -219,6 +219,15 @@ namespace sgns::crdt
         outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
         outcome::result<JobStatus> GetJobStatus( const CID &cid );
 
+        /**
+         * @brief       Broadcast heads for the specified topics
+         * @param[in]   topics Vector of topic names to broadcast heads for
+         * @return      outcome::success on success, or outcome::failure on error
+         */
+        outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
+
+        std::set<std::string> GetTopicNames() const;
+
     protected:
         friend class PubSubBroadcasterExt;
 
@@ -355,7 +364,7 @@ namespace sgns::crdt
         void PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid );
         void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
-        void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
+        void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast );
         bool EnqueueRootCID( const CID &cid );
 
         outcome::result<CID> WaitForJob( const CID &cid );
@@ -422,6 +431,8 @@ namespace sgns::crdt
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
+        std::mutex              pendingBroadcastMutex_;
+        std::set<std::string>   pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
 

@@ -142,12 +142,12 @@ namespace sgns::crdt
             try
             {
                 auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                
+
                 // If database open fails with corruption, try to repair it
                 if ( !dataStoreResult.has_value() )
                 {
                     std::string errorMsg = dataStoreResult.error().message();
-                    if ( errorMsg.find( "corruption" ) != std::string::npos || 
+                    if ( errorMsg.find( "corruption" ) != std::string::npos ||
                          errorMsg.find( "Corruption" ) != std::string::npos )
                     {
                         m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
@@ -163,7 +163,7 @@ namespace sgns::crdt
                         }
                     }
                 }
-                
+
                 if ( dataStoreResult.has_value() )
                 {
                     dataStore = std::move( dataStoreResult.value() );
@@ -398,5 +398,34 @@ namespace sgns::crdt
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
         return m_crdtDatastore->GetJobStatus( cid );
+    }
+
+    outcome::result<void> GlobalDB::RequestHeadBroadcast( const std::set<std::string> &topics )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "RequestHeadBroadcast: CRDT datastore not initialized" );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+
+        if ( !started_.load() )
+        {
+            m_logger->error( "RequestHeadBroadcast: GlobalDB not started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        m_logger->debug( "RequestHeadBroadcast: Forwarding request for {} topics", topics.size() );
+        return m_crdtDatastore->BroadcastHeadsForTopics( topics );
+    }
+
+    outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        m_logger->debug( "{}: Forwarding request for {} topics", __func__ );
+        return m_crdtDatastore->GetTopicNames();
     }
 }

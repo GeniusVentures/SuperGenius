@@ -107,7 +107,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        account_->ConfigureBlockResponseHandler( db_3_5_0_->GetBroadcaster() );
+        account_->ConfigureMessengerHandlers( db_3_5_0_ );
 
         db_3_5_0_->Start();
         //init blockchain
@@ -132,12 +132,11 @@ namespace sgns
                 } );
         }
 
-        auto retry_duration       = std::chrono::minutes( 2 );
-        auto retry_interval       = std::chrono::seconds( 5 );
-        auto retry_start_time     = std::chrono::steady_clock::now();
-        auto last_log_time        = retry_start_time;
-        outcome::result<void> start_result =
-            outcome::failure( Blockchain::Error::BLOCKCHAIN_NOT_INITIALIZED );
+        auto                  retry_duration   = std::chrono::minutes( 2 );
+        auto                  retry_interval   = std::chrono::seconds( 5 );
+        auto                  retry_start_time = std::chrono::steady_clock::now();
+        auto                  last_log_time    = retry_start_time;
+        outcome::result<void> start_result     = outcome::failure( Blockchain::Error::BLOCKCHAIN_NOT_INITIALIZED );
         do
         {
             start_result = blockchain_->Start();
@@ -155,8 +154,7 @@ namespace sgns
                 last_log_time = current_time;
             }
             std::this_thread::sleep_for( retry_interval );
-        } while ( std::chrono::steady_clock::now() - retry_start_time < retry_duration &&
-                  start_result.has_error() );
+        } while ( std::chrono::steady_clock::now() - retry_start_time < retry_duration && start_result.has_error() );
 
         auto timeout_duration     = std::chrono::minutes( 4 );
         auto start_time           = std::chrono::steady_clock::now();

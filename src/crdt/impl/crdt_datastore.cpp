@@ -816,7 +816,7 @@ namespace sgns::crdt
                                 links.size() );
             }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
-            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
+            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority(), job_to_process.created_by_self_ );
             {
                 std::unique_lock lk( dagWorkerMutex_ );
                 activeRootCID_.reset(); // this root fully done
@@ -946,7 +946,21 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        auto getListResult = heads_->GetList();
+        std::set<std::string> pending_topics;
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            pending_topics = pendingBroadcastTopics_;
+        }
+
+        std::set<std::string> topics_to_broadcast = topicNames_;
+        topics_to_broadcast.insert( pending_topics.begin(), pending_topics.end() );
+
+        if ( topics_to_broadcast.empty() )
+        {
+            return;
+        }
+
+        auto getListResult = heads_->GetList( topics_to_broadcast );
         if ( getListResult.has_failure() )
         {
             logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})", getListResult.error() );
@@ -993,6 +1007,76 @@ namespace sgns::crdt
                 }
             }
         }
+
+        if ( !pending_topics.empty() )
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            for ( const auto &topic : pending_topics )
+            {
+                pendingBroadcastTopics_.erase( topic );
+            }
+        }
+    }
+
+    outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
+    {
+        if ( topics.empty() )
+        {
+            logger_->debug( "BroadcastHeadsForTopics: No topics requested" );
+            return outcome::success();
+        }
+
+        auto head_list_result = heads_->GetList();
+        if ( head_list_result.has_error() )
+        {
+            logger_->error( "BroadcastHeadsForTopics: Failed to get head list" );
+            return outcome::failure( head_list_result.error() );
+        }
+
+        auto [head_map, maxHeight] = head_list_result.value();
+
+        // Get PeerInfo once to reuse across broadcasts
+        boost::optional<libp2p::peer::PeerInfo> peerInfo;
+        {
+            auto dagSyncerPtr = std::static_pointer_cast<GraphsyncDAGSyncer>( broadcaster_->GetDagSyncer() );
+            if ( dagSyncerPtr )
+            {
+                auto peerInfoResult = dagSyncerPtr->GetPeerInfo();
+                if ( peerInfoResult.has_value() )
+                {
+                    peerInfo = peerInfoResult.value();
+                }
+                else
+                {
+                    logger_->warn( "BroadcastHeadsForTopics: Failed to get peer info, broadcasts will retry per-call" );
+                }
+            }
+        }
+
+        // Broadcast heads for each requested topic
+        for ( const auto &topic_name : topics )
+        {
+            auto it = head_map.find( topic_name );
+            if ( it == head_map.end() || it->second.empty() )
+            {
+                logger_->debug( "BroadcastHeadsForTopics: No heads to broadcast for topic {}", topic_name );
+                continue;
+            }
+
+            auto broadcastResult = Broadcast( it->second, topic_name, peerInfo );
+            if ( broadcastResult.has_failure() )
+            {
+                logger_->error( "BroadcastHeadsForTopics: Broadcast failed for topic {}", topic_name );
+            }
+            else
+            {
+                logger_->debug( "BroadcastHeadsForTopics: Broadcasted {} heads for topic {}",
+                                it->second.size(),
+                                topic_name );
+            }
+        }
+
+        return outcome::success();
     }
 
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey ) const
@@ -1492,7 +1576,7 @@ namespace sgns::crdt
         crdt_cb_manager_.DeleteDataCallback( key, cid );
     }
 
-    void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority )
+    void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast )
     {
         std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
         auto                        it = pendingHeadsByRootCID_.find( rootCID );
@@ -1501,6 +1585,7 @@ namespace sgns::crdt
             logger_->error( "{}: Error, untracked head {}", __func__, rootCID.toString().value() );
             return;
         }
+        std::set<std::string> updated_topics;
         for ( const auto &[cid, topic] : it->second )
         {
             if ( cid == rootCID )
@@ -1521,6 +1606,7 @@ namespace sgns::crdt
                         logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
                     }
                 }
+                updated_topics.insert( topic );
                 if ( logger_->level() <= spdlog::level::debug )
                 {
                     logger_->debug( "{}: Marking Head CID {} as resolved", __func__, rootCID.toString().value() );
@@ -1568,9 +1654,15 @@ namespace sgns::crdt
                                     cid.toString().value(),
                                     rootCID.toString().value() );
                 }
+                updated_topics.insert( topic );
             }
         }
-        pendingHeadsByRootCID_.erase( it );
+        if ( add_topics_to_broadcast )
+        {
+            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            pendingBroadcastTopics_.insert( updated_topics.begin(), updated_topics.end() );
+        }
+
         rebroadcastCv_.notify_one();
     }
 
@@ -1640,5 +1732,10 @@ namespace sgns::crdt
     void CrdtDatastore::AddTopicName( const std::string &topic )
     {
         topicNames_.emplace( topic );
+    }
+
+    std::set<std::string> CrdtDatastore::GetTopicNames() const
+    {
+        return topicNames_;
     }
 }

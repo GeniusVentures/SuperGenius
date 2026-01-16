@@ -11,6 +11,7 @@
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
+#include "primitives/cid/cid.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
 {
@@ -123,6 +124,65 @@ namespace sgns
         global_block_handler_ = nullptr;
     }
 
+    void AccountMessenger::RegisterHeadRequestHandler( HeadRequestHandler handler )
+    {
+        std::lock_guard lock( head_handler_mutex_ );
+        head_request_handler_ = std::move( handler );
+    }
+
+    void AccountMessenger::ClearHeadRequestHandler()
+    {
+        std::lock_guard lock( head_handler_mutex_ );
+        head_request_handler_ = nullptr;
+    }
+
+    outcome::result<void> AccountMessenger::RequestHeads( const std::set<std::string> &topics )
+    {
+        if ( topics.empty() )
+        {
+            logger_->debug( "[{}] RequestHeads called with empty topics list", address_.substr( 0, 8 ) );
+            return outcome::success();
+        }
+
+        accountComm::HeadRequest req;
+        req.set_requester_address( address_ );
+        req.set_request_id( rd_() );
+        req.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        for ( const auto &topic : topics )
+        {
+            req.add_topics( topic );
+        }
+
+        accountComm::SignedHeadRequest signed_req;
+        signed_req.mutable_data()->CopyFrom( req );
+
+        std::string req_string;
+        if ( !req.SerializeToString( &req_string ) )
+        {
+            logger_->error( "[{}] Failed to serialize HeadRequest", address_.substr( 0, 8 ) );
+            return outcome::failure( Error::PROTO_SERIALIZATION );
+        }
+
+        auto sign_result = methods_.sign_( std::vector<uint8_t>( req_string.begin(), req_string.end() ) );
+        if ( sign_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to sign HeadRequest", address_.substr( 0, 8 ) );
+            return outcome::failure( sign_result.error() );
+        }
+
+        signed_req.set_signature( std::string( sign_result.value().begin(), sign_result.value().end() ) );
+
+        accountComm::AccountMessage envelope;
+        envelope.mutable_head_request()->CopyFrom( signed_req );
+
+        logger_->debug( "[{}] Sending HeadRequest for {} topics", address_.substr( 0, 8 ), topics.size() );
+
+        return SendAccountMessage( envelope, { requests_topic_ } );
+    }
+
     void AccountMessenger::OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
         if ( message )
@@ -142,6 +202,9 @@ namespace sgns
                     break;
                 case accountComm::AccountMessage::kBlockRequest:
                     HandleBlockRequest( acc_msg.block_request() );
+                    break;
+                case accountComm::AccountMessage::kHeadRequest:
+                    HandleHeadRequest( acc_msg.head_request() );
                     break;
                 case accountComm::AccountMessage::kBlockCidRequest:
                     HandleBlockCidRequest( acc_msg.block_cid_request() );
@@ -284,7 +347,9 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
         req.set_cid( cid );
-
+        logger_->debug( "[{}] Requesting block by CID {} with req_id {}",
+                        address_.substr( 0, 8 ),
+                        cid, req_id );
         std::string encoded;
         if ( !req.SerializeToString( &encoded ) )
         {
@@ -346,6 +411,10 @@ namespace sgns
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+        logger_->debug( "[{}] Preparing BlockResponse for req_id {} with requester address {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.requester_address() );
 
         if ( have_cid )
         {
@@ -460,6 +529,10 @@ namespace sgns
         resp.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+        logger_->debug( "[{}] Preparing BlockResponse for req_id {} with requester address {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.requester_address() );
 
         if ( have_cid )
         {
@@ -1223,6 +1296,54 @@ namespace sgns
                             resp.responder_address().substr( 0, 8 ) );
             // Track addresses that responded with no nonce
             no_nonce_responses_[resp.request_id()].insert( resp.responder_address() );
+        }
+    }
+
+    void AccountMessenger::HandleHeadRequest( const accountComm::SignedHeadRequest &signed_req )
+    {
+        const auto &req = signed_req.data();
+
+        logger_->debug( "[{}] Received a Head request req_id {} for {} topics",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.topics_size() );
+
+        std::string serialized;
+        if ( !req.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize HeadRequest for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
+        auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
+                                                                   signed_req.signature(),
+                                                                   serialized_vec );
+        if ( verify_signature_result.has_error() || !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on HeadRequest from {}", req.requester_address() );
+            return;
+        }
+
+        // Get topics from request
+        std::set<std::string> requested_topics;
+        for ( int i = 0; i < req.topics_size(); ++i )
+        {
+            requested_topics.emplace( req.topics( i ) );
+        }
+
+        // Call the registered handler (typically will be handled by CrdtDatastore)
+        std::lock_guard lock( head_handler_mutex_ );
+        if ( head_request_handler_ )
+        {
+            logger_->debug( "[{}] Forwarding head request for {} topics to handler",
+                            address_.substr( 0, 8 ),
+                            requested_topics.size() );
+            head_request_handler_( requested_topics );
+        }
+        else
+        {
+            logger_->warn( "[{}] No head request handler registered, ignoring HeadRequest", address_.substr( 0, 8 ) );
         }
     }
 

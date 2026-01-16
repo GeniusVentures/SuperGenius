@@ -41,7 +41,7 @@ namespace sgns
 
     namespace crdt
     {
-        class PubSubBroadcasterExt;
+        class GlobalDB;
     }
     class AccountMessenger;
 
@@ -76,7 +76,7 @@ namespace sgns
          * @param[in]   broadcaster: the pubsub broadcaster which adds the block CID to be fetched
          * @return      true if successfully configured, false otherwise
          */
-        bool ConfigureBlockResponseHandler( std::shared_ptr<crdt::PubSubBroadcasterExt> broadcaster );
+        bool ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -259,6 +259,13 @@ namespace sgns
             uint64_t                                            timeout_ms,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        /**
+         * @brief       Request heads broadcast for specific topics
+         * @param[in]   topics Vector of topic names to request heads for
+         * @return      outcome::success if request was sent, error otherwise
+         */
+        outcome::result<void> RequestHeads( const std::set<std::string> &topics ) const;
+
         /**
          * @brief       Derives a Genius address from a given Ethereum private key
          * @param[in]   base_path The base path to store/retrieve the key
