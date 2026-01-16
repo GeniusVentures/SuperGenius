@@ -6,7 +6,6 @@
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
-#include <boost/algorithm/hex.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
@@ -433,6 +432,7 @@ namespace sgns
     {
         constexpr std::string_view PREFIX    = "SGNS";
         constexpr std::string_view FILE_NAME = "secure_storage_id";
+
         std::filesystem::create_directories( base_path );
         base_path /= FILE_NAME;
 
@@ -443,15 +443,22 @@ namespace sgns
 
         if ( std::ifstream file( base_path ); file.is_open() )
         {
-            std::string identifier;
-            std::getline( file, identifier );
-            storage = std::make_shared<SecureStorageImpl>( identifier );
+            std::string public_key;
+            file >> public_key;
 
-            if ( auto load_res = storage->Load( "sgns_key" ) )
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+
+            if ( TW::PublicKey::isValid( vec, TWPublicKeyTypeSECP256k1 ) )
             {
-                genius_account_logger()->trace( "Key seed: {}", load_res.value() );
-                key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
-                key_seed_loaded = true;
+                storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                               libp2p::multi::detail::encodeBase58( vec ) );
+
+                if ( auto load_res = storage->Load( "sgns_key" ) )
+                {
+                    genius_account_logger()->trace( "Key seed: {}", load_res.value() );
+                    key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+                    key_seed_loaded = true;
+                }
             }
         }
 
@@ -483,8 +490,9 @@ namespace sgns
             if ( !storage )
             {
                 ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
+                OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( temp_eth_key.GetEntirePubValue() ) );
                 storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                               temp_eth_key.GetEntirePubValue() );
+                                                               libp2p::multi::detail::encodeBase58( vec ) );
             }
 
             BOOST_OUTCOME_TRYV2( auto &&, storage->Save( "sgns_key", key_seed.str() ) );
