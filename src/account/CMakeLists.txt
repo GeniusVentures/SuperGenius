@@ -35,7 +35,7 @@ target_link_libraries(sgns_genius_account
 
 target_include_directories(
     sgns_genius_account
-    PUBLIC
+    PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
