@@ -40,8 +40,8 @@ namespace sgns
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
         account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                      std::make_shared<JSONSecureStorage>( "." ),
-                                      eth_private_key ) ),
+                                      eth_private_key,
+                                      ".") ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {

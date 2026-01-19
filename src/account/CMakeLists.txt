@@ -22,6 +22,7 @@ target_link_libraries(sgns_genius_account
     crdt_globaldb
     ipfs-pubsub
     PRIVATE
+    secure_storage
     component_factory
     SGAccountCommProto
     ${WIN_API_LIBRARY}
@@ -47,21 +48,21 @@ endif()
 
 # Create the main account library (without GeniusAccount files)
 add_library(genius_node
-    TransactionManager.cpp
+    IGeniusTransactions.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
-    GeniusNode.cpp
+    TransactionManager.cpp
     UTXOTxParameters.cpp
-    IGeniusTransactions.cpp
     TokenAmount.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
-        Migration3_5_0To3_5_1.cpp
+    Migration3_5_0To3_5_1.cpp
+    GeniusNode.cpp
 )
 
 set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)

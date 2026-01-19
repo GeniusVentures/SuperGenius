@@ -12,7 +12,6 @@ using namespace sgns::base;
 
 // Test constants
 static const sgns::TokenID   TOKEN_NAME = sgns::TokenID::FromBytes( { 0x01, 0x02 } );
-static const auto            STORAGE    = std::make_shared<JSONSecureStorage>( "." );
 static constexpr const char *PRIV_KEY   = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 static const Hash256         DUMMY_HASH{};
 
@@ -21,7 +20,7 @@ class GeniusAccountTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        account = GeniusAccount::New( TOKEN_NAME, STORAGE, PRIV_KEY );
+        account = GeniusAccount::New( TOKEN_NAME, PRIV_KEY, "." );
     }
 
     std::shared_ptr<GeniusAccount> account;

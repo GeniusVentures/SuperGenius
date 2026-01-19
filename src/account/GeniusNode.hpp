@@ -166,10 +166,10 @@ namespace sgns
 
         [[nodiscard]] processing::ProcessingServiceImpl::ProcessingStatus GetProcessingStatus() const
         {
-            return processing_service_ == nullptr 
-                ? processing::ProcessingServiceImpl::ProcessingStatus(
-                    processing::ProcessingServiceImpl::Status::DISABLED, 0.0f)
-                : processing_service_->GetProcessingStatus();
+            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::ProcessingStatus(
+                                                        processing::ProcessingServiceImpl::Status::DISABLED,
+                                                        0.0f )
+                                                  : processing_service_->GetProcessingStatus();
         }
 
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds( uint64_t                  amount,
@@ -260,6 +260,7 @@ namespace sgns
         void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
         void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
 
+        std::string                    write_base_path_;
         std::shared_ptr<GeniusAccount> account_;
 
     private:
@@ -273,7 +274,6 @@ namespace sgns
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;
-        std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
         bool                                                  is_full_node_;
