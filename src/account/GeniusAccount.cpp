@@ -486,29 +486,27 @@ namespace sgns
 
             key_seed = nil::crypto3::multiprecision::uint256_t( TW::Hash::sha256( signed_secret ) );
 
-            // Create storage if it doesn't exist yet
-            if ( !storage )
-            {
-                ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
-                OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( temp_eth_key.GetEntirePubValue() ) );
-                storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                               libp2p::multi::detail::encodeBase58( vec ) );
-            }
+            // Create storage with loaded key
+            ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
+            auto                           pub_key = temp_eth_key.GetEntirePubValue();
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
+            storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                           libp2p::multi::detail::encodeBase58( vec ) );
 
             BOOST_OUTCOME_TRYV2( auto &&, storage->Save( "sgns_key", key_seed.str() ) );
+
+            // Write public key to file
+            std::ofstream out_file( base_path );
+            if ( !out_file.is_open() )
+            {
+                return outcome::failure( std::errc::bad_file_descriptor );
+            }
+            out_file << pub_key << std::endl;
         }
 
-        // Generate keys and write public key to file
         KeyGenerator::ElGamal          elgamal_key( key_seed );
         ethereum::EthereumKeyGenerator eth_key( key_seed );
         auto                           pub_key = eth_key.GetEntirePubValue();
-
-        std::ofstream out_file( base_path );
-        if ( !out_file.is_open() )
-        {
-            return outcome::failure( std::errc::bad_file_descriptor );
-        }
-        out_file << pub_key << std::endl;
 
         return std::make_pair( storage, std::make_pair( elgamal_key, eth_key ) );
     }
