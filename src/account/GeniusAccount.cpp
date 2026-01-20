@@ -40,7 +40,7 @@ namespace sgns
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID               token_id,
                                                        const char           *eth_private_key,
-                                                       std::filesystem::path base_path,
+                                                       boost::filesystem::path base_path,
                                                        bool                  full_node )
     {
         std::shared_ptr<GeniusAccount> instance;
@@ -444,38 +444,57 @@ namespace sgns
 
     outcome::result<
         std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    GeniusAccount::GenerateGeniusAddress( const char *eth_private_key, std::filesystem::path base_path )
+    GeniusAccount::GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path )
     {
         constexpr std::string_view PREFIX    = "SGNS";
         constexpr std::string_view FILE_NAME = "secure_storage_id";
 
-        std::filesystem::create_directories( base_path );
-        base_path /= FILE_NAME;
+        // Convert to absolute path to handle relative paths properly
+        base_path = boost::filesystem::absolute( base_path );
 
+        boost::filesystem::create_directories( base_path );
+        
+        // Use canonical() after directory exists to get fully normalized path
+        base_path = boost::filesystem::canonical( base_path );
+        base_path /= FILE_NAME;
+        
+        genius_account_logger()->info( "Secure storage ID path: {}", base_path.string() );
+        
         // Try to load existing storage
         std::shared_ptr<ISecureStorage>         storage;
         nil::crypto3::multiprecision::uint256_t key_seed;
         bool                                    key_seed_loaded = false;
 
-        if ( std::ifstream file( base_path ); file.is_open() )
+        if ( std::ifstream file( base_path.string() ); file.is_open() )
         {
             std::string public_key;
             file >> public_key;
+            genius_account_logger()->info( "Loaded public key from file: {} (length: {})", 
+                                          public_key.substr( 0, 16 ) + "...", 
+                                          public_key.length() );
 
             OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+            
+            genius_account_logger()->info( "Unhexed public key vector size: {}", vec.size() );
 
-            if ( TW::PublicKey::isValid( vec, TWPublicKeyTypeSECP256k1 ) )
+            // Create storage using the public key from the file
+            storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                           libp2p::multi::detail::encodeBase58( vec ) );
+
+            if ( auto load_res = storage->Load( "sgns_key" ) )
             {
-                storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                               libp2p::multi::detail::encodeBase58( vec ) );
-
-                if ( auto load_res = storage->Load( "sgns_key" ) )
-                {
-                    genius_account_logger()->trace( "Key seed: {}", load_res.value() );
-                    key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
-                    key_seed_loaded = true;
-                }
+                genius_account_logger()->info( "Successfully loaded key_seed from storage" );
+                key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+                key_seed_loaded = true;
             }
+            else
+            {
+                genius_account_logger()->warn( "Could not load sgns_key from secure storage, will regenerate" );
+            }
+        }
+        else
+        {
+            genius_account_logger()->debug( "Secure storage ID file does not exist, will create new one" );
         }
 
         // Generate key_seed from ethereum private key if not loaded
@@ -512,7 +531,7 @@ namespace sgns
             BOOST_OUTCOME_TRYV2( auto &&, storage->Save( "sgns_key", key_seed.str() ) );
 
             // Write public key to file
-            std::ofstream out_file( base_path );
+            std::ofstream out_file( base_path.string() );
             if ( !out_file.is_open() )
             {
                 return outcome::failure( std::errc::bad_file_descriptor );

@@ -30,6 +30,8 @@
 #include "base/logger.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
 
 namespace sgns
 {
@@ -60,7 +62,7 @@ namespace sgns
          */
         static std::shared_ptr<GeniusAccount> New( TokenID               token_id,
                                                    const char           *eth_private_key,
-                                                   std::filesystem::path base_path,
+                                                   boost::filesystem::path base_path,
                                                    bool                  full_node = false );
 
         /**
@@ -273,7 +275,7 @@ namespace sgns
          */
         static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
                                          std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        GenerateGeniusAddress( const char *eth_private_key, std::filesystem::path base_path );
+        GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path );
 
     protected:
         friend class Blockchain;
