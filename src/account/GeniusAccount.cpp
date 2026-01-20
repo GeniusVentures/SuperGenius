@@ -219,165 +219,9 @@ namespace sgns
         return eth_keypair_->GetEntirePubValue();
     }
 
-    uint64_t GeniusAccount::GetBalance( const std::string &address ) const
-    {
-        uint64_t retval = 0;
-
-        // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->error( "Non-full node cannot get balance for other addresses" );
-            return 0;
-        }
-
-        std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
-        {
-            for ( const auto &curr : it->second )
-            {
-                if ( !curr.GetLock() )
-                {
-                    retval += curr.GetAmount();
-                }
-            }
-        }
-
-        return retval;
-    }
-
     TokenID GeniusAccount::GetToken() const
     {
         return token;
-    }
-
-    uint64_t GeniusAccount::GetBalance() const
-    {
-        return GetBalance( GetAddress() );
-    }
-
-    uint64_t GeniusAccount::GetBalance( const TokenID token_id ) const
-    {
-        return GetBalance( token_id, GetAddress() );
-    }
-
-    bool GeniusAccount::PutUTXO( const GeniusUTXO &new_utxo, const std::string &address )
-    {
-        // If not a full node and trying to store UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->debug( "Non-full node cannot store UTXOs for other addresses" );
-            return false;
-        }
-
-        std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[address];
-
-        bool is_new = true;
-        for ( auto &curr : utxo_list )
-        {
-            if ( new_utxo.GetTxID() != curr.GetTxID() )
-            {
-                continue;
-            }
-            if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
-            {
-                continue;
-            }
-            //TODO - If it's the same, might be locked, then unlock
-            is_new = false;
-            break;
-        }
-        if ( is_new )
-        {
-            utxo_list.push_back( new_utxo );
-        }
-        return is_new;
-    }
-
-    void GeniusAccount::DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address )
-    {
-        // If not a full node and trying to delete UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->warn( "Non-full node cannot delete UTXOs for other addresses" );
-            return;
-        }
-
-        std::unique_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
-        {
-            auto &utxo_list = it->second;
-            for ( auto utxo_it = utxo_list.begin(); utxo_it != utxo_list.end(); )
-            {
-                if ( utxo_it->GetTxID() == utxo_id )
-                {
-                    utxo_it = utxo_list.erase( utxo_it );
-                    continue;
-                }
-                ++utxo_it;
-            }
-        }
-    }
-
-    bool GeniusAccount::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
-    {
-        bool             consumed = false;
-        std::unique_lock lock( utxos_mutex_ );
-        for ( auto &kv : utxos_ )
-        {
-            auto &utxo_list = kv.second;
-            auto  old_size  = utxo_list.size();
-            utxo_list.erase( std::remove_if( utxo_list.begin(),
-                                             utxo_list.end(),
-                                             [&infos]( const GeniusUTXO &x )
-                                             {
-                                                 return std::any_of( infos.begin(),
-                                                                     infos.end(),
-                                                                     [&x]( const InputUTXOInfo &a )
-                                                                     {
-                                                                         return ( a.txid_hash_ == x.GetTxID() ) &&
-                                                                                ( a.output_idx_ == x.GetOutputIdx() );
-                                                                     } );
-                                             } ),
-                             utxo_list.end() );
-            if ( utxo_list.size() != old_size )
-            {
-                consumed = true;
-            }
-        }
-        return consumed;
-    }
-
-    std::vector<GeniusUTXO> GeniusAccount::GetUTXOs( const std::string &address ) const
-    {
-        // If not a full node and trying to get UTXOs for other addresses, return empty
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->warn( "Non-full node cannot get UTXOs for other addresses" );
-            return {};
-        }
-
-        std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
-        {
-            return it->second;
-        }
-        return {};
-    }
-
-    void GeniusAccount::SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address )
-    {
-        // If not a full node and trying to set UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->warn( "Non-full node cannot set UTXOs for other addresses" );
-            return;
-        }
-
-        std::unique_lock lock( utxos_mutex_ );
-        utxos_[address] = utxos;
-
-        genius_account_logger()->debug( "Set {} UTXOs for address {}", utxos.size(), address.substr( 0, 8 ) );
     }
 
     bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
@@ -562,31 +406,6 @@ namespace sgns
         return std::make_pair( storage, std::make_pair( elgamal_key, eth_key ) );
     }
 
-    uint64_t GeniusAccount::GetBalance( const TokenID token_id, const std::string &address ) const
-    {
-        uint64_t balance = 0;
-
-        // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && address != GetAddress() )
-        {
-            genius_account_logger()->warn( "Non-full node cannot get balance for other addresses" );
-            return 0;
-        }
-
-        std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
-        {
-            for ( const auto &utxo : it->second )
-            {
-                if ( !utxo.GetLock() && token_id.Equals( utxo.GetTokenID() ) )
-                {
-                    balance += utxo.GetAmount();
-                }
-            }
-        }
-        return balance;
-    }
-
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
         genius_account_logger()->debug( "Setting local confirmed nonce to {}", nonce );
@@ -732,11 +551,7 @@ namespace sgns
                 genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
                 return cached_nonce_result_.value();
             }
-            else
-            {
-                genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce",
-                                                cache_age_ms );
-            }
+            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age_ms );
         }
 
         // If a request is already in progress, wait for it

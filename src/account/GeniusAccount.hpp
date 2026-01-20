@@ -4,10 +4,9 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#ifndef _GENIUS_ACCOUNT_HPP_
-#define _GENIUS_ACCOUNT_HPP_
+#pragma once
+
 #include <array>
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,19 +14,17 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <tuple>
 #include <filesystem>
 #include <functional>
 #include <optional>
 #include <set>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
-#include "account/GeniusUTXO.hpp"
-#include "account/UTXOTxParameters.hpp"
 #include "account/TokenID.hpp"
-#include "base/logger.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
 #include <boost/filesystem/path.hpp>
@@ -91,23 +88,6 @@ namespace sgns
         [[nodiscard]] std::string GetAddress() const;
 
         /**
-         * @brief       Get the account's balance
-         * @return      The total balance of the account
-         */
-        [[nodiscard]] uint64_t GetBalance() const;
-
-        [[nodiscard]] uint64_t GetBalance( const std::string &address ) const;
-
-        /**
-         * @brief       Get the accounts balance for a specific token
-         * @param[in]   token_id Token ID to get the balance
-         * @return      The balance of the account for the specific token
-         */
-        uint64_t GetBalance( const TokenID token_id ) const;
-
-        uint64_t GetBalance( const TokenID token_id, const std::string &address ) const;
-
-        /**
          * @brief       Get the account's token
          * @return      The token of the account
          */
@@ -120,60 +100,6 @@ namespace sgns
         [[nodiscard]] std::string GetNonce() const
         {
             return std::to_string( GetProposedNonce() );
-        }
-
-        /**
-         * @brief       Add a new UTXO to the account
-         * @param[in]   new_utxo The new UTXO to be added
-         * @return      true if the UTXO was added, false otherwise
-         */
-        bool PutUTXO( const GeniusUTXO &new_utxo, const std::string &address );
-
-        bool PutUTXO( const GeniusUTXO &new_utxo )
-        {
-            return PutUTXO( new_utxo, GetAddress() );
-        }
-
-        /**
-         * @brief       Delete a UTXO from the account
-         * @param[in]   utxo_id The ID of the UTXO to be deleted
-         */
-        void DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address );
-
-        void DeleteUTXO( const base::Hash256 &utxo_id )
-        {
-            DeleteUTXO( utxo_id, GetAddress() );
-        }
-
-        /**
-         * @brief       Consume UTXOs from the account
-         * @param[in]   infos Vector of UTXO information to be consumed
-         * @return      true if all UTXOs were consumed, false otherwise
-         */
-        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
-
-        /**
-         * @brief       Get UTXOs for a specific address
-         * @param[in]   address The address to get UTXOs for (defaults to current account address)
-         * @return      Vector of UTXOs for the address
-         */
-        std::vector<GeniusUTXO> GetUTXOs( const std::string &address ) const;
-
-        std::vector<GeniusUTXO> GetUTXOs() const
-        {
-            return GetUTXOs( GetAddress() );
-        }
-
-        /**
-         * @brief       Set UTXOs for a specific address (replaces existing UTXOs)
-         * @param[in]   utxos Vector of UTXOs to set for the address
-         * @param[in]   address The address to set UTXOs for
-         */
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
-
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos )
-        {
-            SetUTXOs( utxos, GetAddress() );
         }
 
         /**
@@ -291,9 +217,6 @@ namespace sgns
         TokenID token;         ///< Token ID of the account
         bool    is_full_node_; ///< Whether this account is a full node
 
-        std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address
-        mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
-
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
         std::shared_ptr<ISecureStorage>                 storage_;          ///< Secure storage instance
@@ -325,5 +248,3 @@ namespace sgns
         GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
     };
 }
-
-#endif
