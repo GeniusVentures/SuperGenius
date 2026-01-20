@@ -21,7 +21,7 @@ else()
 endif()
 
 addtest(account_balance_test
-    account_balance_test.cpp
+        utxo_manager_test.cpp
 )
 
 target_include_directories(account_balance_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})

@@ -6,19 +6,18 @@
  */
 #ifndef _TRANSFER_TRANSACTION_HPP_
 #define _TRANSFER_TRANSACTION_HPP_
-#include <boost/multiprecision/cpp_int.hpp>
 
 #include "account/IGeniusTransactions.hpp"
+#include "UTXOStructs.hpp"
 #include "account/proto/SGTransaction.pb.h"
-#include "account/UTXOTxParameters.hpp"
 
 namespace sgns
 {
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-        static TransferTransaction New( std::vector<OutputDestInfo> destinations,
-                                        std::vector<InputUTXOInfo>  inputs,
+        static TransferTransaction New( std::vector<InputUTXOInfo>  inputs,
+                                        std::vector<OutputDestInfo> destinations,
                                         SGTransaction::DAGStruct    dag );
         /**
          * @brief      Default Transfer Transaction destructor

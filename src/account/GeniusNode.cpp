@@ -147,6 +147,7 @@ namespace sgns
                             bool                use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( GeniusAccount::New( dev_config.TokenID, eth_private_key, write_base_path_, is_full_node ) ),
+        utxo_manager_( is_full_node, account_->GetAddress() ),
         io_( std::make_shared<boost::asio::io_context>() ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
@@ -330,6 +331,7 @@ namespace sgns
             {
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
+                                                                &utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 is_full_node_ );
@@ -885,8 +887,7 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        if ( manager->GetBalance() < funds )
+        if ( utxo_manager_.GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
@@ -940,6 +941,7 @@ namespace sgns
             return outcome::failure( cut.error() );
         }
 
+        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
         OUTCOME_TRY( ( auto &&, result_pair ),
                      manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
@@ -1145,32 +1147,22 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        uint64_t balance        = 0;
-        auto     manager_result = GetTransactionManager();
-        if ( manager_result.has_value() )
-        {
-            balance = manager_result.value()->GetBalance();
-        }
-        else
-        {
-            node_logger_->error( "{}: Transaction manager not ready", __func__ );
-        }
-        return balance;
+        return utxo_manager_.GetBalance();
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        return account_->GetBalance( token_id );
+        return utxo_manager_.GetBalance( token_id );
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        return account_->GetBalance( address );
+        return utxo_manager_.GetBalance( address );
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        return account_->GetBalance( token_id, address );
+        return utxo_manager_.GetBalance( token_id, address );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
@@ -1260,7 +1252,7 @@ namespace sgns
                            } );
     }
 
-    void GeniusNode::PrintDataStore()
+    void GeniusNode::PrintDataStore() const
     {
         if ( tx_globaldb_ )
         {
@@ -1562,7 +1554,7 @@ namespace sgns
                 }
                 break;
             case TransactionManager::State::INITIALIZING:
-            case TransactionManager::State::SYNCHING:
+            case TransactionManager::State::SYNCING:
                 if ( isprocessor_ )
                 {
                     StopProcessing();

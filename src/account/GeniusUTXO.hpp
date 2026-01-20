@@ -24,9 +24,9 @@ namespace sgns
         {
         }
 
-        void ToggleLock( bool lock )
+        void SetLocked( const bool locked )
         {
-            locked_ = lock;
+            locked_ = locked;
         }
 
         base::Hash256 GetTxID() const

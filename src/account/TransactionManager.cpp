@@ -4,12 +4,10 @@
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <boost/range/concepts.hpp>
 #include <boost/asio/post.hpp>
 
 #include "account/TransactionManager.hpp"
 
-#include <stdexcept>
 #include <utility>
 #include <algorithm>
 #include <thread>
@@ -23,7 +21,6 @@
 #include "MintTransaction.hpp"
 #include "EscrowTransaction.hpp"
 #include "EscrowReleaseTransaction.hpp"
-#include "UTXOTxParameters.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -38,6 +35,7 @@ namespace sgns
 
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
+                                                                 UTXOManager                             *utxo_manager,
                                                                  std::shared_ptr<GeniusAccount>           account,
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
                                                                  bool                                     full_node,
@@ -46,6 +44,7 @@ namespace sgns
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
+                                                                                     utxo_manager,
                                                                                      std::move( account ),
                                                                                      std::move( hasher ),
                                                                                      full_node,
@@ -107,6 +106,7 @@ namespace sgns
 
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
+                                            UTXOManager                             *utxo_manager,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<crypto::Hasher>          hasher,
                                             bool                                     full_node,
@@ -115,13 +115,14 @@ namespace sgns
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
+        utxo_manager_( *utxo_manager ),
         hasher_m( std::move( hasher ) ),
         full_node_m( std::move( full_node ) ),
         state_m( State::CREATING ),
+        last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( std::move( timestamp_tolerance ) ),
         mutability_window_m( std::move( mutability_window ) ),
-        last_loop_time_( std::chrono::steady_clock::now() ),
-        last_periodic_sync_time_( std::chrono::steady_clock::now() )
+        last_loop_time_( std::chrono::steady_clock::now() )
 
     {
     }
@@ -254,7 +255,7 @@ namespace sgns
             case State::CREATING: // Should not happen, but handle gracefully
                 break;
 
-            case State::SYNCHING:
+            case State::SYNCING:
                 this->SyncNonce();
                 break;
 
@@ -269,8 +270,8 @@ namespace sgns
                 auto send_result = SendTransactionItem( tx_queue_m.front() );
                 if ( send_result.has_error() )
                 {
-                    // Immediately switch to SYNCHING so no new transactions are created while we roll back.
-                    ChangeState( State::SYNCHING );
+                    // Immediately switch to SYNCING so no new transactions are created while we roll back.
+                    ChangeState( State::SYNCING );
 
                     m_logger->error( "[{} - full: {}] Error in SendTransactionItem: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
@@ -400,7 +401,7 @@ namespace sgns
     void TransactionManager::PrintAccountInfo()
     {
         std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
-        std::cout << "Balance: " << std::to_string( account_m->GetBalance() ) << std::endl;
+        std::cout << "Balance: " << std::to_string( utxo_manager_.GetBalance() ) << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
     }
@@ -418,18 +419,17 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY(
-            auto &&params,
-            UTXOTxParameters::create( account_m->GetUTXOs(), account_m->GetAddress(), amount, destination, token_id ) );
+        OUTCOME_TRY( auto &&params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
+        auto [inputs, outputs] = params;
 
-        params.SignParameters( account_m );
+        //TODO params.SignParameters( account_m );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct() ) );
+            TransferTransaction::New( inputs, outputs, FillDAGStruct() ) );
 
         transfer_transaction->MakeSignature( *account_m );
 
-        account_m->SetUTXOs( UTXOTxParameters::ReserveUTXOs( account_m->GetUTXOs(), params ) );
+        utxo_manager_.ReserveUTXOs( inputs );
 
         EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
 
@@ -473,15 +473,13 @@ namespace sgns
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
         OUTCOME_TRY( ( auto &&, params ),
-                     UTXOTxParameters::create( account_m->GetUTXOs(),
-                                               account_m->GetAddress(),
-                                               amount,
-                                               "0x" + hash_data.toReadableString(),
-                                               TokenID::FromBytes( { 0x00 } ) ) );
+                     utxo_manager_.CreateTxParameter( amount,
+                                                      "0x" + hash_data.toReadableString(),
+                                                      TokenID::FromBytes( { 0x00 } ) ) );
+        auto [inputs, outputs] = params;
+        //TODO params.SignParameters( account_m );
+        utxo_manager_.ReserveUTXOs( inputs );
 
-        params.SignParameters( account_m );
-
-        account_m->SetUTXOs( UTXOTxParameters::ReserveUTXOs( account_m->GetUTXOs(), params ) );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
@@ -502,10 +500,10 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::PayEscrow(
         const std::string                       &escrow_path,
-        const SGProcessing::TaskResult          &taskresult,
+        const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
-        if ( taskresult.subtask_results().size() == 0 )
+        if ( task_result.subtask_results().size() == 0 )
         {
             m_logger->error( "[{} - full: {}] No result found on escrow {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -534,12 +532,12 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const auto escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+        const auto escrowTokenId = escrow_tx->GetUTXOParameters().second[0].token_id;
 
-        uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
+        uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( task_result.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
 
-        for ( auto &subtask : taskresult.subtask_results() )
+        for ( auto &subtask : task_result.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "[{} - full: {}] Paying out {} in {}",
@@ -566,9 +564,7 @@ namespace sgns
         escrow_utxo_input.signature_  = ""; //TODO - Signature
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( payout_peers,
-                                      std::vector<InputUTXOInfo>{ escrow_utxo_input },
-                                      FillDAGStruct() ) );
+            TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
 
         auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
             EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
@@ -588,11 +584,6 @@ namespace sgns
 
         EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->dag_st.data_hash();
-    }
-
-    uint64_t TransactionManager::GetBalance()
-    {
-        return account_m->GetBalance();
     }
 
     void TransactionManager::Update()
@@ -863,7 +854,7 @@ namespace sgns
 
             for ( auto tx_nonce = signed_previous_nonce; tx_nonce > confirmed_nonce; --tx_nonce )
             {
-                //let's verify if we didn't mistakenly confirmed any bad transactions.
+                //let's verify if we didn't mistakenly confirm any bad transactions.
                 m_logger->debug( "[{} - full: {}] Setting \"VERIFYING\" status to transaction with nonce {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -875,8 +866,7 @@ namespace sgns
                 const auto                          key   = GetTransactionPath( *transaction );
                 const auto                          nonce = transaction->dag_st.nonce();
 
-                auto it = outgoing_tx_processed_m.find( key );
-                if ( it != outgoing_tx_processed_m.end() )
+                if ( auto it = outgoing_tx_processed_m.find( key ); it != outgoing_tx_processed_m.end() )
                 {
                     // Update verifying_count if status is changing from VERIFYING
                     if ( it->second.status == TransactionStatus::VERIFYING )
@@ -1106,7 +1096,6 @@ namespace sgns
         m_logger->debug( "[{} - full: {}] Proof data acquired. Verifying...",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
-        //std::cout << " it has value with size  " << proof_data.size() << std::endl;
         return IBasicProof::VerifyFullProof( proof_data_vector );
     }
 
@@ -1130,7 +1119,6 @@ namespace sgns
                              full_node_m,
                              transaction_list.size() );
 
-            //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
             for ( const auto &element : transaction_list )
             {
                 auto transaction_key = globaldb_m->KeyToString( element.first );
@@ -1226,7 +1214,6 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m );
 
-            //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
             for ( const auto &element : transaction_list )
             {
                 auto transaction_key = globaldb_m->KeyToString( element.first );
@@ -1308,7 +1295,7 @@ namespace sgns
         {
             auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
             GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-            account_m->PutUTXO( new_utxo, dest_infos[i].dest_address );
+            utxo_manager_.PutUTXO( new_utxo, dest_infos[i].dest_address );
 
             m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1336,7 +1323,7 @@ namespace sgns
                              input.output_idx_ );
         }
 
-        account_m->ConsumeUTXOs( transfer_tx->GetInputInfos() );
+        utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos() );
         return topics;
     }
 
@@ -1349,11 +1336,11 @@ namespace sgns
 
         auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
         GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
-        account_m->PutUTXO( new_utxo, mint_tx->GetSrcAddress() );
+        utxo_manager_.PutUTXO( new_utxo, mint_tx->GetSrcAddress() );
         m_logger->info( "[{} - full: {}] Created tokens, balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
-                        std::to_string( account_m->GetBalance() ) );
+                        std::to_string( utxo_manager_.GetBalance() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1373,21 +1360,18 @@ namespace sgns
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
-            auto dest_infos = escrow_tx->GetUTXOParameters();
+            auto [_, outputs] = escrow_tx->GetUTXOParameters();
 
-            if ( !dest_infos.outputs_.empty() )
+            if ( !outputs.empty() )
             {
                 //The first is the escrow, second is the change (might not happen)
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
-                if ( dest_infos.outputs_.size() > 1 )
+                if ( outputs.size() > 1 )
                 {
-                    GeniusUTXO new_utxo( hash,
-                                         1,
-                                         dest_infos.outputs_[1].encrypted_amount,
-                                         dest_infos.outputs_[1].token_id );
-                    account_m->PutUTXO( new_utxo, dest_infos.outputs_[1].dest_address );
+                    GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
+                    utxo_manager_.PutUTXO( new_utxo, outputs[1].dest_address );
                 }
-                account_m->ConsumeUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
+                utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first );
             }
         }
 
@@ -1447,7 +1431,7 @@ namespace sgns
         for ( const auto &dest_info : dest_infos )
         {
             auto hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
-            account_m->DeleteUTXO( hash, dest_info.dest_address );
+            utxo_manager_.DeleteUTXO( hash, dest_info.dest_address );
 
             m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1482,8 +1466,7 @@ namespace sgns
                 OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
-        UTXOTxParameters params( transfer_tx->GetInputInfos(), transfer_tx->GetDstInfos() );
-        account_m->SetUTXOs( UTXOTxParameters::RollbackUTXOs( account_m->GetUTXOs(), params ) );
+        utxo_manager_.RollbackUTXOs(transfer_tx->GetInputInfos());
 
         return topics;
     }
@@ -1496,13 +1479,13 @@ namespace sgns
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
-        account_m->DeleteUTXO( hash, mint_tx->GetSrcAddress() );
+        utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() );
         m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         mint_tx->GetAmount(),
                         mint_tx->dag_st.data_hash(),
-                        std::to_string( account_m->GetBalance() ) );
+                        std::to_string( utxo_manager_.GetBalance() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1522,17 +1505,15 @@ namespace sgns
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
-            auto dest_infos = escrow_tx->GetUTXOParameters();
-
-            if ( !dest_infos.outputs_.empty() )
+            if ( auto [inputs, outputs] = escrow_tx->GetUTXOParameters(); !outputs.empty() )
             {
                 //The first is the escrow, second is the change (might not happen)
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
-                if ( dest_infos.outputs_.size() > 1 )
+                if ( outputs.size() > 1 )
                 {
-                    account_m->DeleteUTXO( hash, dest_infos.outputs_[1].dest_address );
+                    utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address );
                 }
-                for ( auto &input : escrow_tx->GetUTXOParameters().inputs_ )
+                for ( auto &input : escrow_tx->GetUTXOParameters().first )
                 {
                     auto tx = GetOutTransaction( input.txid_hash_.toReadableString() );
                     if ( tx )
@@ -1544,7 +1525,7 @@ namespace sgns
                         OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
-                account_m->SetUTXOs( UTXOTxParameters::RollbackUTXOs( account_m->GetUTXOs(), dest_infos ) );
+                utxo_manager_.RollbackUTXOs( inputs );
             }
         }
 

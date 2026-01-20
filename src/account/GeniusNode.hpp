@@ -1,6 +1,8 @@
 #ifndef _GENIUS_NODE_HPP_
 #define _GENIUS_NODE_HPP_
 
+#include "UTXOManager.hpp"
+
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -211,7 +213,7 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
 
-        void PrintDataStore();
+        void PrintDataStore() const;
         void StopProcessing();
         void StartProcessing();
 
@@ -262,6 +264,7 @@ namespace sgns
 
         std::string                    write_base_path_;
         std::shared_ptr<GeniusAccount> account_;
+        UTXOManager                    utxo_manager_;
 
     private:
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;

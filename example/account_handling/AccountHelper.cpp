@@ -42,6 +42,7 @@ namespace sgns
         account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
                                       eth_private_key,
                                       ".") ),
+        utxo_manager_(true, account_->GetAddress()),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -120,7 +121,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = TransactionManager::New( globaldb_, io_, account_, hasher_ );
+        transaction_manager_ = TransactionManager::New( globaldb_, io_, &utxo_manager_, account_, hasher_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

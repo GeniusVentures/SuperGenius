@@ -7,7 +7,7 @@
 #define _ESCROW_RELEASE_TRANSACTION_HPP_
 
 #include "account/IGeniusTransactions.hpp"
-#include "account/UTXOTxParameters.hpp"
+#include "account/UTXOStructs.hpp"
 
 namespace sgns
 {

@@ -43,19 +43,19 @@ namespace sgns
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
 
-        for ( const auto &input : utxo_params_.inputs_ )
+        for ( const auto &[txid_hash_, output_idx_, signature_] : utxo_params_.first )
         {
             SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
-            input_proto->set_tx_id_hash( input.txid_hash_.toReadableString() );
-            input_proto->set_output_index( input.output_idx_ );
-            input_proto->set_signature( input.signature_ );
+            input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
+            input_proto->set_output_index( output_idx_ );
+            input_proto->set_signature( signature_ );
         }
-        for ( const auto &output : utxo_params_.outputs_ )
+        for ( const auto &[encrypted_amount, dest_address, token_id] : utxo_params_.second )
         {
             SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
-            output_proto->set_encrypted_amount( output.encrypted_amount );
-            output_proto->set_dest_addr( output.dest_address );
-            output_proto->set_token_id( output.token_id.bytes().data(), output.token_id.size() );
+            output_proto->set_encrypted_amount( encrypted_amount );
+            output_proto->set_dest_addr( dest_address );
+            output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
         }
         tx_struct.set_amount( amount_ );
         tx_struct.set_dev_addr( dev_addr_ );
