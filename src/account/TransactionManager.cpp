@@ -2828,6 +2828,32 @@ namespace sgns
                              new_data.first,
                              add_res.error().message() );
         }
+        else if ( full_node_m )
+        {
+            // Full node received a new transaction - broadcast heads for the source address
+            // so other nodes with the same address can sync immediately
+            auto tx_result = DeSerializeTransaction( new_data.second );
+            if ( tx_result.has_value() )
+            {
+                auto              source_addr = tx_result.value()->GetSrcAddress();
+                std::set<std::string> topics{ source_addr };
+                
+                m_logger->debug( "[{} - full: {}] Full node broadcasting heads for topic {} after receiving transaction",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 source_addr );
+                
+                auto broadcast_res = globaldb_m->RequestHeadBroadcast( topics );
+                if ( broadcast_res.has_error() )
+                {
+                    m_logger->error( "[{} - full: {}] Error requesting head broadcast for {}: {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     source_addr,
+                                     broadcast_res.error().message() );
+                }
+            }
+        }
     }
 
     void TransactionManager::NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data )
