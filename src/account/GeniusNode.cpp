@@ -331,7 +331,7 @@ namespace sgns
             {
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
-                                                                &utxo_manager_,
+                                                                utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 is_full_node_ );

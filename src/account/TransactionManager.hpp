@@ -97,7 +97,7 @@ namespace sgns
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
-            UTXOManager                             *utxo_manager,
+            UTXOManager                             &utxo_manager,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
@@ -191,7 +191,7 @@ namespace sgns
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
-                            UTXOManager                             *utxo_manager,
+                            UTXOManager                             &utxo_manager,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
                             bool                                     full_node,

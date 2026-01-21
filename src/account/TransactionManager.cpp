@@ -35,7 +35,7 @@ namespace sgns
 
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
-                                                                 UTXOManager                             *utxo_manager,
+                                                                 UTXOManager                             &utxo_manager,
                                                                  std::shared_ptr<GeniusAccount>           account,
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
                                                                  bool                                     full_node,
@@ -106,7 +106,7 @@ namespace sgns
 
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
-                                            UTXOManager                             *utxo_manager,
+                                            UTXOManager                             &utxo_manager,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<crypto::Hasher>          hasher,
                                             bool                                     full_node,
@@ -115,7 +115,7 @@ namespace sgns
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
-        utxo_manager_( *utxo_manager ),
+        utxo_manager_( utxo_manager ),
         hasher_m( std::move( hasher ) ),
         full_node_m( std::move( full_node ) ),
         state_m( State::CREATING ),
@@ -1466,7 +1466,7 @@ namespace sgns
                 OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
-        utxo_manager_.RollbackUTXOs(transfer_tx->GetInputInfos());
+        utxo_manager_.RollbackUTXOs( transfer_tx->GetInputInfos() );
 
         return topics;
     }
