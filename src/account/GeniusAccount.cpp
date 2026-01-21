@@ -485,7 +485,23 @@ namespace sgns
             {
                 genius_account_logger()->info( "Successfully loaded key_seed from storage" );
                 key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
-                key_seed_loaded = true;
+                
+                // Validate that the loaded key_seed produces the same public key
+                ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
+                auto regenerated_pub_key = temp_eth_key.GetEntirePubValue();
+                
+                if ( regenerated_pub_key == public_key )
+                {
+                    genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
+                    key_seed_loaded = true;
+                }
+                else
+                {
+                    genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
+                    genius_account_logger()->error( "Expected: {}", public_key.substr( 0, 16 ) + "..." );
+                    genius_account_logger()->error( "Got: {}", regenerated_pub_key.substr( 0, 16 ) + "..." );
+                    // Don't set key_seed_loaded, will regenerate
+                }
             }
             else
             {
