@@ -1513,7 +1513,7 @@ namespace sgns
                 {
                     utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address );
                 }
-                for ( auto &input : escrow_tx->GetUTXOParameters().first )
+                for ( auto &input : inputs )
                 {
                     auto tx = GetOutTransaction( input.txid_hash_.toReadableString() );
                     if ( tx )
