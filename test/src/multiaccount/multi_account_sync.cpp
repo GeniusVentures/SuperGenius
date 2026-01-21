@@ -75,7 +75,7 @@ protected:
 
         if ( isGenesisAuthorized )
         {
-            auto response = sgns::GeniusAccount::GenerateGeniusAddress(  key.c_str(), "." );
+            auto response = sgns::GeniusAccount::GenerateGeniusAddress(  key.c_str(), outPath );
             if ( !response.has_value() )
             {
                 ADD_FAILURE() << "Failed to generate full-node address for authorization";
