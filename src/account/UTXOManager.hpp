@@ -96,7 +96,7 @@ namespace sgns
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
     private:
-        base::Logger logger_ = base::createLogger( "TransactionManager" );
+        base::Logger logger_ = base::createLogger( "UTXOManager" );
 
         bool        is_full_node_;
         std::string address_;
