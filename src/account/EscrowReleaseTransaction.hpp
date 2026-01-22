@@ -98,7 +98,7 @@ namespace sgns
           *
           * @return A string representing the transaction path.
           */
-        std::string GetTransactionSpecificPath() override;
+        std::string GetTransactionSpecificPath() const override;
 
     private:
         /**

@@ -143,7 +143,7 @@ namespace sgns
         return original_escrow_hash_;
     }
 
-    std::string EscrowReleaseTransaction::GetTransactionSpecificPath()
+    std::string EscrowReleaseTransaction::GetTransactionSpecificPath() const
     {
         return GetType();
     }

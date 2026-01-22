@@ -15,7 +15,7 @@ namespace sgns
 {
     namespace
     {
-        std::string BuildLegacyTransactionPath( const IGeniusTransactions &tx )
+        std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
         {
             return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );
@@ -368,7 +368,7 @@ namespace sgns
                     logger_->info( "Synthesizing zero-value mint for missing nonce {} on network {}",
                                    nonce,
                                    network_id );
-                    auto tx_path = blockchain_base + BuildLegacyTransactionPath( *mint_tx );
+                    auto tx_path = blockchain_base + BuildLegacyTransactionPath_3_5_0( *mint_tx );
                     return TransactionRecord{ std::move( mint_tx ), std::move( tx_path ) };
                 };
 

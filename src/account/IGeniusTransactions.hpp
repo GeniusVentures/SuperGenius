@@ -57,7 +57,7 @@ namespace sgns
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
-        virtual std::string GetTransactionSpecificPath() = 0;
+        virtual std::string GetTransactionSpecificPath() const = 0;
 
         static std::string GetTransactionFullPath( const std::string &tx_hash )
         {

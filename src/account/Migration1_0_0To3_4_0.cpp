@@ -12,7 +12,7 @@ namespace sgns
 {
     namespace
     {
-        std::string BuildLegacyProofPath( const IGeniusTransactions &tx )
+        std::string BuildLegacyProofPath_1_0_0( const IGeniusTransactions &tx )
         {
             return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );
@@ -139,7 +139,7 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_1_0_0_->Get( { BASE + BuildLegacyProofPath( *tx ) } );
+            auto maybe_proof = db_1_0_0_->Get( { BASE + BuildLegacyProofPath_1_0_0( *tx ) } );
 
             if ( !maybe_proof.has_value() )
             {
@@ -165,7 +165,7 @@ namespace sgns
             data_transaction.put( tx->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath( *tx ) );
+            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath_1_0_0( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
             proof_transaction.put( maybe_proof.value() );
             BOOST_OUTCOME_TRYV2(
