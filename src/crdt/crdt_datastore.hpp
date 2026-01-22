@@ -437,6 +437,7 @@ namespace sgns::crdt
         CRDTCallbackManager crdt_cb_manager_;
 
         std::map<CID, JobStatus> pending_jobs_;
+        bool                     has_full_node_topic_;
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );
