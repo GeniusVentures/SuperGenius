@@ -116,7 +116,7 @@ namespace sgns
          * @param[in]   data data to be signed
          * @return      the signature as a vector of bytes
          */
-        std::vector<uint8_t> Sign( std::vector<uint8_t> data );
+        std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
          * @brief       Set the local confirmed nonce

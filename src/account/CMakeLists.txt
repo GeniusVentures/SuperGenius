@@ -7,6 +7,7 @@ endif()
 
 # Create the GeniusAccount library
 add_library(sgns_genius_account
+    UTXOStructs.cpp
     UTXOManager.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp

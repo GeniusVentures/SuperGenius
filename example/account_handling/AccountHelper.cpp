@@ -4,9 +4,9 @@
  * @date       2024-05-15
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
- #include "AccountHelper.hpp"
- 
- #include <memory>
+#include "AccountHelper.hpp"
+
+#include <memory>
 
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
@@ -39,10 +39,10 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                      eth_private_key,
-                                      ".") ),
-        utxo_manager_(true, account_->GetAddress()),
+        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), eth_private_key, "." ) ),
+        utxo_manager_( true,
+                       account_->GetAddress(),
+                       [this]( const std::vector<uint8_t> &data ) { return this->account_->Sign( data ); } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {

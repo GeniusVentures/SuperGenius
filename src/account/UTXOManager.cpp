@@ -128,7 +128,7 @@ namespace sgns
         std::unique_lock lock( utxos_mutex_ );
         for ( auto &[_, utxo_list] : utxos_ )
         {
-            auto  old_size  = utxo_list.size();
+            auto old_size = utxo_list.size();
             utxo_list.erase(
                 std::remove_if( utxo_list.begin(),
                                 utxo_list.end(),
@@ -175,11 +175,11 @@ namespace sgns
     }
 
     outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( uint64_t           amount,
-                                                                              const std::string &dest_address,
-                                                                              const TokenID     &token_id )
+                                                                      const std::string &dest_address,
+                                                                      const TokenID     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs_;
-        std::vector<OutputDestInfo> outputs_;
+        std::vector<InputUTXOInfo>  inputs;
+        std::vector<OutputDestInfo> outputs;
 
         // Select UTXOs until we cover the requested amount
         std::vector<GeniusUTXO> selected_utxos;
@@ -200,7 +200,7 @@ namespace sgns
             {
                 continue;
             }
-            inputs_.push_back( { utxo.GetTxID(), utxo.GetOutputIdx(), "" } );
+            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx() } );
             selected_utxos.push_back( utxo );
             selected_amount += utxo.GetAmount();
         }
@@ -209,8 +209,8 @@ namespace sgns
         // Abort if insufficient funds
         if ( selected_amount < amount || selected_utxos.empty() )
         {
-            inputs_.clear();
-            outputs_.clear();
+            inputs.clear();
+            outputs.clear();
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -236,28 +236,29 @@ namespace sgns
         }
 
         // Reserve space: one output per token plus possible change
-        outputs_.reserve( 2 );
+        outputs.reserve( 2 );
 
         // Create one output per TokenID for the destination
 
-        outputs_.push_back( { send_totals, dest_address, token_id } );
+        outputs.push_back( { send_totals, dest_address, token_id } );
 
         // Single change output (always from the last UTXO's token)
         uint64_t change = selected_amount - amount;
         if ( change > 0 )
         {
-            outputs_.push_back( { change, address_, token_id } );
+            outputs.push_back( { change, address_, token_id } );
         }
 
-        return std::make_pair( inputs_, outputs_ );
+        SignInputs( inputs );
+
+        return std::make_pair( inputs, outputs );
     }
 
-    outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter(
-        const std::vector<OutputDestInfo> &destinations,
-        const TokenID                     &token_id )
+    outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
+                                                                      const TokenID                     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs_;
-        std::vector<OutputDestInfo> outputs_;
+        std::vector<InputUTXOInfo>  inputs;
+        std::vector<OutputDestInfo> outputs;
 
         uint64_t total_amount = 0;
         TokenID  change_token;
@@ -283,30 +284,32 @@ namespace sgns
             {
                 continue;
             }
-            InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
+            InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), {} };
             used_amount += utxo.GetAmount();
-            inputs_.push_back( curr_input );
+            inputs.push_back( curr_input );
             change_token = token_id;
         }
         lock.unlock();
 
         if ( used_amount < total_amount )
         {
-            inputs_.clear();
-            outputs_.clear();
+            inputs.clear();
+            outputs.clear();
         }
         else
         {
-            outputs_ = destinations;
+            outputs = destinations;
         }
 
         if ( used_amount > total_amount )
         {
             uint64_t change = used_amount - total_amount;
-            outputs_.push_back( { change, address_, change_token } );
+            outputs.push_back( { change, address_, change_token } );
         }
 
-        return std::make_pair( inputs_, outputs_ );
+        SignInputs( inputs );
+
+        return std::make_pair( inputs, outputs );
     }
 
     void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs )
@@ -338,6 +341,16 @@ namespace sgns
                     utxo.SetLocked( false );
                 }
             }
+        }
+    }
+
+    void UTXOManager::SignInputs( std::vector<InputUTXOInfo> &inputs ) const
+    {
+        for ( auto &input : inputs )
+        {
+            auto serialized  = input.SerializeForSigning();
+            auto signature   = sign_( serialized );
+            input.signature_ = signature;
         }
     }
 }
