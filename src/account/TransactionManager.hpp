@@ -134,6 +134,7 @@ namespace sgns
                                                 std::chrono::milliseconds timeout ) const;
 
         static std::string GetTransactionPath( IGeniusTransactions &element );
+        static std::string GetTransactionPath( const std::string &tx_hash );
 
         static std::string GetTransactionProofPath( IGeniusTransactions &element );
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
@@ -217,9 +218,7 @@ namespace sgns
         outcome::result<std::set<std::string>> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<std::set<std::string>> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<void> CheckIncoming();
-
-        outcome::result<void> CheckOutgoing();
+        outcome::result<void> CheckTransactions();
 
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();
@@ -232,9 +231,9 @@ namespace sgns
         outcome::result<bool> CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check );
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
-        std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
-        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce, const std::string &address ) const;
-        std::shared_ptr<IGeniusTransactions> GetInTransaction( uint64_t nonce, const std::string &address ) const;
+        std::shared_ptr<IGeniusTransactions> GetTransactionByHash( const std::string &tx_hash ) const;
+        std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
+                                                                               const std::string &address ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
@@ -268,12 +267,9 @@ namespace sgns
             uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
-        mutable std::shared_mutex                  outgoing_tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx> outgoing_tx_processed_m;
-        std::unordered_map<uint64_t, std::string>  outgoing_nonce_to_key_m; // nonce -> tx_key index
-        std::atomic<size_t>                        verifying_count_{ 0 };   // Count of VERIFYING transactions
-        mutable std::shared_mutex                  incoming_tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
+        mutable std::shared_mutex                  tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx> tx_processed_m;
+        std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
         std::function<void()>                      task_m;
         std::atomic<bool>                          stopped_{ false };
         std::chrono::milliseconds                  timestamp_tolerance_m;

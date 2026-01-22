@@ -62,6 +62,7 @@ add_library(genius_node
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
     Migration3_5_0To3_5_1.cpp
+    Migration3_5_1To3_6_0.cpp
     GeniusNode.cpp
 )
 

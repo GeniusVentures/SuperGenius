@@ -33,6 +33,20 @@ namespace
 
 namespace sgns
 {
+    namespace
+    {
+        std::string BuildLegacyTransactionPath( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+
+        std::string BuildLegacyProofPath( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
 
     Migration0_2_0To1_0_0::Migration0_2_0To1_0_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
@@ -245,7 +259,7 @@ namespace sgns
                 continue;
             }
 
-            auto                        transaction_path = BASE + tx->GetTransactionFullPath();
+            auto                        transaction_path = BASE + BuildLegacyTransactionPath( *tx );
             sgns::crdt::HierarchicalKey tx_key( transaction_path );
 
             auto has_tx     = crdt_transaction_->HasKey( tx_key );
@@ -271,7 +285,7 @@ namespace sgns
 
                             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
-                            sgns::crdt::HierarchicalKey replicated_proof_key( BASE + tx->GetProofFullPath() );
+                            sgns::crdt::HierarchicalKey replicated_proof_key( BASE + BuildLegacyProofPath( *tx ) );
 
                             m_logger->debug( "Need to remove previous proof as well {}",
                                              replicated_proof_key.GetKey() );
@@ -290,7 +304,7 @@ namespace sgns
 
                         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
-                        sgns::crdt::HierarchicalKey replicated_proof_key( BASE + tx->GetProofFullPath() );
+                        sgns::crdt::HierarchicalKey replicated_proof_key( BASE + BuildLegacyProofPath( *tx ) );
 
                         m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
                         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
@@ -318,7 +332,7 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
-                sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
+                sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_transaction;
                 proof_transaction.put( maybe_proof_data.value() );
                 BOOST_OUTCOME_TRYV2(

@@ -59,36 +59,27 @@ namespace sgns
 
         virtual std::string GetTransactionSpecificPath() = 0;
 
-        static std::string GetTransactionFullPath( const std::string &address,
-                                                   const std::string &type,
-                                                   const uint64_t    &nonce )
+        static std::string GetTransactionFullPath( const std::string &tx_hash )
         {
-            boost::format full_path( address + "/tx/" + type + "/%llu" );
-            full_path % nonce;
-
-            return full_path.str();
+            return "tx/" + tx_hash;
         }
 
         std::string GetTransactionFullPath()
         {
-            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
-
-            return full_path.str();
+            return "tx/" + GetHash();
         }
 
         std::string GetProofFullPath()
         {
-            boost::format full_path( GetSrcAddress() + "/proof/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
-
-            return full_path.str();
+            return "proof/" + GetHash();
         }
 
         std::string GetSrcAddress() const
         {
             return dag_st.source_addr();
         }
+
+        std::string GetHash() const;
 
         uint64_t GetTimestamp() const
         {
