@@ -5,9 +5,12 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <chrono>
+#include <system_error>
+#include <unordered_set>
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include <primitives/cid/cid.hpp>
+#include "crdt/graphsync_dagsyncer.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 {
@@ -44,6 +47,13 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 
 namespace sgns
 {
+
+    base::Logger blockchain_logger()
+    {
+        // Always call base::createLogger to get the current logger
+        // This will return existing logger or create new one as needed
+        return base::createLogger( "Blockchain" );
+    }
 
     std::string &Blockchain::AuthorizedFullNodeAddressStorage()
     {
@@ -108,7 +118,7 @@ namespace sgns
                     if ( !initialized )
                     {
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
-                                               strong->account_->GetAddress().substr( 0, 8 ) );
+                                                strong->account_->GetAddress().substr( 0, 8 ) );
                     }
                 }
             } );
@@ -198,6 +208,83 @@ namespace sgns
         instance->logger_->debug( "[{}] Block callback registered", instance->account_->GetAddress().substr( 0, 8 ) );
 
         return instance;
+    }
+
+    outcome::result<void> Blockchain::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
+                                                   const std::shared_ptr<crdt::GlobalDB> &new_db )
+    {
+        if ( !old_db || !new_db )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto new_broadcaster = new_db->GetBroadcaster();
+        auto old_syncer      = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
+            old_db->GetBroadcaster()->GetDagSyncer() );
+        if ( !new_broadcaster )
+        {
+            blockchain_logger()->error( "Missing broadcaster while migrating blockchain CIDs" );
+            return outcome::failure( std::errc::no_such_device );
+        }
+        if ( !old_syncer )
+        {
+            blockchain_logger()->error( "Missing DAG syncer while migrating blockchain CIDs" );
+            return outcome::failure( std::errc::no_such_device );
+        }
+
+        std::unordered_set<std::string> migrated_cids;
+        auto MigrateCIDToNewDB = [&]( const std::string &cid_string ) -> outcome::result<void>
+        {
+            if ( cid_string.empty() || !migrated_cids.emplace( cid_string ).second )
+            {
+                return outcome::success();
+            }
+            blockchain_logger()->debug( "{}: Migrating CID: {}", __func__, cid_string );
+
+            OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
+            OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+            OUTCOME_TRY( new_broadcaster->AddDAGNode( node ) );
+            return outcome::success();
+        };
+
+        auto old_store = old_db->GetDataStore();
+        auto new_store = new_db->GetDataStore();
+
+        blockchain_logger()->debug( "{}: Getting the genesis CID from old database", __func__ );
+
+        crdt::GlobalDB::Buffer genesis_cid_key;
+        genesis_cid_key.put( std::string( GENESIS_CID_KEY ) );
+        auto genesis_cid = old_store->get( genesis_cid_key );
+        if ( genesis_cid.has_value() )
+        {
+            blockchain_logger()->debug( "{}: Genesis CID: {}", __func__, genesis_cid.value().toString() );
+            crdt::GlobalDB::Buffer genesis_cid_value;
+            genesis_cid_value.putBuffer( genesis_cid.value() );
+            (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
+            OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
+        }
+
+        blockchain_logger()->debug( "{}: Getting the account creation CIDs from old database", __func__ );
+        crdt::GlobalDB::Buffer account_creation_prefix;
+        account_creation_prefix.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) );
+        auto account_creation_cids = old_store->query( account_creation_prefix );
+        if ( account_creation_cids.has_value() )
+        {
+            for ( const auto &entry : account_creation_cids.value() )
+            {
+                blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
+
+                (void)new_store->put( entry.first, entry.second );
+                OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
+            }
+        }
+        blockchain_logger()->debug( "{}: Finalized migrating the blockchain", __func__ );
+        for ( auto cid_string : migrated_cids )
+        {
+            blockchain_logger()->debug( "{}: Migrated CID: {}", __func__, cid_string );
+        }
+
+        return outcome::success();
     }
 
     // Private constructor
