@@ -218,10 +218,10 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto new_broadcaster = new_db->GetBroadcaster();
+        auto new_crdt = new_db->GetCRDTDataStore();
         auto old_syncer      = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
             old_db->GetBroadcaster()->GetDagSyncer() );
-        if ( !new_broadcaster )
+        if ( !new_crdt )
         {
             blockchain_logger()->error( "Missing broadcaster while migrating blockchain CIDs" );
             return outcome::failure( std::errc::no_such_device );
@@ -243,7 +243,7 @@ namespace sgns
 
             OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
             OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
-            OUTCOME_TRY( new_broadcaster->AddDAGNode( node ) );
+            OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
             return outcome::success();
         };
 

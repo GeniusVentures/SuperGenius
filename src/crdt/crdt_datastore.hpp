@@ -30,6 +30,11 @@
 #include <condition_variable>
 #include <optional>
 
+namespace sgns
+{
+    class Blockchain;
+}
+
 namespace sgns::crdt
 {
     class CrdtSet; ///< Forward declaration of CRDT Set class
@@ -230,7 +235,7 @@ namespace sgns::crdt
 
     protected:
         friend class PubSubBroadcasterExt;
-        friend class Blockchain;
+        friend class ::sgns::Blockchain;
 
         struct RootCIDJob
         {
@@ -350,6 +355,8 @@ namespace sgns::crdt
             const std::shared_ptr<Delta>                   &aDelta,
             const std::set<std::string>                    &topics ) const;
 
+        outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta> &aDelta,
+                                                                                 const std::set<std::string>  &topics );
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
          *  @param aDelta   Pointer to Delta used for generating node and process it
          *  @param topics   Vector of topic names; the new block will have one link per topic
