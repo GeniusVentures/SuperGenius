@@ -97,9 +97,12 @@ namespace sgns
 
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
+    private:
+        outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
+                                                                                      const TokenID &token_id );
+
         void SignInputs( std::vector<InputUTXOInfo> &inputs ) const;
 
-    private:
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
         bool        is_full_node_;

@@ -178,71 +178,17 @@ namespace sgns
                                                                       const std::string &dest_address,
                                                                       const TokenID     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs;
+        OUTCOME_TRY( auto selection_result, SelectUTXOs( amount, token_id ) );
+        auto [inputs, selected_amount] = selection_result;
+
         std::vector<OutputDestInfo> outputs;
-
-        // Select UTXOs until we cover the requested amount
-        std::vector<GeniusUTXO> selected_utxos;
-        uint64_t                selected_amount = 0;
-
-        std::unique_lock lock( utxos_mutex_ );
-        for ( const auto &utxo : utxos_[address_] )
-        {
-            if ( selected_amount >= amount )
-            {
-                break;
-            }
-            if ( utxo.GetLock() )
-            {
-                continue;
-            }
-            if ( !token_id.Equals( utxo.GetTokenID() ) )
-            {
-                continue;
-            }
-            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx() } );
-            selected_utxos.push_back( utxo );
-            selected_amount += utxo.GetAmount();
-        }
-        lock.unlock();
-
-        // Abort if insufficient funds
-        if ( selected_amount < amount || selected_utxos.empty() )
-        {
-            inputs.clear();
-            outputs.clear();
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        // Aggregate destination amounts by TokenID
-        uint64_t send_totals = 0;
-        uint64_t used_amount = 0;
-        for ( const auto &utxo : selected_utxos )
-        {
-            uint64_t utxo_amt = utxo.GetAmount();
-
-            if ( used_amount + utxo_amt <= amount )
-            {
-                send_totals += utxo_amt;
-                used_amount += utxo_amt;
-            }
-            else
-            {
-                uint64_t needed  = amount - used_amount;
-                send_totals     += needed;
-                used_amount     += needed;
-                break;
-            }
-        }
-
         // Reserve space: one output per token plus possible change
         outputs.reserve( 2 );
 
-        // Create one output per TokenID for the destination
+        // Primary output
+        outputs.push_back( { amount, dest_address, token_id } );
 
-        outputs.push_back( { send_totals, dest_address, token_id } );
-
-        // Single change output (always from the last UTXO's token)
+        // Change output if needed
         uint64_t change = selected_amount - amount;
         if ( change > 0 )
         {
@@ -257,54 +203,22 @@ namespace sgns
     outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
                                                                       const TokenID                     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs;
-        std::vector<OutputDestInfo> outputs;
-
         uint64_t total_amount = 0;
-        TokenID  change_token;
-
         for ( const auto &d : destinations )
         {
             total_amount += d.encrypted_amount;
         }
 
-        uint64_t         used_amount = 0;
-        std::unique_lock lock( utxos_mutex_ );
-        for ( const auto &utxo : utxos_[address_] )
-        {
-            if ( used_amount >= total_amount )
-            {
-                break;
-            }
-            if ( utxo.GetLock() )
-            {
-                continue;
-            }
-            if ( !token_id.Equals( utxo.GetTokenID() ) )
-            {
-                continue;
-            }
-            InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), {} };
-            used_amount += utxo.GetAmount();
-            inputs.push_back( curr_input );
-            change_token = token_id;
-        }
-        lock.unlock();
+        OUTCOME_TRY( auto selection_result, SelectUTXOs( total_amount, token_id ) );
+        auto [inputs, selected_amount] = selection_result;
 
-        if ( used_amount < total_amount )
-        {
-            inputs.clear();
-            outputs.clear();
-        }
-        else
-        {
-            outputs = destinations;
-        }
+        std::vector<OutputDestInfo> outputs = destinations;
 
-        if ( used_amount > total_amount )
+        // Change output if needed
+        if ( selected_amount > total_amount )
         {
-            uint64_t change = used_amount - total_amount;
-            outputs.push_back( { change, address_, change_token } );
+            uint64_t change = selected_amount - total_amount;
+            outputs.push_back( { change, address_, token_id } );
         }
 
         SignInputs( inputs );
@@ -342,6 +256,42 @@ namespace sgns
                 }
             }
         }
+    }
+
+    outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> UTXOManager::SelectUTXOs( uint64_t required_amount,
+                                                                                               const TokenID &token_id )
+    {
+        std::vector<InputUTXOInfo> inputs;
+        uint64_t                   selected_amount = 0;
+
+        std::unique_lock lock( utxos_mutex_ );
+        for ( const auto &utxo : utxos_[address_] )
+        {
+            if ( selected_amount >= required_amount )
+            {
+                break;
+            }
+            if ( utxo.GetLock() )
+            {
+                continue;
+            }
+            if ( !token_id.Equals( utxo.GetTokenID() ) )
+            {
+                continue;
+            }
+
+            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx() } );
+            selected_amount += utxo.GetAmount();
+        }
+        lock.unlock();
+
+        // Abort if insufficient funds
+        if ( selected_amount < required_amount || inputs.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::make_pair( inputs, selected_amount );
     }
 
     void UTXOManager::SignInputs( std::vector<InputUTXOInfo> &inputs ) const
