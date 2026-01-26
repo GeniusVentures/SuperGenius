@@ -7,6 +7,7 @@
 
 #ifndef _ACCOUNT_HELPER_HPP_
 #define _ACCOUNT_HELPER_HPP_
+
 #include <memory>
 #include <string_view>
 #include <boost/asio.hpp>
@@ -46,7 +47,8 @@ namespace sgns
     {
     public:
         AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config, const char *eth_private_key );
-        ~AccountHelper();
+
+        ~AccountHelper() override;
 
         std::string GetName() override
         {
@@ -57,6 +59,7 @@ namespace sgns
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;
+        UTXOManager                                                utxo_manager_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                 pubsub_;
         std::shared_ptr<boost::asio::io_context>                   io_;
         std::shared_ptr<crdt::GlobalDB>                            globaldb_;

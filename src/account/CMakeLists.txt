@@ -7,6 +7,7 @@ endif()
 
 # Create the GeniusAccount library
 add_library(sgns_genius_account
+    UTXOManager.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp
 )
@@ -55,7 +56,6 @@ add_library(genius_node
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
     TransactionManager.cpp
-    UTXOTxParameters.cpp
     TokenAmount.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp

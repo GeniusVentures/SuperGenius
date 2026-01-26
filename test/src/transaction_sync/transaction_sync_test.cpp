@@ -122,17 +122,14 @@ namespace sgns
 
         outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
             std::shared_ptr<sgns::GeniusAccount> account,
+            UTXOManager                         &utxo_manager,
             uint64_t                             amount,
             const std::string                   &destination )
         {
             OUTCOME_TRY( auto &&params,
-                         sgns::UTXOTxParameters::create( account->GetUTXOs(),
-                                                         account->GetAddress(),
-                                                         amount,
-                                                         destination,
-                                                         sgns::TokenID::FromBytes( { 0x00 } ) ) );
+                         utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-            params.SignParameters( account );
+            //TODO params.SignParameters( account );
 
             auto timestamp = std::chrono::system_clock::now();
 
@@ -145,21 +142,26 @@ namespace sgns
             dag.set_data_hash( "" ); //filled by transaction class
 
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
-                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );
+                sgns::TransferTransaction::New( params.first, params.second, dag ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
-            TransferProof prover( static_cast<uint64_t>( account->GetBalance() ), static_cast<uint64_t>( amount ) );
+            TransferProof prover( static_cast<uint64_t>( utxo_manager.GetBalance() ), static_cast<uint64_t>( amount ) );
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
 
             maybe_proof = std::move( proof_result );
 
-            account->SetUTXOs( sgns::UTXOTxParameters::ReserveUTXOs( account->GetUTXOs(), params ) );
+            utxo_manager.ReserveUTXOs( params.first );
             return std::make_pair( transfer_transaction, maybe_proof );
         }
 
         std::shared_ptr<sgns::GeniusAccount> GetAccountFromNode( sgns::GeniusNode &node )
         {
             return node.account_;
+        }
+
+        UTXOManager *GetUTXOManagerFromNode( sgns::GeniusNode &node )
+        {
+            return &node.utxo_manager_;
         }
 
         void SendPair( sgns::GeniusNode &node, std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
@@ -472,7 +474,10 @@ namespace sgns
         // Verify balance after minting
         EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
-        auto tx_pair = CreateTransfer( GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress() );
+        auto tx_pair = CreateTransfer( GetAccountFromNode( *node_proc1 ),
+                                       *GetUTXOManagerFromNode( *node_proc1 ),
+                                       10000000000,
+                                       node_proc2->GetAddress() );
         if ( !tx_pair.has_value() )
         {
         }
@@ -515,12 +520,12 @@ namespace sgns
         std::cout << "subsequent tx failed" << std::endl;
 
         test::assertWaitForCondition(
-            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::SYNCHING; },
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::SYNCING; },
             std::chrono::milliseconds( 20000 ),
             "Node didn't went into synching" );
 
         EXPECT_EQ( node_proc1->GetTransactionManagerState(),
-                   TransactionManager::State::SYNCHING ); //confirms it's invalid
+                   TransactionManager::State::SYNCING ); //confirms it's invalid
 
         auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
             invalid_tx_id,

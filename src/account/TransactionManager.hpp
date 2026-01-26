@@ -7,6 +7,8 @@
 #ifndef _TRANSACTION_MANAGER_HPP_
 #define _TRANSACTION_MANAGER_HPP_
 
+#include "UTXOManager.hpp"
+
 #include <memory>
 #include <deque>
 #include <cstdint>
@@ -55,7 +57,7 @@ namespace sgns
         {
             CREATING = 0, ///< Creating the object
             INITIALIZING, ///< Initializing the object
-            SYNCHING,     ///< Synching the transactions
+            SYNCING,      ///< Syncing the transactions
             READY,        ///< Ready to process transactions
         };
 
@@ -81,6 +83,7 @@ namespace sgns
          * @brief       Factory constructor of the TransactionManager
          * @param[in]   processing_db Database of the CRDT
          * @param[in]   ctx The io context used to run its inner methods
+         * @param[in]   utxo_manager UTXO manager
          * @param[in]   account Genius account to be used
          * @param[in]   hasher Hasher to be used
          * @param[in]   full_node Parameter to indicate if the account is a full node
@@ -94,6 +97,7 @@ namespace sgns
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
+            UTXOManager                             &utxo_manager,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
@@ -120,9 +124,8 @@ namespace sgns
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
         outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &taskresult,
+                                                                           const SGProcessing::TaskResult          &task_result,
                                                                            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
-        uint64_t                                                GetBalance();
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -165,7 +168,7 @@ namespace sgns
                     return "CREATING";
                 case State::INITIALIZING:
                     return "INITIALIZING";
-                case State::SYNCHING:
+                case State::SYNCING:
                     return "SYNCHING";
                 case State::READY:
                     return "READY";
@@ -189,6 +192,7 @@ namespace sgns
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
+                            UTXOManager                             &utxo_manager,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
                             bool                                     full_node,
@@ -241,6 +245,7 @@ namespace sgns
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
+        UTXOManager                             &utxo_manager_;
         std::shared_ptr<crypto::Hasher>          hasher_m;
         bool                                     full_node_m;
         std::string                              full_node_topic_m; ///< formatted full-node topic

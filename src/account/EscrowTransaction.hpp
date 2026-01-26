@@ -6,10 +6,10 @@
  */
 #ifndef _ESCROW_TRANSACTION_HPP_
 #define _ESCROW_TRANSACTION_HPP_
-#include <cstdint>
+
 #include <string>
 #include "account/IGeniusTransactions.hpp"
-#include "account/UTXOTxParameters.hpp"
+#include "UTXOStructs.hpp"
 
 namespace sgns
 {

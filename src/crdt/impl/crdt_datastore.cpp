@@ -816,7 +816,9 @@ namespace sgns::crdt
                                 links.size() );
             }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
-            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority(), job_to_process.created_by_self_ );
+            UpdateCRDTHeads( job_to_process.root_node_->getCID(),
+                             delta.priority(),
+                             job_to_process.created_by_self_ || has_full_node_topic_ );
             {
                 std::unique_lock lk( dagWorkerMutex_ );
                 activeRootCID_.reset(); // this root fully done
@@ -1741,6 +1743,10 @@ namespace sgns::crdt
 
     void CrdtDatastore::AddTopicName( const std::string &topic )
     {
+        if ( topic == "SuperGNUSNode.TestNet.FullNode" )
+        {
+            has_full_node_topic_ = true;
+        }
         topicNames_.emplace( topic );
     }
 
