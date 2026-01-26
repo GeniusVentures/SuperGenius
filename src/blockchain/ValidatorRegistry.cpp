@@ -10,14 +10,53 @@
 #include <atomic>
 #include <set>
 #include <system_error>
+#include <unordered_set>
 
 #include <gsl/span>
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
+#include "crdt/graphsync_dagsyncer.hpp"
 
 namespace sgns::blockchain
 {
+    namespace
+    {
+        base::Logger validator_registry_logger()
+        {
+            return base::createLogger( "ValidatorRegistry" );
+        }
+
+        outcome::result<std::string> ExtractPrevRegistryCid( const ipfs_lite::ipld::IPLDNode &node )
+        {
+            auto            buffer = node.content();
+            crdt::pb::Delta delta;
+            if ( !delta.ParseFromArray( buffer.data(), buffer.size() ) )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+
+            const std::string registry_key = std::string( ValidatorRegistry::RegistryKey() );
+            for ( const auto &element : delta.elements() )
+            {
+                if ( element.key() != registry_key )
+                {
+                    continue;
+                }
+
+                validator::RegistryUpdate update;
+                if ( !update.ParseFromString( element.value() ) )
+                {
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+
+                return update.prev_registry_hash();
+            }
+
+            return outcome::failure( std::errc::no_such_file_or_directory );
+        }
+    }
+
     ValidatorRegistry::ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                                           uint64_t                        quorum_numerator,
                                           uint64_t                        quorum_denominator,
@@ -81,6 +120,87 @@ namespace sgns::blockchain
         return instance;
     }
 
+    outcome::result<void> ValidatorRegistry::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
+                                                          const std::shared_ptr<crdt::GlobalDB> &new_db )
+    {
+        if ( !old_db || !new_db )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
+            old_db->GetBroadcaster()->GetDagSyncer() );
+        auto new_crdt = new_db->GetCRDTDataStore();
+        if ( !new_crdt )
+        {
+            validator_registry_logger()->error( "{}: Missing broadcaster while migrating Validator CIDs", __func__ );
+            return outcome::failure( std::errc::no_such_device );
+        }
+        if ( !old_syncer )
+        {
+            validator_registry_logger()->error( "{}: Missing DAG syncer while migrating Validator CIDs", __func__ );
+            return outcome::failure( std::errc::no_such_device );
+        }
+
+        auto old_store = old_db->GetDataStore();
+        auto new_store = new_db->GetDataStore();
+
+        validator_registry_logger()->debug( "{}: Getting the registry CID from the datastore", __func__ );
+
+        crdt::GlobalDB::Buffer registry_cid_key;
+        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        auto registry_cid = old_store->get( registry_cid_key );
+        if ( registry_cid.has_value() )
+        {
+            validator_registry_logger()->debug( "{}: Latest Validator CID: ",
+                                                __func__,
+                                                registry_cid.value().toString() );
+
+            std::vector<std::string>                 registry_chain;
+            std::vector<ipfs_lite::ipld::IPLDNode &> nodes;
+            auto                                     current_cid = std::string( registry_cid.value().toString() );
+
+            while ( !current_cid.empty() )
+            {
+                registry_chain.push_back( current_cid );
+                OUTCOME_TRY( auto &&cid, CID::fromString( current_cid ) );
+                OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+                nodes.push_back( *node );
+                auto prev_result = ExtractPrevRegistryCid( *node );
+                if ( prev_result.has_error() )
+                {
+                    validator_registry_logger()->error( "{}: Failed to extract previous registry CID from {}",
+                                                        __func__,
+                                                        current_cid );
+                    break;
+                }
+                current_cid = prev_result.value();
+            }
+            std::reverse( registry_chain.begin(), registry_chain.end() );
+            std::reverse( nodes.begin(), nodes.end() );
+            for ( auto i = 0; i < registry_chain.size(); ++i )
+            {
+                const auto &cid_string = registry_chain[i];
+                const auto &node       = nodes[i];
+
+                if ( cid_string.empty() )
+                {
+                    continue;
+                }
+                validator_registry_logger()->debug( "{}: Adding Validator CID: ",
+                                                    __func__,
+                                                    registry_cid.value().toString() );
+                crdt::GlobalDB::Buffer registry_cid_value;
+                registry_cid_value.putBuffer( cid_string.value() );
+                (void)new_store->put( registry_cid_key, std::move( registry_cid_value ) );
+
+                OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
+            }
+        }
+        validator_registry_logger()->debug( "{}: Finished migrating validator registry: ", __func__ );
+        return outcome::success();
+    }
+
     uint64_t ValidatorRegistry::ComputeWeight( Role role ) const
     {
         logger_->trace( "{}: entry role={}", __func__, static_cast<int>( role ) );
@@ -117,7 +237,7 @@ namespace sgns::blockchain
         }
 
         const uint64_t weighted = base_weight * multiplier;
-        const uint64_t result = std::min( weighted, weight_config_.max_weight_ );
+        const uint64_t result   = std::min( weighted, weight_config_.max_weight_ );
         logger_->debug( "{}: computed weight={}", __func__, result );
         return result;
     }
