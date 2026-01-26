@@ -4,6 +4,8 @@
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/EscrowReleaseTransaction.hpp"
+#include "blockchain/Blockchain.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "base/sgns_version.hpp"
 
 #include <filesystem>
@@ -93,6 +95,9 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
+        OUTCOME_TRY( blockchain::ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+
         auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::set<std::string> topics_;
 
@@ -111,16 +116,6 @@ namespace sgns
 
             OUTCOME_TRY( auto &&entries, db_3_5_1_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
             for ( const auto &entry : entries )
-            {
-                auto keyOpt = db_3_5_1_->KeyToString( entry.first );
-                if ( keyOpt.has_value() && unique_keys.emplace( keyOpt.value() ).second )
-                {
-                    transaction_keys.push_back( keyOpt.value() );
-                }
-            }
-
-            OUTCOME_TRY( auto &&flat_entries, db_3_5_1_->QueryKeyValues( blockchain_base + "tx" ) );
-            for ( const auto &entry : flat_entries )
             {
                 auto keyOpt = db_3_5_1_->KeyToString( entry.first );
                 if ( keyOpt.has_value() && unique_keys.emplace( keyOpt.value() ).second )
@@ -152,21 +147,6 @@ namespace sgns
                 data_transaction.put( tx->SerializeByteVector() );
                 BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( new_tx_key, std::move( data_transaction ) ) );
 
-                std::string old_proof_key = transaction_key;
-                size_t      tx_pos        = old_proof_key.find( "/tx/" );
-                if ( tx_pos != std::string::npos )
-                {
-                    old_proof_key.replace( tx_pos, 4, "/proof/" );
-                    auto maybe_proof_data = db_3_5_1_->Get( { old_proof_key } );
-                    if ( maybe_proof_data.has_value() )
-                    {
-                        sgns::crdt::GlobalDB::Buffer proof_transaction;
-                        proof_transaction.put( maybe_proof_data.value() );
-                        const auto new_proof_key = blockchain_base + "proof/" + tx->GetHash();
-                        BOOST_OUTCOME_TRYV2( auto &&,
-                                             crdt_transaction_->Put( new_proof_key, std::move( proof_transaction ) ) );
-                    }
-                }
 
                 topics_.emplace( tx->GetSrcAddress() );
                 if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
