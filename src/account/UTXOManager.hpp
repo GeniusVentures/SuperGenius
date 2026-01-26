@@ -15,11 +15,14 @@ namespace sgns
         using VerifySignatureFunc =
             std::function<bool( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )>;
 
-        UTXOManager( const bool is_full_node, std::string address, SignFunc sign, VerifySignatureFunc verify ) :
+        UTXOManager( const bool          is_full_node,
+                     std::string         address,
+                     SignFunc            sign,
+                     VerifySignatureFunc verify_signature ) :
             is_full_node_( is_full_node ),
-            address_( std::move( address ),
+            address_( std::move( address )),
             sign_( std::move( sign ) ),
-            verify_( std::move( verify ) ) )
+            verify_signature_( std::move( verify_signature ) )
         {
         }
 
@@ -46,7 +49,7 @@ namespace sgns
          * @param       address Address to add the UTXO to
          * @return      true if the UTXO was added, false otherwise
          */
-        bool PutUTXO( const GeniusUTXO &new_utxo, const std::string &address );
+        bool PutUTXO( GeniusUTXO new_utxo, const std::string &address );
 
         bool PutUTXO( const GeniusUTXO &new_utxo )
         {
@@ -115,7 +118,7 @@ namespace sgns
         bool                is_full_node_;
         std::string         address_;
         SignFunc            sign_;
-        VerifySignatureFunc verify_;
+        VerifySignatureFunc verify_signature_;
 
         mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
         std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address

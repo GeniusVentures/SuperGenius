@@ -65,7 +65,7 @@ namespace sgns
         return balance;
     }
 
-    bool UTXOManager::PutUTXO( const GeniusUTXO &new_utxo, const std::string &address )
+    bool UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -94,7 +94,7 @@ namespace sgns
         }
         if ( is_new )
         {
-            utxo_list.push_back( new_utxo );
+            utxo_list.push_back( std::move(new_utxo) );
         }
         return is_new;
     }
@@ -275,7 +275,7 @@ namespace sgns
                     expected_amount += utxo.GetAmount();
                     input_amount    += 1;
                 }
-                if ( !verify_( input.signature_, input.SerializeForSigning() ) )
+                if ( !verify_signature_( input.signature_, input.SerializeForSigning() ) )
                 {
                     logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
                     return false;

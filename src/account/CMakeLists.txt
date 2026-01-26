@@ -27,6 +27,7 @@ target_link_libraries(sgns_genius_account
     secure_storage
     component_factory
     SGAccountCommProto
+    SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     TrustWalletCore

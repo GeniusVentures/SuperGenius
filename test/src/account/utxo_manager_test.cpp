@@ -4,15 +4,18 @@
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 using namespace sgns::base;
 
 // Test constants
-static const sgns::TokenID   TOKEN_NAME = sgns::TokenID::FromBytes( { 0x01, 0x02 } );
-static constexpr const char *PRIV_KEY   = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-static const Hash256         DUMMY_HASH{};
+static const sgns::TokenID      TOKEN_NAME = sgns::TokenID::FromBytes( { 0x01, 0x02 } );
+static constexpr const char    *PRIV_KEY   = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+static const Hash256            DUMMY_HASH{};
+static const TokenID            TOKEN_1 = sgns::TokenID::FromBytes( { 0x01 } );
+static sgns::crypto::HasherImpl HASHER;
 
 class GeniusAccountTest : public ::testing::Test
 {
@@ -22,8 +25,16 @@ protected:
         utxo_manager = std::make_shared<UTXOManager>(
             true,
             PRIV_KEY,
-            []( const std::vector<uint8_t> & ) { return std::vector<uint8_t>(); },
-            []( const std::vector<uint8_t> &, const std::vector<uint8_t> & ) { return true; } );
+            []( const std::vector<uint8_t> &data )
+            {
+                auto hashed = HASHER.sha2_256( data );
+                return std::vector( hashed.begin(), hashed.end() );
+            },
+            []( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            {
+                auto hashed = HASHER.sha2_256( data );
+                return signature == std::vector( hashed.begin(), hashed.end() );
+            } );
     }
 
     std::shared_ptr<UTXOManager> utxo_manager;
@@ -32,39 +43,39 @@ protected:
 TEST_F( GeniusAccountTest, InitialUTXOCount )
 {
     // Insert four unique UTXOs
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x04 } ) ) ) );
     // Duplicate should be ignored
-    EXPECT_FALSE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_FALSE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_EQ( utxo_manager->GetUTXOs().size(), 4u );
 }
 
 TEST_F( GeniusAccountTest, TotalBalance )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
     EXPECT_EQ( utxo_manager->GetBalance(), 140ull );
 }
 
 TEST_F( GeniusAccountTest, BalanceByToken )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
-    EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ), 70ull );
+    EXPECT_EQ( utxo_manager->GetBalance( TOKEN_1 ), 70ull );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ), 30ull );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x03 } ) ), 40ull );
 }
 
 TEST_F( GeniusAccountTest, BalanceByTokenNonexistent )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0xFF } ) ), 0ull );
@@ -72,7 +83,7 @@ TEST_F( GeniusAccountTest, BalanceByTokenNonexistent )
 
 TEST_F( GeniusAccountTest, StringTemplateBalance )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     std::string s = std::to_string( utxo_manager->GetBalance() );
     EXPECT_EQ( s, std::to_string( utxo_manager->GetBalance() ) );
@@ -80,7 +91,7 @@ TEST_F( GeniusAccountTest, StringTemplateBalance )
 
 TEST_F( GeniusAccountTest, RefreshNoUTXOsLeavesAll )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     size_t before = utxo_manager->GetUTXOs().size();
     utxo_manager->ConsumeUTXOs( {} );
@@ -89,20 +100,20 @@ TEST_F( GeniusAccountTest, RefreshNoUTXOsLeavesAll )
 
 TEST_F( GeniusAccountTest, RefreshPartialUTXOsRemovesOnlySpecified )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ) );
     InputUTXOInfo info;
     info.txid_hash_  = DUMMY_HASH;
     info.output_idx_ = 1; // remove idx 1
     utxo_manager->ConsumeUTXOs( { info } );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ), 0ull );
-    EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ), 70ull );
+    EXPECT_EQ( utxo_manager->GetBalance( TOKEN_1 ), 70ull );
 }
 
 TEST_F( GeniusAccountTest, RefreshAllUTXOsRemovesAll )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     std::vector<InputUTXOInfo> infos;
     for ( const auto &utxo : utxo_manager->GetUTXOs() )
@@ -115,6 +126,23 @@ TEST_F( GeniusAccountTest, RefreshAllUTXOsRemovesAll )
     utxo_manager->ConsumeUTXOs( infos );
     EXPECT_TRUE( utxo_manager->GetUTXOs().empty() );
     EXPECT_EQ( utxo_manager->GetBalance(), 0ull );
+}
+
+TEST_F( GeniusAccountTest, VerifyParameters )
+{
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( HASHER.sha2_256( {} ), 0, 420, TOKEN_1 ) ) );
+    auto tx = utxo_manager->CreateTxParameter( 69, "foobar", TOKEN_1 );
+    EXPECT_TRUE( tx.has_value() );
+    EXPECT_TRUE( utxo_manager->VerifyParameters( tx.value() ) );
+
+    // Fails because amount is incorrect
+    tx.value().second[0].encrypted_amount = 420;
+    EXPECT_FALSE( utxo_manager->VerifyParameters( tx.value() ) );
+    tx.value().second[0].encrypted_amount = 69;
+
+    // Fails because signature does not match
+    tx.value().first[0].signature_ = { 1, 2, 3 };
+    EXPECT_FALSE( utxo_manager->VerifyParameters( tx.value() ) );
 }
 
 TEST( GeniusUTXO, PropertyAccessors )
