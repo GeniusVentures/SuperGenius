@@ -109,7 +109,7 @@ namespace sgns
          * @param[in]   data data to be verified
          * @return      true if the signature is valid, false otherwise
          */
-        static bool VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
+        static bool VerifySignature( std::string address, std::string sig, const std::vector<uint8_t> &data );
 
         /**
          * @brief       Sign data using the Genius account's private key

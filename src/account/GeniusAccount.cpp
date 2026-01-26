@@ -1,4 +1,5 @@
 #include "GeniusAccount.hpp"
+
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
@@ -224,7 +225,7 @@ namespace sgns
         return token;
     }
 
-    bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
+    bool GeniusAccount::VerifySignature( std::string address, std::string sig, const std::vector<uint8_t> &data )
     {
         bool ret = false;
 

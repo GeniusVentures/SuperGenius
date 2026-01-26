@@ -1,5 +1,7 @@
 #include "UTXOManager.hpp"
 
+#include <numeric>
+
 namespace sgns
 {
     uint64_t UTXOManager::GetBalance() const
@@ -258,13 +260,46 @@ namespace sgns
         }
     }
 
+    bool UTXOManager::VerifyParameters( const UTXOTxParameters &params ) const
+    {
+        size_t   input_amount    = 0;
+        uint64_t expected_amount = 0;
+
+        std::shared_lock lock( utxos_mutex_ );
+        for ( const auto &utxo : utxos_.at( address_ ) )
+        {
+            for ( auto &input : params.first )
+            {
+                if ( input.txid_hash_ == utxo.GetTxID() )
+                {
+                    expected_amount += utxo.GetAmount();
+                    input_amount    += 1;
+                }
+                if ( !verify_( input.signature_, input.SerializeForSigning() ) )
+                {
+                    logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
+                    return false;
+                }
+            }
+        }
+        lock.unlock();
+
+        uint64_t real_amount = std::accumulate( params.second.cbegin(),
+                                                params.second.cend(),
+                                                UINT64_C( 0 ),
+                                                []( const uint64_t s, const OutputDestInfo &o )
+                                                { return o.encrypted_amount + s; } );
+
+        return real_amount == expected_amount && input_amount == params.first.size();
+    }
+
     outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> UTXOManager::SelectUTXOs( uint64_t required_amount,
                                                                                                const TokenID &token_id )
     {
         std::vector<InputUTXOInfo> inputs;
         uint64_t                   selected_amount = 0;
 
-        std::unique_lock lock( utxos_mutex_ );
+        std::shared_lock lock( utxos_mutex_ );
         for ( const auto &utxo : utxos_[address_] )
         {
             if ( selected_amount >= required_amount )

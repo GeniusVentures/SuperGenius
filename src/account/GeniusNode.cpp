@@ -147,9 +147,16 @@ namespace sgns
                             bool                use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( GeniusAccount::New( dev_config.TokenID, eth_private_key, write_base_path_, is_full_node ) ),
-        utxo_manager_( is_full_node,
-                       account_->GetAddress(),
-                       [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); } ),
+        utxo_manager_(
+            is_full_node,
+            account_->GetAddress(),
+            [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
+            [this]( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            {
+                return this->account_->VerifySignature( GetAddress(),
+                                                        std::string( signature.begin(), signature.end() ),
+                                                        data );
+            } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),

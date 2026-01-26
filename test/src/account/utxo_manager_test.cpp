@@ -19,10 +19,11 @@ class GeniusAccountTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        utxo_manager = std::make_shared<UTXOManager>( true,
-                                                      PRIV_KEY,
-                                                      []( const std::vector<uint8_t> & )
-                                                      { return std::vector<uint8_t>(); } );
+        utxo_manager = std::make_shared<UTXOManager>(
+            true,
+            PRIV_KEY,
+            []( const std::vector<uint8_t> & ) { return std::vector<uint8_t>(); },
+            []( const std::vector<uint8_t> &, const std::vector<uint8_t> & ) { return true; } );
     }
 
     std::shared_ptr<UTXOManager> utxo_manager;

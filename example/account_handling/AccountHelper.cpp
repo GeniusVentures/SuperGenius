@@ -40,9 +40,16 @@ namespace sgns
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
         account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), eth_private_key, "." ) ),
-        utxo_manager_( true,
-                       account_->GetAddress(),
-                       [this]( const std::vector<uint8_t> &data ) { return this->account_->Sign( data ); } ),
+        utxo_manager_(
+            true,
+            account_->GetAddress(),
+            [this]( const std::vector<uint8_t> &data ) { return this->account_->Sign( data ); },
+            [this]( const std::vector<uint8_t> &signature, const std::vector<uint8_t>& data )
+            {
+                return this->account_->VerifySignature( this->account_->GetAddress(),
+                                                        std::string( signature.begin(), signature.end() ),
+                                                        data );
+            } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
