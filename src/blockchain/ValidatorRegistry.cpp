@@ -33,26 +33,25 @@ namespace sgns::blockchain
             crdt::pb::Delta delta;
             if ( !delta.ParseFromArray( buffer.data(), buffer.size() ) )
             {
+                validator_registry_logger()->error( "{}: Failed to parse Delta from IPLD node", __func__ );
                 return outcome::failure( std::errc::invalid_argument );
             }
 
             const std::string registry_key = std::string( ValidatorRegistry::RegistryKey() );
             for ( const auto &element : delta.elements() )
             {
-                if ( element.key() != registry_key )
-                {
-                    continue;
-                }
-
                 validator::RegistryUpdate update;
                 if ( !update.ParseFromString( element.value() ) )
                 {
+                    validator_registry_logger()->error( "{}: Can't parse the registry update {}",
+                                                        __func__,
+                                                        element.key() );
                     return outcome::failure( std::errc::invalid_argument );
                 }
 
                 return update.prev_registry_hash();
             }
-
+            validator_registry_logger()->error( "{}: NO SUCH FILE ", __func__ );
             return outcome::failure( std::errc::no_such_file_or_directory );
         }
     }
@@ -152,21 +151,21 @@ namespace sgns::blockchain
         auto registry_cid = old_store->get( registry_cid_key );
         if ( registry_cid.has_value() )
         {
-            validator_registry_logger()->debug( "{}: Latest Validator CID: ",
+            validator_registry_logger()->debug( "{}: Latest Validator CID: {}",
                                                 __func__,
                                                 registry_cid.value().toString() );
 
-            std::vector<std::string>                 registry_chain;
-            std::vector<ipfs_lite::ipld::IPLDNode &> nodes;
-            auto                                     current_cid = std::string( registry_cid.value().toString() );
+            std::vector<std::string>                                registry_chain;
+            std::vector<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> nodes;
+            auto current_cid = std::string( registry_cid.value().toString() );
 
             while ( !current_cid.empty() )
             {
                 registry_chain.push_back( current_cid );
                 OUTCOME_TRY( auto &&cid, CID::fromString( current_cid ) );
                 OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
-                nodes.push_back( *node );
                 auto prev_result = ExtractPrevRegistryCid( *node );
+                nodes.push_back( std::move( node ) );
                 if ( prev_result.has_error() )
                 {
                     validator_registry_logger()->error( "{}: Failed to extract previous registry CID from {}",
@@ -187,11 +186,11 @@ namespace sgns::blockchain
                 {
                     continue;
                 }
-                validator_registry_logger()->debug( "{}: Adding Validator CID: ",
+                validator_registry_logger()->debug( "{}: Adding Validator CID: {}",
                                                     __func__,
                                                     registry_cid.value().toString() );
                 crdt::GlobalDB::Buffer registry_cid_value;
-                registry_cid_value.putBuffer( cid_string.value() );
+                registry_cid_value.put( cid_string );
                 (void)new_store->put( registry_cid_key, std::move( registry_cid_value ) );
 
                 OUTCOME_TRY( new_crdt->AddDAGNode( node ) );

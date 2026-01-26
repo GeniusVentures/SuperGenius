@@ -218,8 +218,8 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto new_crdt = new_db->GetCRDTDataStore();
-        auto old_syncer      = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
+        auto new_crdt   = new_db->GetCRDTDataStore();
+        auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
             old_db->GetBroadcaster()->GetDagSyncer() );
         if ( !new_crdt )
         {
@@ -239,7 +239,7 @@ namespace sgns
             {
                 return outcome::success();
             }
-            blockchain_logger()->debug( "{}: Migrating CID: {}", __func__, cid_string );
+            blockchain_logger()->debug( " Migrating CID: {}", cid_string );
 
             OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
             OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
