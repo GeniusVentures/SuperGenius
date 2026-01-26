@@ -124,7 +124,10 @@ namespace sgns
                 }
             }
 
-            logger_->debug( "Found {} transaction keys to migrate on network {}", transaction_keys.size(), network_id );
+            logger_->debug( "{}: Found {} transaction keys to migrate on network {}",
+                            __func__,
+                            transaction_keys.size(),
+                            network_id );
 
             for ( const auto &transaction_key : transaction_keys )
             {
@@ -136,17 +139,21 @@ namespace sgns
                 }
                 auto tx = maybe_transaction.value();
 
+                logger_->debug( "{}: Fetched transaction on {}", __func__, transaction_key );
                 if ( tx->GetHash().empty() )
                 {
+                    logger_->error( "{}: NO HASH ON {}", __func__, transaction_key );
                     tx->FillHash();
                 }
 
                 const auto new_tx_key = blockchain_base + "tx/" + tx->GetHash();
 
+                logger_->debug( "{}: New TX key {}", __func__, new_tx_key );
+
+
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
                 BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( new_tx_key, std::move( data_transaction ) ) );
-
 
                 topics_.emplace( tx->GetSrcAddress() );
                 if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
