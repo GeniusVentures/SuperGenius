@@ -13,8 +13,6 @@ add_library(sgns_genius_account
     AccountMessenger.cpp
 )
 
-set_target_properties(sgns_genius_account PROPERTIES UNITY_BUILD ON)
-
 target_link_libraries(sgns_genius_account
     PUBLIC
     Boost::headers

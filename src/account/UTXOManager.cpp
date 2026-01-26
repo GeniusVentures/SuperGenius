@@ -315,7 +315,7 @@ namespace sgns
                 continue;
             }
 
-            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx() } );
+            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx(), {} } );
             selected_amount += utxo.GetAmount();
         }
         lock.unlock();

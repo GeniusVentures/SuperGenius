@@ -2,6 +2,8 @@
 
 #include "account/proto/SGTransaction.pb.h"
 
+#include "base/endian.h"
+
 std::vector<uint8_t> sgns::InputUTXOInfo::SerializeForSigning() const
 {
     auto little_ended = htole32( output_idx_ );
