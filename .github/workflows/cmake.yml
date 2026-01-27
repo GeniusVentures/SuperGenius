@@ -148,7 +148,11 @@ jobs:
             tag_name="${thirdparty_branch}"
           else
             # For branches, use the platform-branch-buildtype format
-            tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
+            if [ '${{matrix.abi}}' ]; then
+              tag_name="${{matrix.target}}-${{matrix.abi}}-${thirdparty_branch}-${{matrix.build-type}}"
+            else
+              tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
+            fi
           fi
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
@@ -194,7 +198,7 @@ jobs:
               if [ "$IS_TAG" == "true" ]; then
                 tag_name="${zkLLVM_branch}"
               else
-                tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+                tag_name=${{matrix.target}}-${{matrix.abi}}-${zkLLVM_branch}-Release
               fi
           else
               ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
