@@ -317,40 +317,19 @@ jobs:
               RELEASE_TAG="${{ github.event.inputs.tag }}"
               IS_TAG_RELEASE="true"
           else
-              RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              if [ '${{ matrix.abi }}' ]; then
+                  RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              else
+                  RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              fi
               IS_TAG_RELEASE="false"
           fi
 
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           echo "IS_TAG_RELEASE=$IS_TAG_RELEASE" >> $GITHUB_ENV
 
-      - name: Wait for primary release creation
-        if: (github.ref_name == 'main' || github.ref_name == 'develop') && matrix.abi != '' && !((matrix.target == 'Linux' && matrix.abi == 'x86_64') || (matrix.target == 'Android' && matrix.abi == 'arm64-v8a'))
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: |
-          ATTEMPT=1
-          MAX_ATTEMPTS=720
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-              if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-                  # Check if it's at the correct commit
-                  if gh release view $RELEASE_TAG | grep -q "${{ github.sha }}"; then
-                    echo "Release $RELEASE_TAG found!"
-                    break
-                  fi
-              fi
-              echo "Waiting for release $RELEASE_TAG (attempt $ATTEMPT/$MAX_ATTEMPTS)..."
-              sleep 10
-              ATTEMPT=$((ATTEMPT + 1))
-          done
-
-          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-              echo "Timed out waiting for release $RELEASE_TAG"
-              exit 1
-          fi
-        shell: bash
-
       - name: Create release tag
-        if: (github.ref_name == 'main' || github.ref_name == 'develop') && (matrix.abi == '' || (matrix.target == 'Linux' && matrix.abi == 'x86_64') || (matrix.target == 'Android' && matrix.abi == 'arm64-v8a'))
+        if: github.ref_name == 'main' || github.ref_name == 'develop'
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         id: create-release-tag
         run: |
