@@ -1201,7 +1201,7 @@ namespace sgns
                              input.output_idx_ );
         }
 
-        utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos() );
+        utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() );
         return topics;
     }
 
@@ -1215,9 +1215,10 @@ namespace sgns
         auto       hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
         utxo_manager_.PutUTXO( new_utxo, mint_tx->GetSrcAddress() );
-        m_logger->info( "[{} - full: {}] Created tokens, balance {}",
+        m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
+                        std::to_string( mint_tx->GetAmount() ),
                         std::to_string( utxo_manager_.GetBalance() ) );
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
@@ -1249,7 +1250,7 @@ namespace sgns
                     GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
                     utxo_manager_.PutUTXO( new_utxo, outputs[1].dest_address );
                 }
-                utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first );
+                utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() );
             }
         }
 

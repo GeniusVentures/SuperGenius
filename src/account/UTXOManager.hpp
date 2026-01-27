@@ -56,9 +56,15 @@ namespace sgns
         /**
          * @brief       Consume UTXOs from the account
          * @param[in]   infos Vector of UTXO information to be consumed
+         * @param       address Address to consume UTXOs from
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
+
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+        {
+            return ConsumeUTXOs( infos, address_ );
+        }
 
         /**
          * @brief       Get UTXOs for a specific address
@@ -85,11 +91,11 @@ namespace sgns
         }
 
         outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t           amount,
-                                                        const std::string &dest_address,
-                                                        const TokenID     &token_id );
+                                                             const std::string &dest_address,
+                                                             const TokenID     &token_id );
 
         outcome::result<UTXOTxParameters> CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
-                                                        const TokenID                     &token_id );
+                                                             const TokenID                     &token_id );
 
         void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
@@ -101,8 +107,17 @@ namespace sgns
         bool        is_full_node_;
         std::string address_;
 
-        mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
-        std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address
+        enum class UTXOState
+        {
+            UTXO_READY,
+            UTXO_RESERVED,
+            UTXO_CONSUMED
+        };
+
+        using UTXOData = std::pair<UTXOState, GeniusUTXO>;
+
+        mutable std::shared_mutex                              utxos_mutex_; ///< Mutex for the UTXOs map
+        std::unordered_map<std::string, std::vector<UTXOData>> utxos_;       ///< Map of UTXOs by address
     };
 
 }
