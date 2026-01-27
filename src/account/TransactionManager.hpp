@@ -259,7 +259,9 @@ namespace sgns
 
         // Periodic sync - request heads every 10 minutes to stay in sync across devices/instances
         std::chrono::steady_clock::time_point last_periodic_sync_time_;
+        std::atomic<bool> received_first_periodic_sync_response_{ false }; // Track if we've gotten at least one response
         static constexpr std::chrono::minutes PERIODIC_SYNC_INTERVAL = std::chrono::minutes( 10 );
+        static constexpr std::chrono::seconds INITIAL_PERIODIC_SYNC_INTERVAL = std::chrono::seconds( 30 );
 
         // for the SendTransactionItem thread support
         mutable std::mutex          mutex_m;

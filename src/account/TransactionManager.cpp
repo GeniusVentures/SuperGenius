@@ -325,14 +325,28 @@ namespace sgns
         }
 
         // Periodic sync - request heads every 10 minutes to stay synchronized across devices/instances
-        auto time_since_last_periodic_sync = std::chrono::duration_cast<std::chrono::minutes>(
-            now - last_periodic_sync_time_ );
-        if ( time_since_last_periodic_sync >= PERIODIC_SYNC_INTERVAL )
+        // Use 30 second interval until we get first response, then switch to 10 minutes
+        bool should_sync = false;
+        if ( !received_first_periodic_sync_response_.load() )
         {
-            m_logger->debug( "[{} - full: {}] Periodic sync - requesting heads after {} minutes",
+            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>(
+                now - last_periodic_sync_time_ );
+            should_sync = time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
+        }
+        else
+        {
+            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::minutes>(
+                now - last_periodic_sync_time_ );
+            should_sync = time_since_last_sync >= PERIODIC_SYNC_INTERVAL;
+        }
+        
+        if ( should_sync )
+        {
+            auto interval_desc = received_first_periodic_sync_response_.load() ? "10 minutes" : "30 seconds";
+            m_logger->debug( "[{} - full: {}] Periodic sync - requesting heads (interval: {})",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             time_since_last_periodic_sync.count() );
+                             interval_desc );
             auto topics_result = globaldb_m->GetMonitoredTopics();
             if ( topics_result.has_value() )
             {
@@ -2592,6 +2606,18 @@ namespace sgns
                              full_node_m,
                              new_data.first,
                              add_res.error().message() );
+        }
+        else
+        {
+            // Successfully received and processed new transaction data
+            // Mark that we've received data (for periodic sync interval adjustment)
+            if ( !received_first_periodic_sync_response_.load() )
+            {
+                received_first_periodic_sync_response_.store( true );
+                m_logger->info( "[{} - full: {}] First transaction data received from network, switching to 10-minute periodic sync interval",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m );
+            }
         }
     }
 
