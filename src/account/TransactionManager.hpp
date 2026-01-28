@@ -107,7 +107,7 @@ namespace sgns
         ~TransactionManager();
 
         void Start();
-        void PrintAccountInfo();
+        void PrintAccountInfo() const;
 
         const GeniusAccount &GetAccount() const;
 
@@ -145,11 +145,16 @@ namespace sgns
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
             const base::Buffer &tx_data );
 
-        State             GetState() const;
+        State GetState() const
+        {
+            return state_m;
+        }
+
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
-        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction( IGeniusTransactions &element );
+        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction(
+            const IGeniusTransactions &element ) const;
 
         /**
          * @brief      Stops the TransactionManager processing
@@ -260,8 +265,9 @@ namespace sgns
 
         // Periodic sync - request heads every 10 minutes to stay in sync across devices/instances
         std::chrono::steady_clock::time_point last_periodic_sync_time_;
-        std::atomic<bool> received_first_periodic_sync_response_{ false }; // Track if we've gotten at least one response
-        static constexpr std::chrono::minutes PERIODIC_SYNC_INTERVAL = std::chrono::minutes( 10 );
+        std::atomic<bool>                     received_first_periodic_sync_response_{
+            false }; // Track if we've gotten at least one response
+        static constexpr std::chrono::minutes PERIODIC_SYNC_INTERVAL         = std::chrono::minutes( 10 );
         static constexpr std::chrono::seconds INITIAL_PERIODIC_SYNC_INTERVAL = std::chrono::seconds( 30 );
 
         // for the SendTransactionItem thread support
@@ -332,9 +338,9 @@ namespace sgns
         bool ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
                                        const IGeniusTransactions &new_tx ) const;
 
-        uint64_t GetCurrentTimestamp() const;
-        int64_t  GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const;
-        int64_t  GetElapsedTime( uint64_t timestamp ) const;
+        static uint64_t GetCurrentTimestamp();
+        int64_t         GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const;
+        int64_t         GetElapsedTime( uint64_t timestamp ) const;
 
         bool IsTransactionImmutable( const IGeniusTransactions &tx ) const;
 

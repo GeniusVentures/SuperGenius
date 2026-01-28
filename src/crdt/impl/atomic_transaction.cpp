@@ -18,14 +18,14 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> AtomicTransaction::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> AtomicTransaction::Put( HierarchicalKey key, Buffer value )
     {
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        operations_.push_back( { Operation::PUT, key, value } );
         modified_keys_.insert( key.GetKey() ); // Track the key
+        operations_.push_back( { Operation::PUT,  std::move(key), std::move( value ) } );
         return outcome::success();
     }
 
@@ -50,7 +50,7 @@ namespace sgns::crdt
                 // Key has been removed in this transaction
                 return outcome::failure( boost::system::error_code{} );
             }
-            else if ( latest_op->type == Operation::PUT )
+            if ( latest_op->type == Operation::PUT )
             {
                 // Return the value from the pending put operation
                 return latest_op->value;
@@ -89,7 +89,7 @@ namespace sgns::crdt
         return modified_keys_.find( key.GetKey() ) != modified_keys_.end();
     }
 
-    outcome::result<CID> AtomicTransaction::Commit(const std::set<std::string>& topics)
+    outcome::result<CID> AtomicTransaction::Commit( const std::set<std::string> &topics )
     {
         if ( is_committed_ )
         {
@@ -157,5 +157,4 @@ namespace sgns::crdt
         }
         return std::nullopt;
     }
-
-} // namespace sgns::crdt
+}
