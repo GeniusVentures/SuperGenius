@@ -44,7 +44,7 @@ namespace sgns::crdt
          * @param value buffer value to store
          * @return outcome::success or failure if already committed
          */
-        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
+        outcome::result<void> Put( HierarchicalKey key, Buffer value );
 
         /**
          * @brief Delete a key in the transaction

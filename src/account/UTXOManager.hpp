@@ -11,8 +11,8 @@ namespace sgns
     class UTXOManager
     {
     public:
-        UTXOManager( const bool is_full_node, const std::string &address ) :
-            is_full_node_( is_full_node ), address_( address )
+        UTXOManager( const bool is_full_node, std::string address ) :
+            is_full_node_( is_full_node ), address_( std::move( address ) )
         {
         }
 
@@ -87,7 +87,7 @@ namespace sgns
 
         void SetUTXOs( const std::vector<GeniusUTXO> &utxos )
         {
-            return SetUTXOs( utxos, address_ );
+            SetUTXOs( utxos, address_ );
         }
 
         outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t           amount,
