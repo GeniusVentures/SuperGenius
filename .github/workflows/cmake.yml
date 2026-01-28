@@ -44,10 +44,12 @@ jobs:
             host: sg-ubuntu-linux
             abi: "x86_64"
             build-type: "Release"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: sg-ubuntu-linux
             abi: "x86_64"
             build-type: "Debug"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
