@@ -329,17 +329,17 @@ namespace sgns
         bool should_sync = false;
         if ( !received_first_periodic_sync_response_.load() )
         {
-            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>(
-                now - last_periodic_sync_time_ );
-            should_sync = time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
+            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>( now -
+                                                                                          last_periodic_sync_time_ );
+            should_sync               = time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
         }
         else
         {
-            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::minutes>(
-                now - last_periodic_sync_time_ );
-            should_sync = time_since_last_sync >= PERIODIC_SYNC_INTERVAL;
+            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::minutes>( now -
+                                                                                          last_periodic_sync_time_ );
+            should_sync               = time_since_last_sync >= PERIODIC_SYNC_INTERVAL;
         }
-        
+
         if ( should_sync )
         {
             auto interval_desc = received_first_periodic_sync_response_.load() ? "10 minutes" : "30 seconds";
@@ -1147,17 +1147,9 @@ namespace sgns
                     continue;
                 }
 
-                const auto nonce    = maybe_transaction.value()->dag_st.nonce();
-                const bool is_local = ( maybe_transaction.value()->GetSrcAddress() == account_m->GetAddress() );
+                const auto nonce = maybe_transaction.value()->dag_st.nonce();
 
-                if ( is_local )
-                {
-                    account_m->SetLocalConfirmedNonce( nonce );
-                }
-                else
-                {
-                    account_m->SetPeerConfirmedNonce( nonce, maybe_transaction.value()->dag_st.source_addr() );
-                }
+                account_m->SetPeerConfirmedNonce( nonce, maybe_transaction.value()->dag_st.source_addr() );
 
                 {
                     std::unique_lock<std::shared_mutex> tx_lock( tx_mutex_m );
@@ -1349,7 +1341,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              input.txid_hash_.toReadableString() );
-            auto tx = GetTransactionByHash( input.txid_hash_.toReadableString() );
+            auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
             if ( tx )
             {
                 m_logger->debug( "[{} - full: {}] Re-parsing {} transaction",
@@ -1408,7 +1400,7 @@ namespace sgns
                 }
                 for ( auto &input : inputs )
                 {
-                    auto tx = GetTransactionByHash( input.txid_hash_.toReadableString() );
+                    auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
                     if ( tx )
                     {
                         m_logger->debug( "[{} - full: {}] Re-parsing {} transaction",
@@ -1926,6 +1918,12 @@ namespace sgns
     std::shared_ptr<IGeniusTransactions> TransactionManager::GetTransactionByHash( const std::string &tx_hash ) const
     {
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        return GetTransactionByHashNoLock( tx_hash );
+    }
+
+    std::shared_ptr<IGeniusTransactions> TransactionManager::GetTransactionByHashNoLock(
+        const std::string &tx_hash ) const
+    {
         for ( const auto &kv : tx_processed_m )
         {
             m_logger->debug( "[{} - full: {}] Searching for hash {}",
@@ -2518,24 +2516,42 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key );
-        const bool is_local               = ( new_tx->GetSrcAddress() == account_m->GetAddress() );
-        bool       should_add_transaction = false;
-        auto       tx_hash                = new_tx->GetHash();
+        bool should_add_transaction = false;
+        auto tx_hash                = new_tx->GetHash();
         if ( tx_hash.empty() )
         {
             //new_tx->FillHash();
             //tx_hash = new_tx->GetHash();
+            m_logger->error( "[{} - full: {}] Empty hash on {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key );
             return outcome::failure( boost::system::error_code{} );
         }
+        m_logger->debug( "[{} - full: {}] Checking if we already have this transaction {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         key );
 
         std::unique_lock tx_lock( tx_mutex_m );
         auto             it = tx_processed_m.find( key );
 
         if ( it != tx_processed_m.end() )
         {
+            m_logger->debug( "[{} - full: {}] Already have the transaction {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key );
             return outcome::success();
         }
+        m_logger->debug( "[{} - full: {}] Verifying if we have a conflicting transaction {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         key );
+        tx_lock.unlock();
         auto conflicting_tx = GetConflictingTransaction( *new_tx );
+        tx_lock.lock();
+
         if ( conflicting_tx.has_value() )
         {
             m_logger->debug( "[{} - full: {}] Found conflicting transaction with hash: {}, removing it",
@@ -2549,19 +2565,17 @@ namespace sgns
             tx_lock.lock();
         }
 
+        m_logger->debug( "[{} - full: {}] Parsing new transaction {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         key );
         OUTCOME_TRY( ParseTransaction( new_tx ) );
 
         const auto nonce = new_tx->dag_st.nonce();
-        if ( is_local )
-        {
-            account_m->SetLocalConfirmedNonce( nonce );
-        }
-        else
-        {
-            account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
 
-            tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
-        }
+        account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
+
+        tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
 
         return outcome::success();
     }
@@ -2592,11 +2606,6 @@ namespace sgns
                          full_node_m,
                          new_data.first );
 
-        m_logger->debug( "[{} - full: {}] Deleting existing entry of key {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         new_data.first );
-
         auto add_res = AddTransactionToProcessedMaps( new_data );
 
         if ( add_res.has_error() )
@@ -2614,9 +2623,10 @@ namespace sgns
             if ( !received_first_periodic_sync_response_.load() )
             {
                 received_first_periodic_sync_response_.store( true );
-                m_logger->info( "[{} - full: {}] First transaction data received from network, switching to 10-minute periodic sync interval",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m );
+                m_logger->info(
+                    "[{} - full: {}] First transaction data received from network, switching to 10-minute periodic sync interval",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m );
             }
         }
     }

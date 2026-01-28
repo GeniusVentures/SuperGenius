@@ -112,7 +112,7 @@ namespace sgns
         if ( !is_full_node_ && address != address_ )
         {
             logger_->warn( "Non-full node cannot delete UTXOs for other addresses" );
-            return;
+            //return;
         }
 
         std::unique_lock lock( utxos_mutex_ );

@@ -236,6 +236,7 @@ namespace sgns
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetTransactionByHash( const std::string &tx_hash ) const;
+        std::shared_ptr<IGeniusTransactions> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
                                                                                const std::string &address ) const;
 
