@@ -63,7 +63,7 @@ jobs:
           - target: OSX
             host: gv-OSX-Large
           - target: Android
-            host: ubuntu-22.04
+            host: sg-ubuntu-linux
             abi: arm64-v8a
             build-type: "Release"
           - target: Android
@@ -71,7 +71,7 @@ jobs:
             abi: arm64-v8a
             build-type: "Debug"
           - target: Android
-            host: ubuntu-22.04
+            host: sg-ubuntu-linux
             abi: armeabi-v7a
             build-type: "Release"
           - target: Android
