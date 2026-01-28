@@ -422,8 +422,8 @@ jobs:
           fi
 
           echo "Creating new tag $RELEASE_TAG..."
-          git tag "$RELEASE_TAG" "${{ github.sha }}"
-          git push origin "$RELEASE_TAG"
+          git tag -f "$RELEASE_TAG" "${{ github.sha }}"
+          git push origin "$RELEASE_TAG" --force
 
           echo "Creating GitHub release $RELEASE_TAG..."
           gh release create "$RELEASE_TAG" \
