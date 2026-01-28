@@ -151,11 +151,11 @@ namespace sgns
             is_full_node,
             account_->GetAddress(),
             [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
-            [this]( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
             {
-                return this->account_->VerifySignature( GetAddress(),
-                                                        std::string( signature.begin(), signature.end() ),
-                                                        data );
+                return GeniusAccount::VerifySignature( address,
+                                                       std::string( signature.begin(), signature.end() ),
+                                                       data );
             } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         autodht_( autodht ),

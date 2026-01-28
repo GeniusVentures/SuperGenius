@@ -94,7 +94,7 @@ namespace sgns
         }
         if ( is_new )
         {
-            utxo_list.push_back( std::move(new_utxo) );
+            utxo_list.push_back( std::move( new_utxo ) );
         }
         return is_new;
     }
@@ -260,13 +260,13 @@ namespace sgns
         }
     }
 
-    bool UTXOManager::VerifyParameters( const UTXOTxParameters &params ) const
+    bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
     {
         size_t   input_amount    = 0;
         uint64_t expected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
-        for ( const auto &utxo : utxos_.at( address_ ) )
+        for ( const auto &utxo : utxos_.at( address ) )
         {
             for ( auto &input : params.first )
             {
@@ -275,7 +275,7 @@ namespace sgns
                     expected_amount += utxo.GetAmount();
                     input_amount    += 1;
                 }
-                if ( !verify_signature_( input.signature_, input.SerializeForSigning() ) )
+                if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
                 {
                     logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
                     return false;

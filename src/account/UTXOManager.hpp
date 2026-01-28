@@ -11,16 +11,17 @@ namespace sgns
     class UTXOManager
     {
     public:
-        using SignFunc = std::function<std::vector<uint8_t>( const std::vector<uint8_t> &data )>;
-        using VerifySignatureFunc =
-            std::function<bool( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )>;
+        using SignFunc            = std::function<std::vector<uint8_t>( const std::vector<uint8_t> &data )>;
+        using VerifySignatureFunc = std::function<bool( const std::string          &address,
+                                                        const std::vector<uint8_t> &signature,
+                                                        const std::vector<uint8_t> &data )>;
 
         UTXOManager( const bool          is_full_node,
                      std::string         address,
                      SignFunc            sign,
                      VerifySignatureFunc verify_signature ) :
             is_full_node_( is_full_node ),
-            address_( std::move( address )),
+            address_( std::move( address ) ),
             sign_( std::move( sign ) ),
             verify_signature_( std::move( verify_signature ) )
         {
@@ -105,7 +106,12 @@ namespace sgns
 
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
-        bool VerifyParameters( const UTXOTxParameters &params ) const;
+        bool VerifyParameters( const UTXOTxParameters &params ) const
+        {
+            return VerifyParameters( params, address_ );
+        }
+
+        bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
     private:
         outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,

@@ -225,7 +225,9 @@ namespace sgns
         return token;
     }
 
-    bool GeniusAccount::VerifySignature( std::string address, std::string sig, const std::vector<uint8_t> &data )
+    bool GeniusAccount::VerifySignature( const std::string          &address,
+                                         std::string_view            sig,
+                                         const std::vector<uint8_t> &data )
     {
         bool ret = false;
 

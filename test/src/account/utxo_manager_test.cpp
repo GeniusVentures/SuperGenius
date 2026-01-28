@@ -30,7 +30,7 @@ protected:
                 auto hashed = HASHER.sha2_256( data );
                 return std::vector( hashed.begin(), hashed.end() );
             },
-            []( const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            []( const std::string &_, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
             {
                 auto hashed = HASHER.sha2_256( data );
                 return signature == std::vector( hashed.begin(), hashed.end() );
