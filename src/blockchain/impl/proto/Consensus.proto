@@ -64,6 +64,7 @@ message ConsensusCertificate {
   uint64 approved_weight = 5;
   uint64 timestamp = 6;
   repeated ConsensusVote votes = 7;
+  ConsensusProposal proposal = 8;
 }
 
 message ConsensusMessage {
