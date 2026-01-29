@@ -38,6 +38,14 @@ addtest(blockchain_genesis_test
     blockchain_genesis_test.cpp
     )
 
+addtest(consensus_certificate_test
+    consensus_certificate_test.cpp
+)
+target_link_libraries(consensus_certificate_test
+    blockchain_genesis
+    base_crdt_test
+)
+
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test

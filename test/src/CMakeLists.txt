@@ -1,6 +1,7 @@
 add_subdirectory(account_creation)
 add_subdirectory(account)
 add_subdirectory(base)
+add_subdirectory(blockchain)
 add_subdirectory(crdt)
 add_subdirectory(crypto)
 add_subdirectory(graphsync)
