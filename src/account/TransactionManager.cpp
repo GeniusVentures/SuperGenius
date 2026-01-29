@@ -436,8 +436,6 @@ namespace sgns
         OUTCOME_TRY( auto &&params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
         auto [inputs, outputs] = params;
 
-        //TODO params.SignParameters( account_m );
-
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( inputs, outputs, FillDAGStruct() ) );
 
@@ -570,11 +568,11 @@ namespace sgns
                          full_node_m,
                          remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
-        InputUTXOInfo escrow_utxo_input;
 
-        escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
+        InputUTXOInfo escrow_utxo_input;
+        escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ).value();
         escrow_utxo_input.output_idx_ = 0;
-        escrow_utxo_input.signature_  = ""; //TODO - Signature
+        escrow_utxo_input.signature_  = account_m->Sign(escrow_utxo_input.SerializeForSigning());
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );

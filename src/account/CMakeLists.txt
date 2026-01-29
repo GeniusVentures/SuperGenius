@@ -1,18 +1,16 @@
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 add_proto_library(SGAccountCommProto proto/SGAccountComm.proto)
 
-if (BUILD_WITH_PROOFS)
+if(BUILD_WITH_PROOFS)
     add_compile_definitions(_PROOF_ENABLED)
 endif()
 
-# Create the GeniusAccount library
 add_library(sgns_genius_account
+    UTXOStructs.cpp
     UTXOManager.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp
 )
-
-set_target_properties(sgns_genius_account PROPERTIES UNITY_BUILD ON)
 
 target_link_libraries(sgns_genius_account
     PUBLIC
@@ -26,6 +24,7 @@ target_link_libraries(sgns_genius_account
     secure_storage
     component_factory
     SGAccountCommProto
+    SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     TrustWalletCore
@@ -35,19 +34,22 @@ target_link_libraries(sgns_genius_account
     ${WIN_CRYPT_LIBRARY}
 )
 
+target_precompile_headers(sgns_genius_account PUBLIC
+    <ProofSystem/ElGamalKeyGenerator.hpp>
+    <ProofSystem/EthereumKeyGenerator.hpp>
+)
+
 target_include_directories(
     sgns_genius_account
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
-if (MSVC)
+if(MSVC)
     target_compile_options(sgns_genius_account PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
-
-# Create the main account library (without GeniusAccount files)
 add_library(genius_node
     IGeniusTransactions.cpp
     TransferTransaction.cpp
@@ -115,7 +117,7 @@ target_link_libraries(genius_node
 )
 
 set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
-if (MSVC)
+if(MSVC)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)

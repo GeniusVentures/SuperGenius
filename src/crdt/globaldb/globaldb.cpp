@@ -1,5 +1,4 @@
 #include "globaldb.hpp"
-#include "pubsub_broadcaster.hpp"
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
@@ -7,19 +6,15 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/atomic_transaction.hpp"
 
-#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
 #include <rocksdb/db.h>
 
-#include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
-#include <libp2p/common/literals.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
-#include <boost/di/extension/scopes/shared.hpp>
 #include <boost/format.hpp>
 
 #if defined( _WIN32 )
@@ -28,9 +23,6 @@
 #pragma comment( lib, "iphlpapi.lib" )
 #pragma comment( lib, "ws2_32.lib" )
 #else
-#include <ifaddrs.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #endif
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
@@ -335,9 +327,9 @@ namespace sgns::crdt
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
     }
 
-    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
+    outcome::result<void> GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        m_broadcaster->AddBroadcastTopic( topicName );
+        return m_broadcaster->AddBroadcastTopic( topicName );
     }
 
     void GlobalDB::AddListenTopic( const std::string &topicName )
@@ -386,12 +378,12 @@ namespace sgns::crdt
         return m_crdtDatastore->AddHead( aCid, topic, priority );
     }
 
-    std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
+    std::shared_ptr<PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
     {
         return m_broadcaster;
     }
 
-    outcome::result<crdt::CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
+    outcome::result<CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
     {
         if ( !m_crdtDatastore )
         {

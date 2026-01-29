@@ -11,8 +11,19 @@ namespace sgns
     class UTXOManager
     {
     public:
-        UTXOManager( const bool is_full_node, std::string address ) :
-            is_full_node_( is_full_node ), address_( std::move( address ) )
+        using SignFunc            = std::function<std::vector<uint8_t>( const std::vector<uint8_t> &data )>;
+        using VerifySignatureFunc = std::function<bool( const std::string          &address,
+                                                        const std::vector<uint8_t> &signature,
+                                                        const std::vector<uint8_t> &data )>;
+
+        UTXOManager( const bool          is_full_node,
+                     std::string         address,
+                     SignFunc            sign,
+                     VerifySignatureFunc verify_signature ) :
+            is_full_node_( is_full_node ),
+            address_( std::move( address ) ),
+            sign_( std::move( sign ) ),
+            verify_signature_( std::move( verify_signature ) )
         {
         }
 
@@ -39,7 +50,7 @@ namespace sgns
          * @param       address Address to add the UTXO to
          * @return      true if the UTXO was added, false otherwise
          */
-        bool PutUTXO( const GeniusUTXO &new_utxo, const std::string &address );
+        bool PutUTXO( GeniusUTXO new_utxo, const std::string &address );
 
         bool PutUTXO( const GeniusUTXO &new_utxo )
         {
@@ -95,11 +106,25 @@ namespace sgns
 
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
+        bool VerifyParameters( const UTXOTxParameters &params ) const
+        {
+            return VerifyParameters( params, address_ );
+        }
+
+        bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
+
     private:
+        outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
+                                                                                      const TokenID &token_id );
+
+        void SignInputs( std::vector<InputUTXOInfo> &inputs ) const;
+
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-        bool        is_full_node_;
-        std::string address_;
+        bool                is_full_node_;
+        std::string         address_;
+        SignFunc            sign_;
+        VerifySignatureFunc verify_signature_;
 
         mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
         std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address

@@ -109,14 +109,16 @@ namespace sgns
          * @param[in]   data data to be verified
          * @return      true if the signature is valid, false otherwise
          */
-        static bool VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
+        static bool VerifySignature( const std::string          &address,
+                                     std::string_view            sig,
+                                     const std::vector<uint8_t> &data );
 
         /**
          * @brief       Sign data using the Genius account's private key
          * @param[in]   data data to be signed
          * @return      the signature as a vector of bytes
          */
-        std::vector<uint8_t> Sign( std::vector<uint8_t> data );
+        std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
          * @brief       Set the local confirmed nonce

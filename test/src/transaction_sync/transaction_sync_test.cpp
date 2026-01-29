@@ -129,8 +129,6 @@ namespace sgns
             OUTCOME_TRY( auto &&params,
                          utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-            //TODO params.SignParameters( account );
-
             auto timestamp = std::chrono::system_clock::now();
 
             SGTransaction::DAGStruct dag;
