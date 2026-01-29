@@ -25,6 +25,11 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "primitives/cid/cid.hpp"
 
+namespace sgns
+{
+    class Migration3_5_1To3_6_0;
+}
+
 namespace sgns::blockchain
 {
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
@@ -88,6 +93,12 @@ namespace sgns::blockchain
         {
             return "gnus-validator-registry-cid";
         }
+
+    protected:
+        friend class sgns::Migration3_5_1To3_6_0;
+
+        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
+                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
 
     private:
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,

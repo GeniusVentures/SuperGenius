@@ -420,4 +420,10 @@ namespace sgns::crdt
         m_logger->debug( "{}: Forwarding request for {} topics", __func__ );
         return m_crdtDatastore->GetTopicNames();
     }
+
+    std::shared_ptr<crdt::CrdtDatastore> GlobalDB::GetCRDTDataStore()
+    {
+        return m_crdtDatastore;
+    }
+
 }

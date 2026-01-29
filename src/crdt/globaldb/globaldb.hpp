@@ -164,6 +164,8 @@ namespace sgns::crdt
          */
         outcome::result<std::set<std::string>> GetMonitoredTopics() const;
 
+        std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
+
     private:
         /**
          * @brief       Constructs a new Global D B object

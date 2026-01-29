@@ -13,6 +13,15 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
+
     Migration3_4_0To3_5_0::Migration3_4_0To3_5_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
@@ -52,7 +61,7 @@ namespace sgns
         if ( !db_3_4_0_ )
         {
             logger_->info( "Legacy 3.4.0 DB not found; skipping migration to {}", ToVersion() );
-            return false;
+            return ret;
         }
 
         do
@@ -359,7 +368,7 @@ namespace sgns
                     logger_->info( "Synthesizing zero-value mint for missing nonce {} on network {}",
                                    nonce,
                                    network_id );
-                    auto tx_path = blockchain_base + mint_tx->GetTransactionFullPath();
+                    auto tx_path = blockchain_base + BuildLegacyTransactionPath_3_5_0( *mint_tx );
                     return TransactionRecord{ std::move( mint_tx ), std::move( tx_path ) };
                 };
 

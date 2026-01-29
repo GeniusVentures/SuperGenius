@@ -103,6 +103,8 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const override;
 
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
+
         std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks( ipfs_lite::ipld::IPLDNode &node,
                                                                std::string                link_name = "",
                                                                LinkInfoSet                visited = {} ) const override;
@@ -147,8 +149,6 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
 
         outcome::result<void> BlackListPeer( const PeerId &peer ) const;
-
-        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
 
         outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
         void                       EraseRoutesFromPeerID( const PeerId &peer ) const;

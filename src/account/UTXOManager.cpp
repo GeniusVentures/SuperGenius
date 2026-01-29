@@ -23,9 +23,9 @@ namespace sgns
         std::shared_lock lock( utxos_mutex_ );
         if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
-            for ( const auto &curr : it->second )
+            for ( const auto &[state, curr] : it->second )
             {
-                if ( !curr.GetLock() )
+                if ( !curr.GetLock() && state == UTXOState::UTXO_READY )
                 {
                     retval += curr.GetAmount();
                 }
@@ -54,9 +54,9 @@ namespace sgns
         std::shared_lock lock( utxos_mutex_ );
         if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
-            for ( const auto &utxo : it->second )
+            for ( const auto &[state, utxo] : it->second )
             {
-                if ( !utxo.GetLock() && token_id.Equals( utxo.GetTokenID() ) )
+                if ( !utxo.GetLock() && token_id.Equals( utxo.GetTokenID() ) && state == UTXOState::UTXO_READY )
                 {
                     balance += utxo.GetAmount();
                 }
@@ -78,15 +78,24 @@ namespace sgns
         auto            &utxo_list = utxos_[address];
 
         bool is_new = true;
-        for ( auto &curr : utxo_list )
+        for ( auto it = utxo_list.begin(); it != utxo_list.end(); )
         {
+            auto &[state, curr] = *it;
             if ( new_utxo.GetTxID() != curr.GetTxID() )
             {
+                ++it;
                 continue;
             }
             if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
             {
+                ++it;
                 continue;
+            }
+            if ( state == UTXOState::UTXO_CONSUMED )
+            {
+                it     = utxo_list.erase( it );
+                is_new = false;
+                break;
             }
             //TODO - If it's the same, might be locked, then unlock
             is_new = false;
@@ -94,7 +103,7 @@ namespace sgns
         }
         if ( is_new )
         {
-            utxo_list.push_back( std::move( new_utxo ) );
+            utxo_list.push_back( { UTXOState::UTXO_READY, std::move( new_utxo ) } );
         }
         return is_new;
     }
@@ -104,8 +113,7 @@ namespace sgns
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
         {
-            logger_->warn( "Non-full node cannot delete UTXOs for other addresses" );
-            return;
+            logger_->warn( "Non-full node deleting UTXOs for other addresses" );
         }
 
         std::unique_lock lock( utxos_mutex_ );
@@ -114,7 +122,8 @@ namespace sgns
             auto &utxo_list = it->second;
             for ( auto utxo_it = utxo_list.begin(); utxo_it != utxo_list.end(); )
             {
-                if ( utxo_it->GetTxID() == utxo_id )
+                auto &[state, curr] = *utxo_it;
+                if ( curr.GetTxID() == utxo_id )
                 {
                     utxo_it = utxo_list.erase( utxo_it );
                     continue;
@@ -124,30 +133,42 @@ namespace sgns
         }
     }
 
-    bool UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+    bool UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address )
     {
-        bool             consumed = false;
+        bool             consumed = true;
         std::unique_lock lock( utxos_mutex_ );
-        for ( auto &[_, utxo_list] : utxos_ )
+        auto            &utxo_list = utxos_[address];
+        for ( auto &input_info : infos )
         {
-            auto old_size = utxo_list.size();
-            utxo_list.erase(
-                std::remove_if( utxo_list.begin(),
-                                utxo_list.end(),
-                                [&infos]( const GeniusUTXO &x )
-                                {
-                                    return std::any_of(
-                                        infos.begin(),
-                                        infos.end(),
-                                        [&x]( const InputUTXOInfo &a )
-                                        { return a.txid_hash_ == x.GetTxID() && a.output_idx_ == x.GetOutputIdx(); } );
-                                } ),
-                utxo_list.end() );
-            if ( utxo_list.size() != old_size )
+            bool utxo_found = false;
+            auto utxo_it    = utxo_list.end();
+            for ( auto it = utxo_list.begin(); it != utxo_list.end(); ++it )
             {
-                consumed = true;
+                auto &[state, curr] = *it;
+                if ( input_info.txid_hash_ != curr.GetTxID() )
+                {
+                    continue;
+                }
+                if ( input_info.output_idx_ != curr.GetOutputIdx() )
+                {
+                    continue;
+                }
+                utxo_found = true;
+                utxo_it    = it;
+                break;
             }
+            if ( utxo_found )
+            {
+                utxo_list.erase( utxo_it );
+            }
+            else
+            {
+                GeniusUTXO consumed_utxo( input_info.txid_hash_, input_info.output_idx_, 0, TokenID() );
+                utxo_list.emplace_back( UTXOState::UTXO_CONSUMED, consumed_utxo );
+            }
+            consumed = consumed && utxo_found;
         }
+
         return consumed;
     }
 
@@ -156,7 +177,17 @@ namespace sgns
         std::shared_lock lock( utxos_mutex_ );
         if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
-            return it->second;
+            std::vector<GeniusUTXO> result;
+            result.reserve( it->second.size() );
+            for ( const auto &[state, utxo] : it->second )
+            {
+                if ( state == UTXOState::UTXO_CONSUMED )
+                {
+                    continue;
+                }
+                result.push_back( utxo );
+            }
+            return result;
         }
         return {};
     }
@@ -171,7 +202,13 @@ namespace sgns
         }
 
         std::unique_lock lock( utxos_mutex_ );
-        utxos_[address] = utxos;
+        auto            &utxo_list = utxos_[address];
+        utxo_list.clear();
+        utxo_list.reserve( utxos.size() );
+        for ( const auto &utxo : utxos )
+        {
+            utxo_list.emplace_back( UTXOState::UTXO_READY, utxo );
+        }
 
         logger_->debug( "Set {} UTXOs for address {}", utxos.size(), address.substr( 0, 8 ) );
     }
@@ -232,7 +269,7 @@ namespace sgns
     {
         std::unique_lock lock( utxos_mutex_ );
 
-        for ( auto &utxo : utxos_[address_] )
+        for ( auto &[state, utxo] : utxos_[address_] )
         {
             for ( auto &input_utxo : inputs )
             {
@@ -248,7 +285,7 @@ namespace sgns
     {
         std::unique_lock lock( utxos_mutex_ );
 
-        for ( auto &utxo : utxos_[address_] )
+        for ( auto &[state, utxo] : utxos_[address_] )
         {
             for ( auto &input_utxo : inputs )
             {
@@ -266,10 +303,14 @@ namespace sgns
         uint64_t expected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
-        for ( const auto &utxo : utxos_.at( address ) )
+        for ( const auto &[state, utxo] : utxos_.at( address ) )
         {
             for ( auto &input : params.first )
             {
+                if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
+                {
+                    continue;
+                }
                 if ( input.txid_hash_ == utxo.GetTxID() )
                 {
                     expected_amount += utxo.GetAmount();
@@ -300,13 +341,17 @@ namespace sgns
         uint64_t                   selected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
-        for ( const auto &utxo : utxos_[address_] )
+        for ( const auto &[state, utxo] : utxos_[address_] )
         {
             if ( selected_amount >= required_amount )
             {
                 break;
             }
             if ( utxo.GetLock() )
+            {
+                continue;
+            }
+            if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
             {
                 continue;
             }

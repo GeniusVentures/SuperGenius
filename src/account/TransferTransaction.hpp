@@ -40,7 +40,7 @@ namespace sgns
         std::vector<OutputDestInfo> GetDstInfos() const;
         std::vector<InputUTXOInfo>  GetInputInfos() const;
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             return GetType();
         }

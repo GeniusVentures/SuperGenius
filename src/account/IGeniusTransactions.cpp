@@ -93,4 +93,9 @@ namespace sgns
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
+
+    std::string IGeniusTransactions::GetHash() const
+    {
+        return dag_st.data_hash();
+    }
 }

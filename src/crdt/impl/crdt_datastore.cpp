@@ -1153,7 +1153,8 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
                                                  const std::set<std::string>  &topics )
     {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
+        OUTCOME_TRY( auto &&node, CreateDAGNode( aDelta, topics ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( node ) );
         return newCID;
     }
 
@@ -1187,7 +1188,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
+    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateIPLDNode(
         const std::vector<std::pair<CID, std::string>> &aHeads,
         const std::shared_ptr<Delta>                   &aDelta,
         const std::set<std::string>                    &topics ) const
@@ -1205,7 +1206,8 @@ namespace sgns::crdt
         //Log expensive toString only if trace enabled
         if ( logger_->level() == spdlog::level::trace )
         {
-            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}",
+            logger_->trace( "{}: added destination for block {{ cid=\"{}\" }}",
+                            __func__,
                             node->getCID().toString().value() );
         }
 
@@ -1226,7 +1228,8 @@ namespace sgns::crdt
             //Log expensive toString only if trace enabled
             if ( logger_->level() == spdlog::level::trace )
             {
-                logger_->trace( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                logger_->trace( "{}: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                                __func__,
                                 link.getCID().toString().value(),
                                 link.getName(),
                                 link.getSize() );
@@ -1236,8 +1239,9 @@ namespace sgns::crdt
         return node;
     }
 
-    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
-                                                    const std::set<std::string>  &topics )
+    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateDAGNode(
+        const std::shared_ptr<Delta> &aDelta,
+        const std::set<std::string>  &topics )
     {
         OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
@@ -1255,15 +1259,21 @@ namespace sgns::crdt
             }
         }
 
-        OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
+        OUTCOME_TRY( auto &&node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
-        if ( logger_->level() == spdlog::level::trace )
+        if ( logger_->level() == spdlog::level::debug )
         {
-            logger_->trace( "AddDAGNode: Processing generated block {} from {}",
+            logger_->debug( "{}: Created Node to insert in DAG: {} (instance {})",
+                            __func__,
                             node->getCID().toString().value(),
                             reinterpret_cast<uint64_t>( this ) );
         }
+        return node;
+    }
+
+    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node )
+    {
 
         RootCIDJob rootJob{ nullptr, node, true };
 

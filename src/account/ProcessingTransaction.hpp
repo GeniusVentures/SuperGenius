@@ -50,7 +50,7 @@ namespace sgns
             return job_id_;
         }
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             boost::format processing_fmt( GetType() + "/%s" );
 

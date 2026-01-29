@@ -29,7 +29,7 @@ namespace sgns
         std::vector<uint8_t> SerializeByteVector() override;
         uint64_t             GetNumChunks() const;
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             return GetType();
         }

@@ -30,6 +30,16 @@
 #include <condition_variable>
 #include <optional>
 
+namespace sgns
+{
+    class Blockchain;
+}
+
+namespace sgns::blockchain
+{
+    class ValidatorRegistry;
+}
+
 namespace sgns::crdt
 {
     class CrdtSet; ///< Forward declaration of CRDT Set class
@@ -230,7 +240,9 @@ namespace sgns::crdt
 
     protected:
         friend class PubSubBroadcasterExt;
-
+        friend class ::sgns::Blockchain;
+        friend class ::sgns::blockchain::ValidatorRegistry;
+ 
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
@@ -339,21 +351,24 @@ namespace sgns::crdt
         */
         static outcome::result<Buffer> EncodeBroadcastStatic( const std::set<CID> &heads );
 
-        /** PutBlock add block node to DAGSyncer
+        /** CreateIPLDNode add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
         * @param aDelta Delta to serialize into IPLD node
         * @return IPLD node or outcome::failure on error
         */
-        outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>> &aHeads,
-                                                             const std::shared_ptr<Delta>                   &aDelta,
-                                                             const std::set<std::string> &topics ) const;
+        outcome::result<std::shared_ptr<IPLDNode>> CreateIPLDNode(
+            const std::vector<std::pair<CID, std::string>> &aHeads,
+            const std::shared_ptr<Delta>                   &aDelta,
+            const std::set<std::string>                    &topics ) const;
 
+        outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta> &aDelta,
+                                                                                 const std::set<std::string>  &topics );
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
          *  @param aDelta   Pointer to Delta used for generating node and process it
          *  @param topics   Vector of topic names; the new block will have one link per topic
          *  @return         CID or outcome::failure on error
          */
-        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
+        outcome::result<CID> AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node );
 
         /** SyncDatastore sync heads and set datastore
         * @param: aKeyList all heads and the set entries related to the given prefix
