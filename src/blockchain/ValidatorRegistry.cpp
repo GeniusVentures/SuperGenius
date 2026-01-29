@@ -175,9 +175,7 @@ namespace sgns::blockchain
                 }
                 current_cid = prev_result.value();
             }
-            std::reverse( registry_chain.begin(), registry_chain.end() );
-            std::reverse( nodes.begin(), nodes.end() );
-            for ( auto i = 0; i < registry_chain.size(); ++i )
+            for ( size_t i = registry_chain.size(); i-- > 0; )
             {
                 const auto &cid_string = registry_chain[i];
                 const auto &node       = nodes[i];

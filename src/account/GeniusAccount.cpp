@@ -1,4 +1,5 @@
 #include "GeniusAccount.hpp"
+
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
@@ -224,7 +225,9 @@ namespace sgns
         return token;
     }
 
-    bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
+    bool GeniusAccount::VerifySignature( const std::string          &address,
+                                         std::string_view            sig,
+                                         const std::vector<uint8_t> &data )
     {
         bool ret = false;
 
@@ -267,7 +270,7 @@ namespace sgns
         return ret;
     }
 
-    std::vector<uint8_t> GeniusAccount::Sign( std::vector<uint8_t> data )
+    std::vector<uint8_t> GeniusAccount::Sign( const std::vector<uint8_t> &data ) const
     {
         std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
 

@@ -434,8 +434,6 @@ namespace sgns
         OUTCOME_TRY( auto &&params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
         auto [inputs, outputs] = params;
 
-        //TODO params.SignParameters( account_m );
-
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( inputs, outputs, FillDAGStruct() ) );
 
@@ -568,11 +566,11 @@ namespace sgns
                          full_node_m,
                          remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
-        InputUTXOInfo escrow_utxo_input;
 
-        escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
+        InputUTXOInfo escrow_utxo_input;
+        escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();
         escrow_utxo_input.output_idx_ = 0;
-        escrow_utxo_input.signature_  = ""; //TODO - Signature
+        escrow_utxo_input.signature_  = account_m->Sign(escrow_utxo_input.SerializeForSigning());
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
@@ -1126,7 +1124,6 @@ namespace sgns
                                      full_node_m,
                                      transaction_key.value() );
                     continue;
-                    //maybe_transaction.value()->FillHash();
                 }
 
                 auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
@@ -2492,8 +2489,6 @@ namespace sgns
         auto tx_hash                = new_tx->GetHash();
         if ( tx_hash.empty() )
         {
-            //new_tx->FillHash();
-            //tx_hash = new_tx->GetHash();
             m_logger->error( "[{} - full: {}] Empty hash on {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,

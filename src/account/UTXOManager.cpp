@@ -1,5 +1,7 @@
 #include "UTXOManager.hpp"
 
+#include <numeric>
+
 namespace sgns
 {
     uint64_t UTXOManager::GetBalance() const
@@ -63,7 +65,7 @@ namespace sgns
         return balance;
     }
 
-    bool UTXOManager::PutUTXO( const GeniusUTXO &new_utxo, const std::string &address )
+    bool UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -101,7 +103,7 @@ namespace sgns
         }
         if ( is_new )
         {
-            utxo_list.push_back( { UTXOState::UTXO_READY, new_utxo } );
+            utxo_list.push_back( { UTXOState::UTXO_READY, std::move( new_utxo ) } );
         }
         return is_new;
     }
@@ -111,8 +113,7 @@ namespace sgns
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
         {
-            logger_->warn( "Non-full node cannot delete UTXOs for other addresses" );
-            //return;
+            logger_->warn( "Non-full node deleting UTXOs for other addresses" );
         }
 
         std::unique_lock lock( utxos_mutex_ );
@@ -216,143 +217,52 @@ namespace sgns
                                                                       const std::string &dest_address,
                                                                       const TokenID     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs_;
-        std::vector<OutputDestInfo> outputs_;
+        OUTCOME_TRY( auto selection_result, SelectUTXOs( amount, token_id ) );
+        auto [inputs, selected_amount] = selection_result;
 
-        // Select UTXOs until we cover the requested amount
-        std::vector<GeniusUTXO> selected_utxos;
-        uint64_t                selected_amount = 0;
-
-        std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[address_];
-        for ( const auto &[state, utxo] : utxo_list )
-        {
-            if ( selected_amount >= amount )
-            {
-                break;
-            }
-            if ( utxo.GetLock() )
-            {
-                continue;
-            }
-            if ( !token_id.Equals( utxo.GetTokenID() ) )
-            {
-                continue;
-            }
-            if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
-            {
-                continue;
-            }
-            inputs_.push_back( { utxo.GetTxID(), utxo.GetOutputIdx(), "" } );
-            selected_utxos.push_back( utxo );
-            selected_amount += utxo.GetAmount();
-        }
-        lock.unlock();
-
-        // Abort if insufficient funds
-        if ( selected_amount < amount || selected_utxos.empty() )
-        {
-            inputs_.clear();
-            outputs_.clear();
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        // Aggregate destination amounts by TokenID
-        uint64_t send_totals = 0;
-        uint64_t used_amount = 0;
-        for ( const auto &utxo : selected_utxos )
-        {
-            uint64_t utxo_amt = utxo.GetAmount();
-
-            if ( used_amount + utxo_amt <= amount )
-            {
-                send_totals += utxo_amt;
-                used_amount += utxo_amt;
-            }
-            else
-            {
-                uint64_t needed  = amount - used_amount;
-                send_totals     += needed;
-                used_amount     += needed;
-                break;
-            }
-        }
-
+        std::vector<OutputDestInfo> outputs;
         // Reserve space: one output per token plus possible change
-        outputs_.reserve( 2 );
+        outputs.reserve( 2 );
 
-        // Create one output per TokenID for the destination
+        // Primary output
+        outputs.push_back( { amount, dest_address, token_id } );
 
-        outputs_.push_back( { send_totals, dest_address, token_id } );
-
-        // Single change output (always from the last UTXO's token)
+        // Change output if needed
         uint64_t change = selected_amount - amount;
         if ( change > 0 )
         {
-            outputs_.push_back( { change, address_, token_id } );
+            outputs.push_back( { change, address_, token_id } );
         }
 
-        return std::make_pair( inputs_, outputs_ );
+        SignInputs( inputs );
+
+        return std::make_pair( inputs, outputs );
     }
 
     outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
                                                                       const TokenID                     &token_id )
     {
-        std::vector<InputUTXOInfo>  inputs_;
-        std::vector<OutputDestInfo> outputs_;
-
         uint64_t total_amount = 0;
-        TokenID  change_token;
-
         for ( const auto &d : destinations )
         {
             total_amount += d.encrypted_amount;
         }
 
-        uint64_t         used_amount = 0;
-        std::unique_lock lock( utxos_mutex_ );
-        for ( const auto &[state, utxo] : utxos_[address_] )
-        {
-            if ( used_amount >= total_amount )
-            {
-                break;
-            }
-            if ( utxo.GetLock() )
-            {
-                continue;
-            }
-            if ( !token_id.Equals( utxo.GetTokenID() ) )
-            {
-                continue;
-            }
-            if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
-            {
-                continue;
-            }
-            InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
-            used_amount += utxo.GetAmount();
-            inputs_.push_back( curr_input );
-            change_token = token_id;
-        }
-        lock.unlock();
+        OUTCOME_TRY( auto selection_result, SelectUTXOs( total_amount, token_id ) );
+        auto [inputs, selected_amount] = selection_result;
 
-        if ( used_amount < total_amount )
+        std::vector<OutputDestInfo> outputs = destinations;
+
+        // Change output if needed
+        if ( selected_amount > total_amount )
         {
-            inputs_.clear();
-            outputs_.clear();
-        }
-        else
-        {
-            outputs_ = destinations;
+            uint64_t change = selected_amount - total_amount;
+            outputs.push_back( { change, address_, token_id } );
         }
 
-        if ( used_amount > total_amount )
-        {
-            uint64_t change = used_amount - total_amount;
-            outputs_.push_back( { change, address_, change_token } );
-        }
+        SignInputs( inputs );
 
-        return std::make_pair( inputs_, outputs_ );
+        return std::make_pair( inputs, outputs );
     }
 
     void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs )
@@ -384,6 +294,93 @@ namespace sgns
                     utxo.SetLocked( false );
                 }
             }
+        }
+    }
+
+    bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
+    {
+        size_t   input_amount    = 0;
+        uint64_t expected_amount = 0;
+
+        std::shared_lock lock( utxos_mutex_ );
+        for ( const auto &[state, utxo] : utxos_.at( address ) )
+        {
+            for ( auto &input : params.first )
+            {
+                if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
+                {
+                    continue;
+                }
+                if ( input.txid_hash_ == utxo.GetTxID() )
+                {
+                    expected_amount += utxo.GetAmount();
+                    input_amount    += 1;
+                }
+                if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
+                {
+                    logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
+                    return false;
+                }
+            }
+        }
+        lock.unlock();
+
+        uint64_t real_amount = std::accumulate( params.second.cbegin(),
+                                                params.second.cend(),
+                                                UINT64_C( 0 ),
+                                                []( const uint64_t s, const OutputDestInfo &o )
+                                                { return o.encrypted_amount + s; } );
+
+        return real_amount == expected_amount && input_amount == params.first.size();
+    }
+
+    outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> UTXOManager::SelectUTXOs( uint64_t required_amount,
+                                                                                               const TokenID &token_id )
+    {
+        std::vector<InputUTXOInfo> inputs;
+        uint64_t                   selected_amount = 0;
+
+        std::shared_lock lock( utxos_mutex_ );
+        for ( const auto &[state, utxo] : utxos_[address_] )
+        {
+            if ( selected_amount >= required_amount )
+            {
+                break;
+            }
+            if ( utxo.GetLock() )
+            {
+                continue;
+            }
+            if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
+            {
+                continue;
+            }
+            if ( !token_id.Equals( utxo.GetTokenID() ) )
+            {
+                continue;
+            }
+
+            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx(), {} } );
+            selected_amount += utxo.GetAmount();
+        }
+        lock.unlock();
+
+        // Abort if insufficient funds
+        if ( selected_amount < required_amount || inputs.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::make_pair( inputs, selected_amount );
+    }
+
+    void UTXOManager::SignInputs( std::vector<InputUTXOInfo> &inputs ) const
+    {
+        for ( auto &input : inputs )
+        {
+            auto serialized  = input.SerializeForSigning();
+            auto signature   = sign_( serialized );
+            input.signature_ = signature;
         }
     }
 }

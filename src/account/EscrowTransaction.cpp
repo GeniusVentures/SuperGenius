@@ -48,7 +48,7 @@ namespace sgns
             SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
             input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
             input_proto->set_output_index( output_idx_ );
-            input_proto->set_signature( signature_ );
+            input_proto->set_signature( signature_.data(), signature_.size() );
         }
         for ( const auto &[encrypted_amount, dest_address, token_id] : utxo_params_.second )
         {
@@ -84,7 +84,7 @@ namespace sgns
             InputUTXOInfo curr;
             curr.txid_hash_  = ( base::Hash256::fromReadableString( input_proto.tx_id_hash() ) ).value();
             curr.output_idx_ = input_proto.output_index();
-            curr.signature_  = input_proto.signature();
+            curr.signature_  = std::vector<uint8_t>( input_proto.signature().cbegin(), input_proto.signature().cend() );
             inputs.push_back( curr );
         }
         std::vector<OutputDestInfo> outputs;

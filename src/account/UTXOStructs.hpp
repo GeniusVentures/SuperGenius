@@ -10,9 +10,11 @@ namespace sgns
      */
     struct InputUTXOInfo
     {
-        base::Hash256 txid_hash_;
-        uint32_t      output_idx_;
-        std::string   signature_;
+        std::vector<uint8_t> SerializeForSigning() const;
+
+        base::Hash256        txid_hash_;  //< Hash of the related transaction
+        uint32_t             output_idx_; //< Index of the related output in the output vector
+        std::vector<uint8_t> signature_;  //< Signature of the hash and index
     };
 
     /**
