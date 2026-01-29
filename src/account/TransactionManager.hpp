@@ -205,7 +205,7 @@ namespace sgns
                             std::chrono::milliseconds                mutability_window );
 
         // Parser function pointer alias: returns a set of topic strings or an error
-        using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
+        using TransactionParserFn = outcome::result<std::unordered_set<std::string>> ( TransactionManager::* )(
             const std::shared_ptr<IGeniusTransactions> & );
 
         void                                Update();
@@ -223,9 +223,11 @@ namespace sgns
                                                                  const std::shared_ptr<IGeniusTransactions> &tx );
         static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
-        outcome::result<bool>                  CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<bool>                            CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::unordered_set<std::string>> ParseTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::unordered_set<std::string>> RevertTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> CheckTransactions();
 
@@ -239,11 +241,11 @@ namespace sgns
 
         outcome::result<bool> CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check );
 
-        outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
+        outcome::result<void> DeleteTransaction( std::string tx_key, const std::unordered_set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetTransactionByHash( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                               const std::string &address ) const;
+                                                                              const std::string &address ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
@@ -301,19 +303,22 @@ namespace sgns
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
-        outcome::result<std::set<std::string>> ParseTransferTransaction(
+        outcome::result<std::unordered_set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> ParseEscrowReleaseTransaction(
+        outcome::result<std::unordered_set<std::string>> ParseMintTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::unordered_set<std::string>> ParseEscrowTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::unordered_set<std::string>> ParseEscrowReleaseTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<std::set<std::string>> RevertTransferTransaction(
+        outcome::result<std::unordered_set<std::string>> RevertTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> RevertEscrowTransaction(
+        outcome::result<std::unordered_set<std::string>> RevertMintTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::set<std::string>> RevertEscrowReleaseTransaction(
+        outcome::result<std::unordered_set<std::string>> RevertEscrowTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::unordered_set<std::string>> RevertEscrowReleaseTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>

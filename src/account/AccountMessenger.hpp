@@ -155,7 +155,7 @@ namespace sgns
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::set<std::string> &topics );
+        outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics );
 
     private:
         /// Basis of the account receiving topic

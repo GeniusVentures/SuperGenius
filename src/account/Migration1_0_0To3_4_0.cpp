@@ -104,7 +104,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
         auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 

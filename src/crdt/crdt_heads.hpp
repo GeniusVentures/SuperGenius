@@ -109,7 +109,7 @@ namespace sgns::crdt
         * @param topics Topic to get list from
         * @return outcome::failure on error
         */
-        outcome::result<CRDTListResult> GetList( const std::set<std::string> &topics = {} ) const;
+        outcome::result<CRDTListResult> GetList( const std::unordered_set<std::string> &topics = {} ) const;
 
         /** primeCache builds the heads cache based on what's in storage; since
         * it is called from the constructor only we don't bother locking.

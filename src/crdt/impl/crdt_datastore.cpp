@@ -948,13 +948,13 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        std::set<std::string> pending_topics;
+        std::unordered_set<std::string> pending_topics;
         {
-            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            std::lock_guard lock( pendingBroadcastMutex_ );
             pending_topics = pendingBroadcastTopics_;
         }
 
-        std::set<std::string> topics_to_broadcast = topicNames_;
+        std::unordered_set<std::string> topics_to_broadcast = topicNames_;
         topics_to_broadcast.insert( pending_topics.begin(), pending_topics.end() );
 
         if ( topics_to_broadcast.empty() )
@@ -1121,9 +1121,9 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
-                                                const Buffer                &aValue,
-                                                const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey                 &aKey,
+                                                const Buffer                          &aValue,
+                                                const std::unordered_set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -1134,7 +1134,8 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey                 &aKey,
+                                                   const std::unordered_set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -1150,8 +1151,8 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
-                                                 const std::set<std::string>  &topics )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>          &aDelta,
+                                                 const std::unordered_set<std::string> &topics )
     {
         OUTCOME_TRY( auto &&node, CreateDAGNode( aDelta, topics ) );
         OUTCOME_TRY( auto &&newCID, AddDAGNode( node ) );
@@ -1191,7 +1192,7 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateIPLDNode(
         const std::vector<std::pair<CID, std::string>> &aHeads,
         const std::shared_ptr<Delta>                   &aDelta,
-        const std::set<std::string>                    &topics ) const
+        const std::unordered_set<std::string>          &topics ) const
     {
         if ( aDelta == nullptr )
         {
@@ -1240,8 +1241,8 @@ namespace sgns::crdt
     }
 
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateDAGNode(
-        const std::shared_ptr<Delta> &aDelta,
-        const std::set<std::string>  &topics )
+        const std::shared_ptr<Delta>          &aDelta,
+        const std::unordered_set<std::string> &topics )
     {
         OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
@@ -1750,7 +1751,7 @@ namespace sgns::crdt
         topicNames_.emplace( topic );
     }
 
-    std::set<std::string> CrdtDatastore::GetTopicNames() const
+    std::unordered_set<std::string> CrdtDatastore::GetTopicNames() const
     {
         return topicNames_;
     }

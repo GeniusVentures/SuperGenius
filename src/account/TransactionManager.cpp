@@ -570,7 +570,7 @@ namespace sgns
         InputUTXOInfo escrow_utxo_input;
         escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();
         escrow_utxo_input.output_idx_ = 0;
-        escrow_utxo_input.signature_  = account_m->Sign(escrow_utxo_input.SerializeForSigning());
+        escrow_utxo_input.signature_  = account_m->Sign( escrow_utxo_input.SerializeForSigning() );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
@@ -762,7 +762,7 @@ namespace sgns
             expected_next_nonce++;
         }
 
-        std::set<std::string> topicSet;
+        std::unordered_set<std::string> topicSet;
         for ( auto &[tx, _] : transaction_batch )
         {
             OUTCOME_TRY( auto &&parsedTopics, ParseTransaction( tx ) );
@@ -992,7 +992,7 @@ namespace sgns
         return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::ParseTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::ParseTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
@@ -1007,7 +1007,7 @@ namespace sgns
         return ( this->*( it->second.first ) )( tx );
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::RevertTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::RevertTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
@@ -1151,13 +1151,13 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::ParseTransferTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::ParseTransferTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
@@ -1195,12 +1195,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::ParseMintTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::ParseMintTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         auto       hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
@@ -1220,12 +1220,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::ParseEscrowTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::ParseEscrowTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1253,12 +1253,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::ParseEscrowReleaseTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::ParseEscrowReleaseTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
         if ( !escrowReleaseTx )
         {
             m_logger->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
@@ -1288,13 +1288,13 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::RevertTransferTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::RevertTransferTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         for ( const auto &dest_info : dest_infos )
         {
@@ -1339,12 +1339,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::RevertMintTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::RevertMintTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() );
@@ -1364,12 +1364,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::RevertEscrowTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::RevertEscrowTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
 
         if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
@@ -1406,12 +1406,12 @@ namespace sgns
         return topics;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::RevertEscrowReleaseTransaction(
+    outcome::result<std::unordered_set<std::string>> TransactionManager::RevertEscrowReleaseTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
 
-        std::set topics{ full_node_topic_m, account_m->GetAddress() };
+        std::unordered_set topics{ full_node_topic_m, account_m->GetAddress() };
         if ( !escrowReleaseTx )
         {
             m_logger->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
@@ -1865,8 +1865,8 @@ namespace sgns
         return changed;
     }
 
-    outcome::result<void> TransactionManager::DeleteTransaction( std::string                  tx_key,
-                                                                 const std::set<std::string> &topics )
+    outcome::result<void> TransactionManager::DeleteTransaction( std::string                            tx_key,
+                                                                 const std::unordered_set<std::string> &topics )
     {
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
 

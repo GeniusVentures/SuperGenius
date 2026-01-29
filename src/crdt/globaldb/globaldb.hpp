@@ -82,7 +82,9 @@ namespace sgns::crdt
          * @param[in] topics Topics to publish to.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
-        outcome::result<CID> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
+        outcome::result<CID> Put( const HierarchicalKey                 &key,
+                                  const Buffer                          &value,
+                                  const std::unordered_set<std::string> &topics );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
@@ -90,7 +92,8 @@ namespace sgns::crdt
          * @param[in]   topics Topics to publish to.
          * @return      outcome::failure on error or success otherwise
          */
-        outcome::result<CID> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
+        outcome::result<CID> Put( const std::vector<DataPair> &data_vector,
+                                  const std::unordered_set<std::string> &topics );
 
         /** Gets a value that corresponds to specified key.
         * @param key - value key
@@ -103,7 +106,7 @@ namespace sgns::crdt
         * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<CID> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
+        outcome::result<CID> Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
         * @param keyPrefix - keys prefix to match. An empty prefix matches any key.
@@ -165,7 +168,7 @@ namespace sgns::crdt
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names 
          */
-        outcome::result<std::set<std::string>> GetMonitoredTopics() const;
+        outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
 

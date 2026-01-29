@@ -27,6 +27,8 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
+
+#include <unordered_set>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -59,10 +61,10 @@ namespace sgns
          * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID               token_id,
-                                                   const char           *eth_private_key,
+        static std::shared_ptr<GeniusAccount> New( TokenID                 token_id,
+                                                   const char             *eth_private_key,
                                                    boost::filesystem::path base_path,
-                                                   bool                  full_node = false );
+                                                   bool                    full_node = false );
 
         /**
          * @brief       Initialize the messenger for the account
@@ -195,7 +197,7 @@ namespace sgns
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::set<std::string> &topics ) const;
+        outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;
 
         /**
          * @brief       Derives a Genius address from a given Ethereum private key
