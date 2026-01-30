@@ -1492,6 +1492,11 @@ namespace sgns
         return it->second;
     }
 
+    std::shared_ptr<blockchain::ValidatorRegistry> Blockchain::GetValidatorRegistry() const
+    {
+        return validator_registry_;
+    }
+
     void Blockchain::SetFullNodeMode()
     {
         db_->AddListenTopic(

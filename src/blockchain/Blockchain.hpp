@@ -103,6 +103,7 @@ namespace sgns
 
         outcome::result<std::string> GetGenesisCID() const;
         outcome::result<std::string> GetAccountCreationCID() const;
+        std::shared_ptr<blockchain::ValidatorRegistry> GetValidatorRegistry() const;
 
         void SetFullNodeMode();
 
