@@ -77,9 +77,6 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
 
         auto manager = std::make_shared<blockchain::ConsensusManager>( registry );
-        manager->SetVerifier(
-            []( const std::string &signer, const std::string &signature, const std::vector<uint8_t> &payload )
-            { return GeniusAccount::VerifySignature( signer, signature, payload ); } );
 
         std::vector<uint8_t> tx_hash{ 0x01, 0x02, 0x03 };
         auto subject_result =
@@ -116,9 +113,6 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
 
         auto manager = std::make_shared<blockchain::ConsensusManager>( registry );
-        manager->SetVerifier(
-            []( const std::string &signer, const std::string &signature, const std::vector<uint8_t> &payload )
-            { return GeniusAccount::VerifySignature( signer, signature, payload ); } );
 
         std::vector<uint8_t> tx_hash{ 0x0a, 0x0b, 0x0c };
         auto subject_result =
