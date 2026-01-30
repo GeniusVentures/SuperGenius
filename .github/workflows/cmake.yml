@@ -105,8 +105,8 @@ jobs:
     container:
       image: ${{matrix.container}}
       credentials:
-        username: ${{secrets.GHCR_USERNAME}}
-        password: ${{secrets.GHCR_TOKEN}}
+        username: ${{github.actor}}
+        password: ${{secrets.GNUS_TOKEN_1}}
     strategy:
       fail-fast: false
       matrix:
