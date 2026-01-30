@@ -64,12 +64,12 @@ namespace sgns
             return "tx/" + tx_hash;
         }
 
-        std::string GetTransactionFullPath()
+        std::string GetTransactionFullPath() const
         {
             return "tx/" + GetHash();
         }
 
-        std::string GetProofFullPath()
+        std::string GetProofFullPath() const
         {
             return "proof/" + GetHash();
         }
@@ -85,6 +85,8 @@ namespace sgns
         {
             return dag_st.timestamp();
         }
+
+        virtual std::unordered_set<std::string> GetTopics() const;
 
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
@@ -104,7 +106,7 @@ namespace sgns
         void FillHash();
         bool CheckHash();
 
-        std::vector<uint8_t> MakeSignature( GeniusAccount& account );
+        std::vector<uint8_t> MakeSignature( GeniusAccount &account );
         bool                 CheckSignature();
         bool                 CheckDAGSignatureLegacy();
 

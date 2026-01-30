@@ -41,7 +41,7 @@ namespace sgns
             SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
             input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
             input_proto->set_output_index( output_idx_ );
-            input_proto->set_signature(signature_.data(), signature_.size());
+            input_proto->set_signature( signature_.data(), signature_.size() );
         }
         for ( const auto &[encrypted_amount, dest_address, token_id] : outputs_ )
         {
@@ -100,4 +100,15 @@ namespace sgns
         return input_tx_;
     }
 
+    std::unordered_set<std::string> TransferTransaction::GetTopics() const
+    {
+        auto topics = IGeniusTransactions::GetTopics();
+
+        for ( const auto &dest : GetDstInfos() )
+        {
+            topics.emplace( dest.dest_address );
+        }
+
+        return topics;
+    }
 }

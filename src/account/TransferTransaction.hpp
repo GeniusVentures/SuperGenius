@@ -16,7 +16,7 @@ namespace sgns
     /**
      * @brief Transaction for transferring funds between UTXO inputs and outputs.
      */
-    class TransferTransaction : public IGeniusTransactions
+    class TransferTransaction final : public IGeniusTransactions
     {
     public:
         static TransferTransaction New( std::vector<InputUTXOInfo>  inputs,
@@ -48,8 +48,9 @@ namespace sgns
             return GetType();
         }
 
+        std::unordered_set<std::string> GetTopics() const override;
+
     private:
-        //TODO - El Gamal encrypt the amount. Now only copying
         /**
          * @brief       Construct a new TransferTransaction object.
          * @param[in]   destinations Destination outputs.
@@ -67,13 +68,13 @@ namespace sgns
          * @brief       Registers the deserializer for the transfer transaction type.
          * @return      A boolean indicating successful registration.
          */
-        static inline bool Register()
+        static bool Register()
         {
             RegisterDeserializer( "transfer", &TransferTransaction::DeSerializeByteVector );
             return true;
         }
 
-        /** 
+        /**
          * @brief       Static variable to ensure registration happens on inclusion of header file.
          */
         static inline bool registered = Register();

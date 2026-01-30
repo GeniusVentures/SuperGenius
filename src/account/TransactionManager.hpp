@@ -136,10 +136,10 @@ namespace sgns
         TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                 std::chrono::milliseconds timeout ) const;
 
-        static std::string GetTransactionPath( IGeniusTransactions &element );
+        static std::string GetTransactionPath( const IGeniusTransactions &element );
         static std::string GetTransactionPath( const std::string &tx_hash );
 
-        static std::string GetTransactionProofPath( IGeniusTransactions &element );
+        static std::string GetTransactionProofPath( const IGeniusTransactions &element );
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
@@ -174,7 +174,7 @@ namespace sgns
                 case State::INITIALIZING:
                     return "INITIALIZING";
                 case State::SYNCING:
-                    return "SYNCHING";
+                    return "SYNCING";
                 case State::READY:
                     return "READY";
                 default:
@@ -205,14 +205,14 @@ namespace sgns
                             std::chrono::milliseconds                mutability_window );
 
         // Parser function pointer alias: returns a set of topic strings or an error
-        using TransactionParserFn = outcome::result<std::unordered_set<std::string>> ( TransactionManager::* )(
-            const std::shared_ptr<IGeniusTransactions> & );
+        using TransactionParserFn =
+            outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
-        void                                Update();
-        SGTransaction::DAGStruct            FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<std::set<uint64_t>> SendTransactionItem( TransactionItem &item );
-        outcome::result<void>               ConfirmTransactions();
-        outcome::result<void>               RollbackTransactions( TransactionItem &item_to_rollback );
+        void                                          Update();
+        SGTransaction::DAGStruct                      FillDAGStruct( std::string transaction_hash = "" ) const;
+        outcome::result<std::unordered_set<uint64_t>> SendTransactionItem( TransactionItem &item );
+        outcome::result<void>                         ConfirmTransactions();
+        outcome::result<void>                         RollbackTransactions( TransactionItem &item_to_rollback );
 
         static std::string           GetTransactionBasePath( const std::string &address );
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
@@ -223,11 +223,9 @@ namespace sgns
                                                                  const std::shared_ptr<IGeniusTransactions> &tx );
         static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
-        outcome::result<bool>                            CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> ParseTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> RevertTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> CheckTransactions();
 
@@ -269,6 +267,7 @@ namespace sgns
         std::chrono::steady_clock::time_point last_periodic_sync_time_;
         std::atomic<bool>                     received_first_periodic_sync_response_{
             false }; // Track if we've gotten at least one response
+
         static constexpr std::chrono::minutes PERIODIC_SYNC_INTERVAL         = std::chrono::minutes( 10 );
         static constexpr std::chrono::seconds INITIAL_PERIODIC_SYNC_INTERVAL = std::chrono::seconds( 30 );
 
@@ -303,23 +302,15 @@ namespace sgns
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
-        outcome::result<std::unordered_set<std::string>> ParseTransferTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> ParseMintTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> ParseEscrowTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> ParseEscrowReleaseTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<std::unordered_set<std::string>> RevertTransferTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> RevertMintTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> RevertEscrowTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<std::unordered_set<std::string>> RevertEscrowReleaseTransaction(
-            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> RevertTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> RevertEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers = {
