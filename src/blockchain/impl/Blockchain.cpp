@@ -132,6 +132,17 @@ namespace sgns
             return nullptr;
         }
 
+        instance->consensus_manager_ = blockchain::ConsensusManager::New(
+            instance->validator_registry_,
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( std::vector<uint8_t> payload )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->account_->Sign( std::move( payload ) );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         auto ensure_registry_result = instance->EnsureValidatorRegistry();
         if ( ensure_registry_result.has_error() )
         {

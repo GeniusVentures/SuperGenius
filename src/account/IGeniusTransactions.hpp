@@ -79,7 +79,7 @@ namespace sgns
             return dag_st.source_addr();
         }
 
-        std::string GetHash() const;
+        [[nodiscard]] std::string GetHash() const;
 
         uint64_t GetTimestamp() const
         {

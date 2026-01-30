@@ -20,6 +20,7 @@
 #include "crdt/proto/delta.pb.h"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/impl/proto/SGBlockchain.pb.h"
+#include "blockchain/Consensus.hpp"
 #include "base/buffer.hpp"
 #include "crdt/crdt_callback_manager.hpp"
 #include "base/sgns_version.hpp"
@@ -101,8 +102,8 @@ namespace sgns
          */
         static const std::string &GetAuthorizedFullNodeAddress();
 
-        outcome::result<std::string> GetGenesisCID() const;
-        outcome::result<std::string> GetAccountCreationCID() const;
+        outcome::result<std::string>                   GetGenesisCID() const;
+        outcome::result<std::string>                   GetAccountCreationCID() const;
         std::shared_ptr<blockchain::ValidatorRegistry> GetValidatorRegistry() const;
 
         void SetFullNodeMode();
@@ -210,6 +211,8 @@ namespace sgns
         std::atomic<bool> validator_registry_initialized_{ false };
         bool              genesis_ready_          = false;
         bool              account_creation_ready_ = false;
+
+        std::shared_ptr<blockchain::ConsensusManager> consensus_manager_;
     };
 
 }
