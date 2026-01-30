@@ -92,10 +92,6 @@ on:
         default: 'true'
         type: boolean
 
-permissions:
-  contents: read
-  packages: read
-
 jobs:
   build:
     env:
@@ -541,9 +537,6 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         id: create-release-tag
         run: |
-          # Configure git to use the token for authentication
-          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
-          
           echo "Checking if release $RELEASE_TAG exists..."
 
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
