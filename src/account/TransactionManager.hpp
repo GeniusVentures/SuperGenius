@@ -28,6 +28,8 @@
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
 
+#include "blockchain/Blockchain.hpp"
+
 #include "proof/proto/SGProof.pb.h"
 
 #include "processing/proto/SGProcessing.pb.h"
@@ -96,6 +98,7 @@ namespace sgns
             UTXOManager                             &utxo_manager,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
+            std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
             std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
@@ -201,6 +204,7 @@ namespace sgns
                             UTXOManager                             &utxo_manager,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
+                            std::shared_ptr<Blockchain>              blockchain,
                             bool                                     full_node,
                             std::chrono::milliseconds                timestamp_tolerance,
                             std::chrono::milliseconds                mutability_window );
@@ -246,6 +250,9 @@ namespace sgns
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
+        void OnConsensusCertificate( const blockchain::ConsensusProposal    &proposal,
+                                     const blockchain::ConsensusCertificate &certificate );
+
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
@@ -281,13 +288,14 @@ namespace sgns
             uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
-        mutable std::shared_mutex                  tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx> tx_processed_m;
-        std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
-        std::function<void()>                      task_m;
-        std::atomic<bool>                          stopped_{ false };
-        std::chrono::milliseconds                  timestamp_tolerance_m;
-        std::chrono::milliseconds                  mutability_window_m;
+        mutable std::shared_mutex                    tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx>   tx_processed_m;
+        std::atomic<size_t>                          verifying_count_{ 0 }; // Count of VERIFYING transactions
+        std::unordered_map<std::string, std::string> pending_proposals_;
+        std::function<void()>                        task_m;
+        std::atomic<bool>                            stopped_{ false };
+        std::chrono::milliseconds                    timestamp_tolerance_m;
+        std::chrono::milliseconds                    mutability_window_m;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );

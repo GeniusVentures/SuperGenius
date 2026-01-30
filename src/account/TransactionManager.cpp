@@ -9,8 +9,6 @@
 #include <utility>
 #include <thread>
 #include <system_error>
-#include <set>
-#include <unordered_set>
 
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
@@ -35,6 +33,7 @@ namespace sgns
                                                                  UTXOManager                             &utxo_manager,
                                                                  std::shared_ptr<GeniusAccount>           account,
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
+                                                                 std::shared_ptr<Blockchain>              blockchain,
                                                                  bool                                     full_node,
                                                                  std::chrono::milliseconds timestamp_tolerance,
                                                                  std::chrono::milliseconds mutability_window )
@@ -44,9 +43,21 @@ namespace sgns
                                                                                      utxo_manager,
                                                                                      std::move( account ),
                                                                                      std::move( hasher ),
+                                                                                     std::move( blockchain ),
                                                                                      full_node,
                                                                                      timestamp_tolerance,
                                                                                      mutability_window ) );
+
+        instance->blockchain_->SetCertificateCallback(
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const blockchain::ConsensusProposal    &proposal,
+                const blockchain::ConsensusCertificate &certificate )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->OnConsensusCertificate( proposal, certificate );
+                }
+            } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
@@ -135,6 +146,7 @@ namespace sgns
                                             UTXOManager                             &utxo_manager,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<crypto::Hasher>          hasher,
+                                            std::shared_ptr<Blockchain>              blockchain,
                                             bool                                     full_node,
                                             std::chrono::milliseconds                timestamp_tolerance,
                                             std::chrono::milliseconds                mutability_window ) :
@@ -143,6 +155,7 @@ namespace sgns
         account_m( std::move( account ) ),
         utxo_manager_( utxo_manager ),
         hasher_m( std::move( hasher ) ),
+        blockchain_( std::move( blockchain ) ),
         full_node_m( full_node ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
@@ -757,11 +770,33 @@ namespace sgns
                                  full_node_m,
                                  proof_key.GetKey() );
 
-                proof_transaction.put( proof );
-                BOOST_OUTCOME_TRYV2( auto &&,
-                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
+                    proof_transaction.put( proof );
+                    BOOST_OUTCOME_TRYV2(
+                        auto &&,
+                        crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
+                }
+                nonces_set.insert( transaction->dag_st.nonce() );
+                m_logger->debug( "[{} - full: {}] Creating Consensus Proposal for tx {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 transaction_path );
+                OUTCOME_TRY( auto &&proposal,
+                             blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
+                                                                   transaction->dag_st.nonce(),
+                                                                   transaction->GetHash() ) );
+                pending_proposals_[transaction->GetHash()] = proposal.proposal_id();
             }
-            nonces_set.insert( transaction->dag_st.nonce() );
+            else
+            {
+                m_logger->error( "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 expected_next_nonce,
+                                 transaction->dag_st.nonce() );
+
+                return outcome::failure(
+                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
             expected_next_nonce++;
         }
 
@@ -2712,6 +2747,25 @@ namespace sgns
                          key );
         OUTCOME_TRY( ParseTransaction( new_tx ) );
 
+        auto proposal_it = pending_proposals_.find( tx_hash );
+        if ( proposal_it != pending_proposals_.end() )
+        {
+            m_logger->debug( "[{} - full: {}] Found pending proposal for transaction {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key );
+            auto submit_result = blockchain_->SendConsensusProposal( *proposal_it );
+            if ( submit_result.has_error() )
+            {
+                m_logger->error( "[{} - full: {}] Failed to submit Proposal for tx {}: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 tx_hash,
+                                 submit_result.error().message() );
+                return outcome::failure( submit_result.error() );
+            }
+        }
+
         const auto nonce = new_tx->dag_st.nonce();
 
         {
@@ -2931,7 +2985,13 @@ namespace sgns
 
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
+
+    void TransactionManager::OnConsensusCertificate( const blockchain::ConsensusProposal    &proposal,
+                                                     const blockchain::ConsensusCertificate &certificate )
+    {
+    }
 }
+
 
 fmt::format_context::iterator fmt::formatter<sgns::TransactionManager::State>::format(
     sgns::TransactionManager::State s,
