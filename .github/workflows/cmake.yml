@@ -92,6 +92,10 @@ on:
         default: 'true'
         type: boolean
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build:
     env:
@@ -101,8 +105,8 @@ jobs:
     container:
       image: ${{matrix.container}}
       credentials:
-        username: ${{github.actor}}
-        password: ${{secrets.GNUS_TOKEN_1}}
+        username: ${{secrets.GHCR_USERNAME}}
+        password: ${{secrets.GHCR_TOKEN}}
     strategy:
       fail-fast: false
       matrix:
@@ -175,16 +179,16 @@ jobs:
               Android-armeabi-v7a-Debug)
                 if [ '${{ inputs.build_android_armv7a_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
-              iOS-Release)
+              iOS-*-Release)
                 if [ '${{ inputs.build_ios_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
-              iOS-Debug)
+              iOS-*-Debug)
                 if [ '${{ inputs.build_ios_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
-              OSX-Release)
+              OSX-*-Release)
                 if [ '${{ inputs.build_osx_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
-              OSX-Debug)
+              OSX-*-Debug)
                 if [ '${{ inputs.build_osx_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
               Linux-x86_64-Release)
