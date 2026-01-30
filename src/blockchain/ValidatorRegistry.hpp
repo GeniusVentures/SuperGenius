@@ -79,6 +79,8 @@ namespace sgns::blockchain
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
         outcome::result<std::vector<uint8_t>> SerializeRegistryUpdate( const RegistryUpdate &update ) const;
         outcome::result<RegistryUpdate>       DeserializeRegistryUpdate( const std::vector<uint8_t> &buffer ) const;
+        std::string                           GetRegistryCid() const;
+        uint64_t                              GetRegistryEpoch() const;
 
         static constexpr std::string_view RegistryKey()
         {

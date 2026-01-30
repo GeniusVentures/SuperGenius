@@ -456,6 +456,22 @@ namespace sgns::blockchain
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
+    std::string ValidatorRegistry::GetRegistryCid() const
+    {
+        std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+        return cached_registry_id_;
+    }
+
+    uint64_t ValidatorRegistry::GetRegistryEpoch() const
+    {
+        std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+        if ( cached_registry_ )
+        {
+            return cached_registry_->epoch();
+        }
+        return 0;
+    }
+
     outcome::result<std::optional<uint64_t>> ValidatorRegistry::GetValidatorWeight(
         const std::string &validator_id ) const
     {
