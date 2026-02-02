@@ -131,7 +131,7 @@ jobs:
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Windows
-            host: windows-latest
+            host: SG-WIN11
           - target: OSX
             host: gv-OSX-Large
           - target: Android
@@ -501,7 +501,7 @@ jobs:
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: cmake --build . --config ${{matrix.build-type}} -j
+        run: cmake --build . --config ${{matrix.build-type}} -j8
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
