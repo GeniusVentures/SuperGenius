@@ -19,6 +19,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
+
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
@@ -122,7 +123,7 @@ namespace sgns::crdt
         * @param aPrefix prefix to search, if empty string, return all
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix ) const;
+        outcome::result<QueryResult> QueryKeyValues( std::string_view aPrefix ) const;
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -143,7 +144,7 @@ namespace sgns::crdt
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        std::string GetValueSuffix() const;
+        static std::string GetValueSuffix();
 
         /**
          * @brief Stores the given value in the CRDT store

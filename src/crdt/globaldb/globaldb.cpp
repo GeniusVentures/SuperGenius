@@ -250,7 +250,7 @@ namespace sgns::crdt
         return m_crdtDatastore->PutKey( key, value, topics );
     }
 
-    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>    &data_vector,
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
@@ -284,7 +284,7 @@ namespace sgns::crdt
         return m_crdtDatastore->DeleteKey( key, topics );
     }
 
-    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( std::string_view keyPrefix )
     {
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
     }

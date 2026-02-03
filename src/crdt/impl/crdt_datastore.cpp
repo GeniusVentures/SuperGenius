@@ -4,6 +4,7 @@
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
+#include "storage/database_error.hpp"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
@@ -1091,12 +1092,12 @@ namespace sgns::crdt
         return set_->KeysKey( "" ).GetKey();
     }
 
-    std::string CrdtDatastore::GetValueSuffix() const
+    std::string CrdtDatastore::GetValueSuffix()
     {
-        return '/' + set_->GetValueSuffix();
+        return '/' + CrdtSet::GetValueSuffix();
     }
 
-    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix ) const
+    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( std::string_view aPrefix ) const
     {
         return set_->QueryElements( aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
@@ -1108,7 +1109,7 @@ namespace sgns::crdt
     {
         if ( set_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
         }
         return set_->QueryElements( prefix_base,
                                     middle_part,
@@ -1275,7 +1276,6 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node )
     {
-
         RootCIDJob rootJob{ nullptr, node, true };
 
         {

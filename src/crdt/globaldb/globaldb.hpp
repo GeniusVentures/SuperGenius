@@ -92,7 +92,7 @@ namespace sgns::crdt
          * @param[in]   topics Topics to publish to.
          * @return      outcome::failure on error or success otherwise
          */
-        outcome::result<CID> Put( const std::vector<DataPair> &data_vector,
+        outcome::result<CID> Put( const std::vector<DataPair>           &data_vector,
                                   const std::unordered_set<std::string> &topics );
 
         /** Gets a value that corresponds to specified key.
@@ -112,7 +112,7 @@ namespace sgns::crdt
         * @param keyPrefix - keys prefix to match. An empty prefix matches any key.
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );
+        outcome::result<QueryResult> QueryKeyValues( std::string_view keyPrefix );
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -137,7 +137,7 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
-        void AddListenTopic( const std::string &topicName );
+        void                  AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
 

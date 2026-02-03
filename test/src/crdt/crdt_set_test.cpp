@@ -139,7 +139,7 @@ namespace sgns::crdt
       auto value = elem.value();
 
       // /namespace/s/<key>/<id>
-      auto kNamespace = crdtSet.ElemsPrefix(key).ChildString(id);
+      auto kNamespace = crdtSet.ElemsPrefix(key).ChildString( id );
 
       Buffer keyBuffer;
       keyBuffer.put(kNamespace.GetKey());
