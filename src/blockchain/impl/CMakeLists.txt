@@ -39,6 +39,7 @@ target_link_libraries(blockchain_genesis
     hexutil
     logger
     sgns_genius_account
+    ipfs-pubsub
     PRIVATE
     SGBlockchainProto
     ConsensusProto

@@ -259,6 +259,7 @@ namespace sgns
         std::shared_ptr<GeniusAccount>           account_m;
         UTXOManager                             &utxo_manager_;
         std::shared_ptr<crypto::Hasher>          hasher_m;
+        std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
         std::string                              full_node_topic_m; ///< formatted full-node topic
         void                                     TickOnce();
@@ -288,14 +289,14 @@ namespace sgns
             uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
-        mutable std::shared_mutex                    tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx>   tx_processed_m;
-        std::atomic<size_t>                          verifying_count_{ 0 }; // Count of VERIFYING transactions
-        std::unordered_map<std::string, std::string> pending_proposals_;
-        std::function<void()>                        task_m;
-        std::atomic<bool>                            stopped_{ false };
-        std::chrono::milliseconds                    timestamp_tolerance_m;
-        std::chrono::milliseconds                    mutability_window_m;
+        mutable std::shared_mutex                  tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx> tx_processed_m;
+        std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
+        std::unordered_map<std::string, blockchain::ConsensusManager::Proposal> pending_proposals_;
+        std::function<void()>                                                   task_m;
+        std::atomic<bool>                                                       stopped_{ false };
+        std::chrono::milliseconds                                               timestamp_tolerance_m;
+        std::chrono::milliseconds                                               mutability_window_m;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );

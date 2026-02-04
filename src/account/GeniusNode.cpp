@@ -355,6 +355,7 @@ namespace sgns
                     blockchain_    = Blockchain::New(
                         tx_globaldb_,
                         account_,
+                        pubsub_,
                         [weak_self]( outcome::result<void> result )
                         {
                             if ( auto strong = weak_self.lock() )
@@ -416,6 +417,7 @@ namespace sgns
                                                                 utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
+                                                                blockchain_,
                                                                 is_full_node_ );
 
                 transaction_manager_->RegisterStateChangeCallback(

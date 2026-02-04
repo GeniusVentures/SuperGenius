@@ -130,6 +130,7 @@ namespace sgns
             blockchain_ = Blockchain::New(
                 db_3_5_0_,
                 account_,
+                pubSub_,
                 [wptr( weak_from_this() )]( outcome::result<void> result )
                 {
                     if ( auto strong = wptr.lock() )

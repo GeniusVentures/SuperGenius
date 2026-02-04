@@ -66,9 +66,10 @@ namespace sgns
          * @param callback Called when initialization completes.
          * @return shared_ptr to Blockchain instance.
          */
-        static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB> global_db,
-                                                std::shared_ptr<GeniusAccount>  account,
-                                                BlockchainCallback              callback );
+        static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
+                                                std::shared_ptr<GeniusAccount>             account,
+                                                std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                BlockchainCallback                         callback );
 
         ~Blockchain();
 
@@ -107,6 +108,15 @@ namespace sgns
         std::shared_ptr<blockchain::ValidatorRegistry> GetValidatorRegistry() const;
 
         void SetFullNodeMode();
+
+        void SetCertificateCallback( blockchain::ConsensusManager::CertificateCallback callback );
+
+        outcome::result<blockchain::ConsensusManager::Proposal> CreateConsensusProposal(
+            const std::string          &account_id,
+            uint64_t                    nonce,
+            const std::string &tx_hash );
+
+        outcome::result<void> SubmitProposal( const blockchain::ConsensusManager::Proposal &proposal );
 
     protected:
         friend class Migration3_5_1To3_6_0;

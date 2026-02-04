@@ -784,7 +784,7 @@ namespace sgns
                              blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                    transaction->dag_st.nonce(),
                                                                    transaction->GetHash() ) );
-                pending_proposals_[transaction->GetHash()] = proposal.proposal_id();
+                pending_proposals_[transaction->GetHash()] = proposal;
             }
             else
             {
@@ -2754,7 +2754,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              key );
-            auto submit_result = blockchain_->SendConsensusProposal( *proposal_it );
+            auto submit_result = blockchain_->SubmitProposal( proposal_it->second );
             if ( submit_result.has_error() )
             {
                 m_logger->error( "[{} - full: {}] Failed to submit Proposal for tx {}: {}",

@@ -8,6 +8,7 @@ addtest(consensus_certificate_test
 )
 target_link_libraries(consensus_certificate_test
     blockchain_genesis
+    rapidjson
     base_crdt_test
 )
 
@@ -15,6 +16,7 @@ target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCL
 
 target_link_libraries(blockchain_genesis_test
     genius_node
+    rapidjson
 )
 if(WIN32)
     target_link_options(blockchain_genesis_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)

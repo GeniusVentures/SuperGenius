@@ -6,6 +6,7 @@
  */
 #include "blockchain/Consensus.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <set>
 #include <system_error>
@@ -13,26 +14,120 @@
 #include <gsl/span>
 
 #include "base/hexutil.hpp"
+#include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
+#include "account/GeniusAccount.hpp"
 
 namespace sgns::blockchain
 {
-    ConsensusManager::ConsensusManager( std::shared_ptr<ValidatorRegistry> registry ) :
-        registry_( std::move( registry ) )
+
+    base::Logger ConsensusManagerLogger()
+    {
+        // Always call base::createLogger to get the current logger
+        // This will return existing logger or create new one as needed
+        return base::createLogger( "ConsensusManager" );
+    }
+
+    std::shared_ptr<ConsensusManager> ConsensusManager::New( std::shared_ptr<ValidatorRegistry>         registry,
+                                                             std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                             Signer                                     signer,
+                                                             std::string consensus_topic )
+    {
+        if ( !pubsub )
+        {
+            return nullptr;
+        }
+
+        auto instance = std::shared_ptr<ConsensusManager>( new ConsensusManager( std::move( registry ),
+                                                                                 std::move( pubsub ),
+                                                                                 std::move( signer ),
+                                                                                 std::move( consensus_topic ) ) );
+
+        instance->consensus_subs_future_ = std::move( instance->pubsub_->Subscribe(
+            instance->consensus_topic_,
+            [weakptr( std::weak_ptr<ConsensusManager>( instance ) )](
+                boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    ConsensusManagerLogger()->trace( "Received Consensus Message on topic {}", self->consensus_topic_ );
+                    self->OnConsensusMessage( message );
+                }
+            } ) );
+        ConsensusManagerLogger()->debug( "Subscribed to Consensus topic {}", instance->consensus_topic_ );
+
+        return instance;
+    }
+
+    ConsensusManager::ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
+                                        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                        Signer                                     signer,
+                                        std::string                                consensus_topic ) :
+        registry_( std::move( registry ) ), //
+        pubsub_( std::move( pubsub ) ),     //
+        signer_( std::move( signer ) ),     //
+        consensus_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
+                          consensus_topic )
     {
     }
 
-    void ConsensusManager::SetRegistry( std::shared_ptr<ValidatorRegistry> registry )
+    void ConsensusManager::SetProposalValidator( ProposalValidator validator )
     {
-        registry_ = std::move( registry );
+        proposal_validator_ = std::move( validator );
     }
 
-    outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal(
-        const Subject     &subject,
-        const std::string &proposer_id,
-        const std::string &registry_cid,
-        uint64_t           registry_epoch,
-        Signer             sign )
+    void ConsensusManager::SetCertificateCallback( CertificateCallback callback )
+    {
+        certificate_callback_ = std::move( callback );
+    }
+
+    outcome::result<void> ConsensusManager::Publish( const ConsensusMessage &message )
+    {
+        std::vector<uint8_t> serialized_proto( message.ByteSizeLong() );
+        if ( !message.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        ConsensusManagerLogger()->debug( "Sending consensus packet to {}", consensus_topic_ );
+        pubsub_->Publish( consensus_topic_, serialized_proto );
+
+        return outcome::success();
+    }
+
+    void ConsensusManager::SetProposalHandler( ProposalHandler handler )
+    {
+        proposal_handler_ = std::move( handler );
+    }
+
+    void ConsensusManager::SetVoteHandler( VoteHandler handler )
+    {
+        vote_handler_ = std::move( handler );
+    }
+
+    void ConsensusManager::SetVoteBundleHandler( VoteBundleHandler handler )
+    {
+        vote_bundle_handler_ = std::move( handler );
+    }
+
+    void ConsensusManager::SetCertificateHandler( CertificateHandler handler )
+    {
+        certificate_handler_ = std::move( handler );
+    }
+
+    outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
+                                                                                  const std::string &proposer_id,
+                                                                                  const std::string &registry_cid,
+                                                                                  uint64_t           registry_epoch )
+    {
+        return CreateProposal( subject, proposer_id, registry_cid, registry_epoch, signer_ );
+    }
+
+    outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
+                                                                                  const std::string &proposer_id,
+                                                                                  const std::string &registry_cid,
+                                                                                  uint64_t           registry_epoch,
+                                                                                  Signer             sign )
     {
         if ( !sign )
         {
@@ -49,9 +144,9 @@ namespace sgns::blockchain
         proposal.set_proposer_id( proposer_id );
         proposal.set_registry_cid( registry_cid );
         proposal.set_registry_epoch( registry_epoch );
-        proposal.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::system_clock::now().time_since_epoch() )
-                                    .count() );
+        proposal.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
 
         if ( proposal.subject().subject_id().empty() )
         {
@@ -69,18 +164,16 @@ namespace sgns::blockchain
         {
             return outcome::failure( signing_bytes.error() );
         }
-
-        auto signature = sign( signing_bytes.value() );
+        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         proposal.set_signature( signature.data(), signature.size() );
 
         return proposal;
     }
 
-    outcome::result<ConsensusManager::Vote> ConsensusManager::CreateVote(
-        const std::string &proposal_id,
-        const std::string &voter_id,
-        bool               approve,
-        Signer             sign )
+    outcome::result<ConsensusManager::Vote> ConsensusManager::CreateVote( const std::string &proposal_id,
+                                                                          const std::string &voter_id,
+                                                                          bool               approve,
+                                                                          Signer             sign )
     {
         if ( !sign )
         {
@@ -91,9 +184,9 @@ namespace sgns::blockchain
         vote.set_proposal_id( proposal_id );
         vote.set_voter_id( voter_id );
         vote.set_approve( approve );
-        vote.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::system_clock::now().time_since_epoch() )
-                                .count() );
+        vote.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
 
         auto signing_bytes = VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
@@ -101,17 +194,16 @@ namespace sgns::blockchain
             return outcome::failure( signing_bytes.error() );
         }
 
-        auto signature = sign( signing_bytes.value() );
+        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         vote.set_signature( signature.data(), signature.size() );
 
         return vote;
     }
 
-    outcome::result<ConsensusManager::VoteBundle> ConsensusManager::CreateVoteBundle(
-        const std::string       &proposal_id,
-        const std::string       &aggregator_id,
-        const std::vector<Vote> &votes,
-        Signer                   sign )
+    outcome::result<ConsensusManager::VoteBundle> ConsensusManager::CreateVoteBundle( const std::string &proposal_id,
+                                                                                      const std::string &aggregator_id,
+                                                                                      const std::vector<Vote> &votes,
+                                                                                      Signer                   sign )
     {
         if ( !sign )
         {
@@ -121,9 +213,9 @@ namespace sgns::blockchain
         VoteBundle bundle;
         bundle.set_proposal_id( proposal_id );
         bundle.set_aggregator_id( aggregator_id );
-        bundle.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                  std::chrono::system_clock::now().time_since_epoch() )
-                                  .count() );
+        bundle.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
         for ( const auto &vote : votes )
         {
             *bundle.add_votes() = vote;
@@ -135,18 +227,16 @@ namespace sgns::blockchain
             return outcome::failure( signing_bytes.error() );
         }
 
-        auto signature = sign( signing_bytes.value() );
+        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         bundle.set_signature( signature.data(), signature.size() );
 
         return bundle;
     }
 
-    outcome::result<ConsensusManager::Certificate> ConsensusManager::CreateCertificate(
-        const Proposal         &proposal,
-        const std::vector<Vote> &votes,
-        Verifier                verify )
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::CreateCertificate( const Proposal &proposal,
+                                                                                        const std::vector<Vote> &votes )
     {
-        auto tally_result = TallyVotes( proposal, votes, std::move( verify ) );
+        auto tally_result = TallyVotes( proposal, votes );
         if ( tally_result.has_error() )
         {
             return outcome::failure( tally_result.error() );
@@ -159,21 +249,20 @@ namespace sgns::blockchain
         cert.set_registry_epoch( proposal.registry_epoch() );
         cert.set_total_weight( tally.total_weight );
         cert.set_approved_weight( tally.approved_weight );
-        cert.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::system_clock::now().time_since_epoch() )
-                                .count() );
+        cert.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
         for ( const auto &vote : votes )
         {
             *cert.add_votes() = vote;
         }
+        *cert.mutable_proposal() = proposal;
 
         return cert;
     }
 
-    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes(
-        const Proposal         &proposal,
-        const std::vector<Vote> &votes,
-        Verifier                verify )
+    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
+                                                                                 const std::vector<Vote> &votes )
     {
         if ( !registry_ )
         {
@@ -186,14 +275,19 @@ namespace sgns::blockchain
             return outcome::failure( registry_result.error() );
         }
 
-        const auto &registry = registry_result.value();
+        const auto &registry     = registry_result.value();
+        const auto  registry_cid = registry_->GetRegistryCid();
+        if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
         if ( proposal.registry_epoch() != registry.epoch() )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        uint64_t total_weight = registry_->TotalWeight( registry );
-        uint64_t approved_weight = 0;
+        uint64_t              total_weight    = registry_->TotalWeight( registry );
+        uint64_t              approved_weight = 0;
         std::set<std::string> seen;
 
         for ( const auto &vote : votes )
@@ -213,17 +307,15 @@ namespace sgns::blockchain
                 continue;
             }
 
-            if ( verify )
+            auto signing_bytes = VoteSigningBytes( vote );
+            if ( signing_bytes.has_error() )
             {
-                auto signing_bytes = VoteSigningBytes( vote );
-                if ( signing_bytes.has_error() )
-                {
-                    continue;
-                }
-                if ( !verify( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
-                {
-                    continue;
-                }
+                continue;
+            }
+
+            if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
+            {
+                continue;
             }
 
             if ( vote.approve() )
@@ -233,9 +325,9 @@ namespace sgns::blockchain
         }
 
         QuorumTally tally;
-        tally.total_weight = total_weight;
+        tally.total_weight    = total_weight;
         tally.approved_weight = approved_weight;
-        tally.has_quorum = registry_->IsQuorum( approved_weight, total_weight );
+        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
         return tally;
     }
 
@@ -275,6 +367,378 @@ namespace sgns::blockchain
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
+    outcome::result<void> ConsensusManager::SubmitProposal( const Proposal &proposal, bool self_vote )
+    {
+        const auto slot_key = GetSlotKey( proposal );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = proposals_.find( proposal.proposal_id() );
+            if ( it == proposals_.end() )
+            {
+                ProposalState state;
+                state.proposal = proposal;
+                state.slot_key = slot_key;
+                proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+            }
+        }
+
+        ConsensusMessage message;
+        *message.mutable_proposal() = proposal;
+        auto publish_result         = Publish( message );
+        if ( publish_result.has_error() )
+        {
+            return publish_result;
+        }
+
+        if ( self_vote )
+        {
+            HandleProposal( proposal );
+        }
+
+        return outcome::success();
+    }
+
+    outcome::result<void> ConsensusManager::SubmitVote( const Vote &vote )
+    {
+        ConsensusMessage message;
+        *message.mutable_vote() = vote;
+        return Publish( message );
+    }
+
+    outcome::result<void> ConsensusManager::SubmitCertificate( const Certificate &certificate )
+    {
+        ConsensusMessage message;
+        *message.mutable_certificate() = certificate;
+        return Publish( message );
+    }
+
+    void ConsensusManager::HandleProposal( const Proposal &proposal )
+    {
+        if ( proposal_handler_ )
+        {
+            proposal_handler_( proposal );
+        }
+
+        if ( !registry_ )
+        {
+            return;
+        }
+
+        const auto registry_cid = registry_->GetRegistryCid();
+        if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
+        {
+            return;
+        }
+        if ( proposal.registry_epoch() != registry_->GetRegistryEpoch() )
+        {
+            return;
+        }
+
+        auto signing_bytes = ProposalSigningBytes( proposal );
+        if ( signing_bytes.has_error() )
+        {
+            return;
+        }
+        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
+        {
+            return;
+        }
+
+        if ( proposal_validator_ && !proposal_validator_( proposal ) )
+        {
+            return;
+        }
+
+        const auto slot_key    = GetSlotKey( proposal );
+        bool       should_vote = false;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+            {
+                ProposalState state;
+                state.proposal = proposal;
+                state.slot_key = slot_key;
+                proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+            }
+
+            auto &slot_state = slot_states_[slot_key];
+            if ( slot_state.best_proposal_id.empty() )
+            {
+                slot_state.best_proposal_id = proposal.proposal_id();
+                if ( proposal.subject().has_nonce() )
+                {
+                    slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
+                }
+            }
+            else
+            {
+                const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
+                if ( IsBetterProposal( proposal, current ) )
+                {
+                    slot_state.best_proposal_id = proposal.proposal_id();
+                    if ( proposal.subject().has_nonce() )
+                    {
+                        slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
+                    }
+                }
+            }
+
+            if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
+            {
+                slot_state.voted = true;
+                should_vote      = true;
+            }
+        }
+
+        if ( should_vote && signer_ && !account_address_.empty() )
+        {
+            auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
+            if ( vote_result.has_value() )
+            {
+                (void)SubmitVote( vote_result.value() );
+            }
+        }
+    }
+
+    void ConsensusManager::HandleVote( const Vote &vote )
+    {
+        if ( vote_handler_ )
+        {
+            vote_handler_( vote );
+        }
+
+        if ( !registry_ )
+        {
+            return;
+        }
+
+        ProposalState state;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = proposals_.find( vote.proposal_id() );
+            if ( it == proposals_.end() )
+            {
+                return;
+            }
+            it->second.votes.push_back( vote );
+            state = it->second;
+
+            auto slot_it = slot_states_.find( state.slot_key );
+            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
+            {
+                return;
+            }
+        }
+
+        auto tally_result = TallyVotes( state.proposal, state.votes );
+        if ( tally_result.has_error() || !tally_result.value().has_quorum )
+        {
+            return;
+        }
+
+        if ( state.certificate.has_value() )
+        {
+            return;
+        }
+
+        auto certificate_result = CreateCertificate( state.proposal, state.votes );
+        if ( certificate_result.has_error() )
+        {
+            return;
+        }
+
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = proposals_.find( vote.proposal_id() );
+            if ( it != proposals_.end() )
+            {
+                it->second.certificate = certificate_result.value();
+            }
+        }
+
+        (void)SubmitCertificate( certificate_result.value() );
+        NotifyCertificate( state.proposal, certificate_result.value() );
+    }
+
+    void ConsensusManager::HandleVoteBundle( const VoteBundle &bundle )
+    {
+        if ( vote_bundle_handler_ )
+        {
+            vote_bundle_handler_( bundle );
+        }
+        for ( const auto &vote : bundle.votes() )
+        {
+            HandleVote( vote );
+        }
+    }
+
+    void ConsensusManager::HandleCertificate( const Certificate &certificate )
+    {
+        if ( certificate_handler_ )
+        {
+            certificate_handler_( certificate );
+        }
+
+        if ( !registry_ )
+        {
+            return;
+        }
+
+        ProposalState state;
+        Proposal      proposal;
+        bool          have_proposal = false;
+        if ( certificate.has_proposal() )
+        {
+            proposal = certificate.proposal();
+
+            if ( proposal.proposal_id() != certificate.proposal_id() )
+            {
+                return;
+            }
+
+            if ( proposal.registry_cid() != certificate.registry_cid() ||
+                 proposal.registry_epoch() != certificate.registry_epoch() )
+            {
+                return;
+            }
+
+            if ( !ValidateSubject( proposal.subject() ) )
+            {
+                return;
+            }
+
+            auto signing_bytes = ProposalSigningBytes( proposal );
+            if ( signing_bytes.has_error() )
+            {
+                return;
+            }
+            if ( !GeniusAccount::VerifySignature( proposal.proposer_id(),
+                                                  proposal.signature(),
+                                                  signing_bytes.value() ) )
+            {
+                return;
+            }
+
+            const auto computed_id = CreateProposalId( proposal );
+            if ( computed_id.empty() || computed_id != certificate.proposal_id() )
+            {
+                return;
+            }
+
+            have_proposal = true;
+        }
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = proposals_.find( certificate.proposal_id() );
+            if ( it != proposals_.end() )
+            {
+                if ( it->second.certificate.has_value() )
+                {
+                    return;
+                }
+                state         = it->second;
+                proposal      = state.proposal;
+                have_proposal = true;
+            }
+            else if ( have_proposal )
+            {
+                ProposalState new_state;
+                new_state.proposal = proposal;
+                new_state.slot_key = GetSlotKey( proposal );
+                proposals_.emplace( proposal.proposal_id(), new_state );
+                state = std::move( new_state );
+
+                auto &slot_state = slot_states_[state.slot_key];
+                if ( slot_state.best_proposal_id.empty() )
+                {
+                    slot_state.best_proposal_id = proposal.proposal_id();
+                    if ( proposal.subject().has_nonce() )
+                    {
+                        slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
+                    }
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            auto slot_it = slot_states_.find( state.slot_key );
+            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
+            {
+                return;
+            }
+        }
+
+        std::vector<Vote> votes;
+        votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
+        for ( const auto &vote : certificate.votes() )
+        {
+            votes.push_back( vote );
+        }
+
+        auto tally_result = TallyVotes( proposal, votes );
+        if ( tally_result.has_error() || !tally_result.value().has_quorum )
+        {
+            return;
+        }
+
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = proposals_.find( certificate.proposal_id() );
+            if ( it != proposals_.end() )
+            {
+                it->second.certificate = certificate;
+            }
+        }
+
+        NotifyCertificate( proposal, certificate );
+    }
+
+    void ConsensusManager::NotifyCertificate( const Proposal &proposal, const Certificate &certificate )
+    {
+        if ( certificate_callback_ )
+        {
+            certificate_callback_( proposal, certificate );
+        }
+    }
+
+    std::string ConsensusManager::GetSlotKey( const Proposal &proposal ) const
+    {
+        if ( proposal.subject().type() == SubjectType::SUBJECT_NONCE && proposal.subject().has_nonce() )
+        {
+            return proposal.subject().account_id() + ":" + std::to_string( proposal.subject().nonce().nonce() );
+        }
+        if ( !proposal.subject().subject_id().empty() )
+        {
+            return proposal.subject().subject_id();
+        }
+        return proposal.proposal_id();
+    }
+
+    bool ConsensusManager::IsBetterProposal( const Proposal &candidate, const Proposal &current ) const
+    {
+        const bool candidate_nonce = candidate.subject().type() == SubjectType::SUBJECT_NONCE &&
+                                     candidate.subject().has_nonce();
+        const bool current_nonce = current.subject().type() == SubjectType::SUBJECT_NONCE &&
+                                   current.subject().has_nonce();
+        if ( candidate_nonce && current_nonce )
+        {
+            const auto &cand_hash = candidate.subject().nonce().tx_hash();
+            const auto &curr_hash = current.subject().nonce().tx_hash();
+            if ( cand_hash == curr_hash )
+            {
+                return candidate.proposal_id() < current.proposal_id();
+            }
+            return std::lexicographical_compare( cand_hash.begin(),
+                                                 cand_hash.end(),
+                                                 curr_hash.begin(),
+                                                 curr_hash.end() );
+        }
+
+        return candidate.proposal_id() < current.proposal_id();
+    }
+
     outcome::result<std::string> ConsensusManager::ComputeSubjectId( const Subject &subject )
     {
         Subject copy = subject;
@@ -286,16 +750,14 @@ namespace sgns::blockchain
         }
 
         sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( serialized.data() ),
-                                      serialized.size() ) );
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( serialized.data() ), serialized.size() ) );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
-    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject(
-        const std::string        &account_id,
-        uint64_t                  nonce,
-        const std::vector<uint8_t> &tx_hash )
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject( const std::string &account_id,
+                                                                                     uint64_t           nonce,
+                                                                                     const std::string &tx_hash )
     {
         Subject subject;
         subject.set_type( SubjectType::SUBJECT_NONCE );
@@ -314,10 +776,10 @@ namespace sgns::blockchain
     }
 
     outcome::result<ConsensusManager::Subject> ConsensusManager::CreateTaskResultSubject(
-        const std::string        &account_id,
-        const std::string        &escrow_path,
-        const std::vector<uint8_t> &task_result_hash,
-        uint64_t                  result_epoch )
+        const std::string &account_id,
+        const std::string &escrow_path,
+        const std::string &task_result_hash,
+        uint64_t           result_epoch )
     {
         Subject subject;
         subject.set_type( SubjectType::SUBJECT_TASK_RESULT );
@@ -336,7 +798,7 @@ namespace sgns::blockchain
         return subject;
     }
 
-    std::string ConsensusManager::CreateProposalId( const Proposal &proposal ) const
+    std::string ConsensusManager::CreateProposalId( const Proposal &proposal )
     {
         auto signing_bytes = ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
@@ -345,12 +807,12 @@ namespace sgns::blockchain
         }
 
         sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256(
+        auto                     hash = hasher.sha2_256(
             gsl::span<const uint8_t>( signing_bytes.value().data(), signing_bytes.value().size() ) );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
-    bool ConsensusManager::ValidateSubject( const Subject &subject ) const
+    bool ConsensusManager::ValidateSubject( const Subject &subject )
     {
         if ( subject.account_id().empty() )
         {
@@ -392,5 +854,40 @@ namespace sgns::blockchain
             }
         }
         return nullptr;
+    }
+
+    void ConsensusManager::OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
+    {
+        if ( !message )
+        {
+            return;
+        }
+
+        ConsensusMessage decoded;
+        if ( !decoded.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
+        {
+            ConsensusManagerLogger()->debug( "Failed to decode consensus message" );
+            return;
+        }
+
+        if ( decoded.has_proposal() )
+        {
+            HandleProposal( decoded.proposal() );
+            return;
+        }
+        if ( decoded.has_vote() )
+        {
+            HandleVote( decoded.vote() );
+            return;
+        }
+        if ( decoded.has_vote_bundle() )
+        {
+            HandleVoteBundle( decoded.vote_bundle() );
+            return;
+        }
+        if ( decoded.has_certificate() )
+        {
+            HandleCertificate( decoded.certificate() );
+        }
     }
 }

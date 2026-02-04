@@ -63,9 +63,10 @@ namespace sgns
         return address;
     }
 
-    std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB> global_db,
-                                                 std::shared_ptr<GeniusAccount>  account,
-                                                 BlockchainCallback              callback )
+    std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
+                                                 std::shared_ptr<GeniusAccount>             account,
+                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                 BlockchainCallback                         callback )
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
@@ -134,7 +135,9 @@ namespace sgns
 
         instance->consensus_manager_ = blockchain::ConsensusManager::New(
             instance->validator_registry_,
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( std::vector<uint8_t> payload )
+            std::move( pubsub ),
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -1513,4 +1516,30 @@ namespace sgns
         db_->AddListenTopic(
             std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
+
+    void Blockchain::SetCertificateCallback( blockchain::ConsensusManager::CertificateCallback callback )
+    {
+        consensus_manager_->SetCertificateCallback( std::move( callback ) );
+    }
+
+    outcome::result<blockchain::ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
+        const std::string &account_id,
+        uint64_t           nonce,
+        const std::string &tx_hash )
+    {
+        OUTCOME_TRY( auto &&nonce_subject, consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash ) );
+        OUTCOME_TRY( auto &&nonce_proposal,
+                     consensus_manager_->CreateProposal( nonce_subject,
+                                                         account_id,
+                                                         validator_registry_->GetRegistryCid(),
+                                                         validator_registry_->GetRegistryEpoch() ) );
+
+        return nonce_proposal;
+    }
+
+    outcome::result<void> Blockchain::SubmitProposal( const blockchain::ConsensusManager::Proposal &proposal )
+    {
+        return consensus_manager_->SubmitProposal( std::move( proposal ) );
+    }
+
 }
