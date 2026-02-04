@@ -150,6 +150,9 @@ namespace sgns::crdt
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
+        void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterNewElementCallback( const std::string &pattern );
+        void UnregisterDeletedElementCallback( const std::string &pattern );
 
         void Start();
 

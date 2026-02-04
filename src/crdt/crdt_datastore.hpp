@@ -215,6 +215,9 @@ namespace sgns::crdt
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
+        void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterNewElementCallback( const std::string &pattern );
+        void UnregisterDeletedElementCallback( const std::string &pattern );
 
         /**
          * @brief Configure which topic this datastore should filter on.

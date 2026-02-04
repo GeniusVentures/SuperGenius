@@ -328,6 +328,15 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
+        if ( db_ )
+        {
+            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
+            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
+            db_->UnregisterNewElementCallback( genesis_pattern );
+            db_->UnregisterElementFilter( genesis_pattern );
+            db_->UnregisterNewElementCallback( account_pattern );
+            db_->UnregisterElementFilter( account_pattern );
+        }
         account_->ClearGetBlockChainCIDMethod();
     }
 

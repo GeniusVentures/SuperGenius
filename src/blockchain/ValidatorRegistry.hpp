@@ -61,6 +61,7 @@ namespace sgns::blockchain
                                                        std::string                     genesis_authority,
                                                        BlockRequestMethod              block_request_method,
                                                        InitCallback                    init_callback = nullptr );
+        ~ValidatorRegistry();
 
         uint64_t ComputeWeight( Role role ) const;
         uint64_t TotalWeight( const Registry &registry ) const;

@@ -74,6 +74,17 @@ namespace sgns::blockchain
         logger_->trace( "{}: constructed", __func__ );
     }
 
+    ValidatorRegistry::~ValidatorRegistry()
+    {
+        const std::string pattern = "/?" + std::string( RegistryKey() );
+        if ( db_ )
+        {
+            db_->UnregisterNewElementCallback( pattern );
+            db_->UnregisterElementFilter( pattern );
+        }
+        logger_->trace( "{}: destroyed", __func__ );
+    }
+
     std::shared_ptr<ValidatorRegistry> ValidatorRegistry::New( std::shared_ptr<crdt::GlobalDB> db,
                                                                uint64_t                        quorum_numerator,
                                                                uint64_t                        quorum_denominator,

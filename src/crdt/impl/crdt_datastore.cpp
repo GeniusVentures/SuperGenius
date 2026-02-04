@@ -1574,6 +1574,21 @@ namespace sgns::crdt
         return crdt_cb_manager_.RegisterDeletedDataCallback( pattern, std::move( callback ) );
     }
 
+    void CrdtDatastore::UnregisterElementFilter( const std::string &pattern )
+    {
+        crdt_filter_.UnregisterElementFilter( pattern );
+    }
+
+    void CrdtDatastore::UnregisterNewElementCallback( const std::string &pattern )
+    {
+        crdt_cb_manager_.UnregisterNewDataCallback( pattern );
+    }
+
+    void CrdtDatastore::UnregisterDeletedElementCallback( const std::string &pattern )
+    {
+        crdt_cb_manager_.UnregisterDeletedDataCallback( pattern );
+    }
+
     void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid )
     {
         crdt_cb_manager_.PutDataCallback( key, value, cid );

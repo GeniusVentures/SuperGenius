@@ -171,6 +171,21 @@ namespace sgns
         m_logger->debug( "[{} - full: {}] ~TransactionManager CALLED",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
+        if ( globaldb_m )
+        {
+            auto monitored_networks = GetMonitoredNetworkIDs();
+            for ( auto network_id : monitored_networks )
+            {
+                std::string blockchain_base = GetBlockChainBase( network_id );
+                const std::string tx_pattern = "^/?" + blockchain_base + "tx/[^/]+";
+                const std::string proof_pattern = "^/?" + blockchain_base + "proof/[^/]+";
+
+                globaldb_m->UnregisterNewElementCallback( tx_pattern );
+                globaldb_m->UnregisterDeletedElementCallback( tx_pattern );
+                globaldb_m->UnregisterElementFilter( tx_pattern );
+                globaldb_m->UnregisterElementFilter( proof_pattern );
+            }
+        }
         Stop();
     }
 
