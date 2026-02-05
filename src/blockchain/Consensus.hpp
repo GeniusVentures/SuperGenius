@@ -22,7 +22,7 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 
-namespace sgns::blockchain
+namespace sgns
 {
     class ConsensusManager : public std::enable_shared_from_this<ConsensusManager>
     {
@@ -61,7 +61,7 @@ namespace sgns::blockchain
                                                       std::string                                consensus_topic = "" );
 
         void SetProposalValidator( ProposalValidator validator );
-        void RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
+        bool RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
         void UnregisterSubjectHandler( SubjectType type );
         void SetCertificateCallback( CertificateCallback callback );
 

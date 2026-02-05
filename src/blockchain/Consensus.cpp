@@ -18,7 +18,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 #include "account/GeniusAccount.hpp"
 
-namespace sgns::blockchain
+namespace sgns
 {
 
     base::Logger ConsensusManagerLogger()
@@ -117,15 +117,16 @@ namespace sgns::blockchain
         certificate_handler_ = std::move( handler );
     }
 
-    void ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
+    bool ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
     {
         if ( !handler )
         {
             ConsensusManagerLogger()->warn( "{}: ignored empty handler type={}", __func__, static_cast<int>( type ) );
-            return;
+            return false;
         }
         std::unique_lock lock( subject_handlers_mutex_ );
         subject_handlers_[static_cast<int>( type )] = std::move( handler );
+        return true;
     }
 
     void ConsensusManager::UnregisterSubjectHandler( SubjectType type )

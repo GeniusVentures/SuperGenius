@@ -250,8 +250,8 @@ namespace sgns
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
-        void OnConsensusCertificate( const blockchain::ConsensusProposal    &proposal,
-                                     const blockchain::ConsensusCertificate &certificate );
+        void OnConsensusCertificate( const ConsensusProposal    &proposal,
+                                     const ConsensusCertificate &certificate );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -292,7 +292,7 @@ namespace sgns
         mutable std::shared_mutex                  tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> tx_processed_m;
         std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
-        std::unordered_map<std::string, blockchain::ConsensusManager::Proposal> pending_proposals_;
+        std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                                   task_m;
         std::atomic<bool>                                                       stopped_{ false };
         std::chrono::milliseconds                                               timestamp_tolerance_m;

@@ -18,7 +18,7 @@
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crdt/graphsync_dagsyncer.hpp"
 
-namespace sgns::blockchain
+namespace sgns
 {
     namespace
     {

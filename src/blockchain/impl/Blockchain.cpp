@@ -98,11 +98,11 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        instance->validator_registry_ = blockchain::ValidatorRegistry::New(
+        instance->validator_registry_ = ValidatorRegistry::New(
             instance->db_,
             2,
             3,
-            blockchain::ValidatorRegistry::WeightConfig{},
+            ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress(),
 
             [weak_ptr( std::weak_ptr<Blockchain>(
@@ -133,7 +133,7 @@ namespace sgns
             return nullptr;
         }
 
-        instance->consensus_manager_ = blockchain::ConsensusManager::New(
+        instance->consensus_manager_ = ConsensusManager::New(
             instance->validator_registry_,
             std::move( pubsub ),
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
@@ -826,7 +826,7 @@ namespace sgns
                        account_->GetAddress().substr( 0, 8 ),
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::GenesisBlock g;
+        GenesisBlock g;
         auto                           timestamp = std::chrono::system_clock::now();
 
         g.set_chain_id( "supergenius" );
@@ -920,7 +920,7 @@ namespace sgns
                         account_->GetAddress().substr( 0, 8 ),
                         GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::GenesisBlock g;
+        GenesisBlock g;
 
         // Convert string back to byte vector for ParseFromArray
         std::vector<uint8_t> data( serialized_genesis.begin(), serialized_genesis.end() );
@@ -958,12 +958,12 @@ namespace sgns
         return outcome::success();
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::GenesisBlock &g ) const
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Computing signature data for genesis block", account_->GetAddress().substr( 0, 8 ) );
 
         // Create a copy without signature for deterministic signing
-        blockchain::GenesisBlock g_copy = g;
+        GenesisBlock g_copy = g;
         g_copy.clear_signature();
 
         // Serialize the unsigned block
@@ -977,10 +977,10 @@ namespace sgns
         return signature_data;
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::AccountCreationBlock &ac ) const
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const AccountCreationBlock &ac ) const
     {
         // Create a copy without signature for deterministic signing
-        blockchain::AccountCreationBlock ac_copy = ac;
+        AccountCreationBlock ac_copy = ac;
         ac_copy.clear_signature();
 
         size_t               size = ac_copy.ByteSizeLong();
@@ -990,7 +990,7 @@ namespace sgns
         return signature_data;
     }
 
-    bool Blockchain::VerifySignature( const blockchain::GenesisBlock &g ) const
+    bool Blockchain::VerifySignature( const GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Verifying genesis block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -1024,7 +1024,7 @@ namespace sgns
         return verification_result;
     }
 
-    bool Blockchain::VerifySignature( const blockchain::AccountCreationBlock &ac ) const
+    bool Blockchain::VerifySignature( const AccountCreationBlock &ac ) const
     {
         logger_->trace( "[{}] Verifying account creation block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -1072,7 +1072,7 @@ namespace sgns
                        account_->GetAddress().substr( 0, 8 ),
                        cids_.genesis_.value() );
 
-        sgns::blockchain::AccountCreationBlock ac;
+        AccountCreationBlock ac;
         auto                                   timestamp = std::chrono::system_clock::now();
 
         ac.set_account_address( account_->GetAddress() );
@@ -1143,7 +1143,7 @@ namespace sgns
     {
         logger_->debug( "[{}] Verifying account creation block", account_->GetAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::AccountCreationBlock ac;
+        AccountCreationBlock ac;
 
         // Convert string back to byte vector for ParseFromArray
         std::vector<uint8_t> data( serialized_account_creation.begin(), serialized_account_creation.end() );
@@ -1194,7 +1194,7 @@ namespace sgns
 
         do
         {
-            sgns::blockchain::GenesisBlock new_genesis;
+            GenesisBlock new_genesis;
             if ( !new_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
                                               static_cast<int>( element.value().size() ) ) )
             {
@@ -1228,7 +1228,7 @@ namespace sgns
                 break;
             }
 
-            sgns::blockchain::GenesisBlock existing_genesis;
+            GenesisBlock existing_genesis;
             if ( !existing_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
                                                    static_cast<int>( existing_serialized.size() ) ) )
             {
@@ -1276,7 +1276,7 @@ namespace sgns
 
         do
         {
-            sgns::blockchain::AccountCreationBlock new_block;
+            AccountCreationBlock new_block;
             if ( !new_block.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
                                             static_cast<int>( element.value().size() ) ) )
             {
@@ -1330,7 +1330,7 @@ namespace sgns
                 break;
             }
 
-            sgns::blockchain::AccountCreationBlock existing_block;
+            AccountCreationBlock existing_block;
             if ( !existing_block.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
                                                  static_cast<int>( existing_serialized.size() ) ) )
             {
@@ -1380,8 +1380,8 @@ namespace sgns
         return std::nullopt;
     }
 
-    bool Blockchain::ShouldReplaceGenesis( const blockchain::GenesisBlock &existing,
-                                           const blockchain::GenesisBlock &candidate )
+    bool Blockchain::ShouldReplaceGenesis( const GenesisBlock &existing,
+                                           const GenesisBlock &candidate ) const
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1390,8 +1390,8 @@ namespace sgns
         return candidate.timestamp() < existing.timestamp();
     }
 
-    bool Blockchain::ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
-                                                   const blockchain::AccountCreationBlock &candidate )
+    bool Blockchain::ShouldReplaceAccountCreation( const AccountCreationBlock &existing,
+                                                   const AccountCreationBlock &candidate ) const
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1515,7 +1515,7 @@ namespace sgns
         return it->second;
     }
 
-    std::shared_ptr<blockchain::ValidatorRegistry> Blockchain::GetValidatorRegistry() const
+    std::shared_ptr<ValidatorRegistry> Blockchain::GetValidatorRegistry() const
     {
         return validator_registry_;
     }
@@ -1526,12 +1526,23 @@ namespace sgns
             std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
 
-    void Blockchain::SetCertificateCallback( blockchain::ConsensusManager::CertificateCallback callback )
+    bool Blockchain::RegisterSubjectHandler( SubjectType    type,
+                                             ConsensusManager::SubjectHandler handler )
+    {
+        return consensus_manager_->RegisterSubjectHandler( type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterSubjectHandler( SubjectType type )
+    {
+        consensus_manager_->UnregisterSubjectHandler( type );
+    }
+
+    void Blockchain::SetCertificateCallback( ConsensusManager::CertificateCallback callback )
     {
         consensus_manager_->SetCertificateCallback( std::move( callback ) );
     }
 
-    outcome::result<blockchain::ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
+    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
         const std::string &account_id,
         uint64_t           nonce,
         const std::string &tx_hash )
@@ -1546,7 +1557,7 @@ namespace sgns
         return nonce_proposal;
     }
 
-    outcome::result<void> Blockchain::SubmitProposal( const blockchain::ConsensusManager::Proposal &proposal )
+    outcome::result<void> Blockchain::SubmitProposal( const ConsensusManager::Proposal &proposal )
     {
         return consensus_manager_->SubmitProposal( std::move( proposal ) );
     }

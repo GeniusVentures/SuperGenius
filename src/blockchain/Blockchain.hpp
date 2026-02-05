@@ -27,10 +27,7 @@
 
 namespace sgns
 {
-    namespace blockchain
-    {
-        class ValidatorRegistry;
-    }
+    class ValidatorRegistry;
 
     class Migration3_5_1To3_6_0;
 
@@ -103,20 +100,22 @@ namespace sgns
          */
         static const std::string &GetAuthorizedFullNodeAddress();
 
-        outcome::result<std::string>                   GetGenesisCID() const;
-        outcome::result<std::string>                   GetAccountCreationCID() const;
-        std::shared_ptr<blockchain::ValidatorRegistry> GetValidatorRegistry() const;
+        outcome::result<std::string>       GetGenesisCID() const;
+        outcome::result<std::string>       GetAccountCreationCID() const;
+        std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         void SetFullNodeMode();
 
-        void SetCertificateCallback( blockchain::ConsensusManager::CertificateCallback callback );
+        bool RegisterSubjectHandler( SubjectType type, ConsensusManager::SubjectHandler handler );
+        void UnregisterSubjectHandler( SubjectType type );
 
-        outcome::result<blockchain::ConsensusManager::Proposal> CreateConsensusProposal(
-            const std::string          &account_id,
-            uint64_t                    nonce,
-            const std::string &tx_hash );
+        void SetCertificateCallback( ConsensusManager::CertificateCallback callback );
 
-        outcome::result<void> SubmitProposal( const blockchain::ConsensusManager::Proposal &proposal );
+        outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
+                                                                             uint64_t           nonce,
+                                                                             const std::string &tx_hash );
+
+        outcome::result<void> SubmitProposal( const ConsensusManager::Proposal &proposal );
 
     protected:
         friend class Migration3_5_1To3_6_0;
@@ -135,10 +134,10 @@ namespace sgns
         outcome::result<void> SaveGenesisCID( const std::string &cid );
         outcome::result<void> SaveAccountCreationCID( const std::string &address, const std::string &cid );
 
-        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g ) const;
-        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::AccountCreationBlock &ac ) const;
-        bool                 VerifySignature( const sgns::blockchain::GenesisBlock &g ) const;
-        bool                 VerifySignature( const sgns::blockchain::AccountCreationBlock &ac ) const;
+        std::vector<uint8_t> ComputeSignatureData( const GenesisBlock &g ) const;
+        std::vector<uint8_t> ComputeSignatureData( const AccountCreationBlock &ac ) const;
+        bool                 VerifySignature( const GenesisBlock &g ) const;
+        bool                 VerifySignature( const AccountCreationBlock &ac ) const;
 
         outcome::result<void> CreateGenesisBlock();
         outcome::result<void> VerifyGenesisBlock( const std::string &serialized_genesis );
@@ -148,11 +147,9 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterGenesis( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterAccountCreation( const crdt::pb::Element &element );
-
-        static bool ShouldReplaceGenesis( const blockchain::GenesisBlock &existing,
-                                          const blockchain::GenesisBlock &candidate );
-        static bool ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
-                                                  const blockchain::AccountCreationBlock &candidate );
+        bool ShouldReplaceGenesis( const GenesisBlock &existing, const GenesisBlock &candidate ) const;
+        bool ShouldReplaceAccountCreation( const AccountCreationBlock &existing,
+                                           const AccountCreationBlock &candidate ) const;
 
         void GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair& new_data, const std::string &cid );
@@ -177,9 +174,9 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
 
-        BlockchainCallback blockchain_processed_callback_; ///< Callback when the processing of the blockchain is done
-        sgns::blockchain::GenesisBlock         genesis_block_;          ///< Cached genesis block for easy access
-        sgns::blockchain::AccountCreationBlock account_creation_block_; ///< Cached account creation block
+        BlockchainCallback blockchain_processed_callback_;  ///< Callback when the processing of the blockchain is done
+        GenesisBlock genesis_block_;                  ///< Cached genesis block for easy access
+        AccountCreationBlock account_creation_block_; ///< Cached account creation block
 
         struct BlockchainCIDs
         {
@@ -211,7 +208,7 @@ namespace sgns
 
         static std::string &AuthorizedFullNodeAddressStorage();
 
-        std::shared_ptr<blockchain::ValidatorRegistry> validator_registry_;
+        std::shared_ptr<ValidatorRegistry> validator_registry_;
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
@@ -222,7 +219,7 @@ namespace sgns
         bool              genesis_ready_          = false;
         bool              account_creation_ready_ = false;
 
-        std::shared_ptr<blockchain::ConsensusManager> consensus_manager_;
+        std::shared_ptr<ConsensusManager> consensus_manager_;
     };
 
 }

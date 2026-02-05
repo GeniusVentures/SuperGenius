@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package sgns.blockchain.validator;
+package sgns.validator;
 
 message ValidatorEntry {
   string validator_id = 1;

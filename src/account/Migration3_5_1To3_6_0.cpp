@@ -95,7 +95,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        OUTCOME_TRY( blockchain::ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
         OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
         auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();

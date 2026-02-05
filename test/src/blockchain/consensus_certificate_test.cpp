@@ -20,11 +20,11 @@ namespace
         return account;
     }
 
-    std::shared_ptr<sgns::blockchain::ValidatorRegistry> MakeRegistry(
+    std::shared_ptr<sgns::ValidatorRegistry> MakeRegistry(
         const std::shared_ptr<sgns::crdt::GlobalDB> &db,
         const std::shared_ptr<sgns::GeniusAccount>  &account )
     {
-        using sgns::blockchain::ValidatorRegistry;
+        using sgns::ValidatorRegistry;
         auto registry = ValidatorRegistry::New(
             db,
             1,
@@ -72,13 +72,13 @@ namespace sgns::test
         auto account  = MakeAccount( getPathString() );
         auto registry = MakeRegistry( db_, account );
 
-        auto manager = blockchain::ConsensusManager::New( registry,
+        auto manager = ConsensusManager::New( registry,
                                                           pubs_,
                                                           [account]( std::vector<uint8_t> payload )
                                                           { return account->Sign( std::move( payload ) ); } );
 
         std::string tx_hash = "0x010203";
-        auto subject_result = blockchain::ConsensusManager::CreateNonceSubject( account->GetAddress(), 1, tx_hash );
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 1, tx_hash );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -107,13 +107,13 @@ namespace sgns::test
         auto account  = MakeAccount( getPathString() );
         auto registry = MakeRegistry( db_, account );
 
-        auto manager = blockchain::ConsensusManager::New( registry,
+        auto manager = ConsensusManager::New( registry,
                                                           pubs_,
                                                           [account]( std::vector<uint8_t> payload )
                                                           { return account->Sign( std::move( payload ) ); } );
 
         std::string tx_hash = "0x010203";
-        auto subject_result = blockchain::ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, tx_hash );
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, tx_hash );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -137,8 +137,8 @@ namespace sgns::test
         auto cert = cert_result.value();
 
         bool notified = false;
-        manager->SetCertificateCallback( [&notified]( const blockchain::ConsensusProposal &,
-                                                      const blockchain::ConsensusCertificate & ) { notified = true; } );
+        manager->SetCertificateCallback( [&notified]( const ConsensusProposal &,
+                                                      const ConsensusCertificate & ) { notified = true; } );
 
         manager->HandleCertificate( cert );
         EXPECT_TRUE( notified );

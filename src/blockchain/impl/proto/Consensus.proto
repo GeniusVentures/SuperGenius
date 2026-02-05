@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package sgns.blockchain;
+package sgns;
 
 message ConsensusSubject {
   string subject_id = 1;

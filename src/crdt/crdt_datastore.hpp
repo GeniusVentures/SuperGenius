@@ -35,10 +35,6 @@
 namespace sgns
 {
     class Blockchain;
-}
-
-namespace sgns::blockchain
-{
     class ValidatorRegistry;
 }
 
@@ -249,8 +245,8 @@ namespace sgns::crdt
     protected:
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
-        friend class ::sgns::blockchain::ValidatorRegistry;
-
+        friend class ::sgns::ValidatorRegistry;
+ 
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process

@@ -50,8 +50,8 @@ namespace sgns
 
         instance->blockchain_->SetCertificateCallback(
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const blockchain::ConsensusProposal    &proposal,
-                const blockchain::ConsensusCertificate &certificate )
+                const ConsensusProposal    &proposal,
+                const ConsensusCertificate &certificate )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -3001,8 +3001,8 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    void TransactionManager::OnConsensusCertificate( const blockchain::ConsensusProposal    &proposal,
-                                                     const blockchain::ConsensusCertificate &certificate )
+    void TransactionManager::OnConsensusCertificate( const ConsensusProposal    &proposal,
+                                                     const ConsensusCertificate &certificate )
     {
     }
 }

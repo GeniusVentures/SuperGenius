@@ -30,7 +30,7 @@ namespace sgns
     class Migration3_5_1To3_6_0;
 }
 
-namespace sgns::blockchain
+namespace sgns
 {
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
     {
