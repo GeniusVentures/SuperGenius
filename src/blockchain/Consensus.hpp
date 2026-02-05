@@ -101,6 +101,9 @@ namespace sgns::blockchain
         outcome::result<void>                        SubmitVote( const Vote &vote );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
 
+    protected:
+        void ConfigureTimestampWindow( std::chrono::milliseconds window );
+
     private:
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
@@ -108,6 +111,7 @@ namespace sgns::blockchain
                                    std::string                                consensus_topic );
 
         static constexpr std::string_view CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
+        static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes( 5 );
 
         struct ProposalState
         {
@@ -131,6 +135,7 @@ namespace sgns::blockchain
         void        NotifyCertificate( const Proposal &proposal, const Certificate &certificate );
         std::string GetSlotKey( const Proposal &proposal ) const;
         bool        IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
+        bool        IsTimestampSane( uint64_t timestamp_ms ) const;
 
         static std::string                       CreateProposalId( const Proposal &proposal );
         static bool                              ValidateSubject( const Subject &subject );
@@ -155,5 +160,6 @@ namespace sgns::blockchain
 
         std::string                                                         consensus_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
+        std::chrono::milliseconds                                           timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
     };
 }

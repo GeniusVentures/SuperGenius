@@ -122,6 +122,31 @@ namespace sgns::blockchain
         certificate_handler_ = std::move( handler );
     }
 
+    void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
+    {
+        if ( window.count() <= 0 )
+        {
+            ConsensusManagerLogger()->warn( "{}: ConfigureTimestampWindow using default window", __func__ );
+            timestamp_window_ = DEFAULT_TIMESTAMP_WINDOW;
+            return;
+        }
+        timestamp_window_ = window;
+    }
+
+    bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
+    {
+        if ( timestamp_ms == 0 )
+        {
+            return false;
+        }
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+        const auto window_ms = timestamp_window_.count();
+        const auto ts_ms     = static_cast<std::int64_t>( timestamp_ms );
+        return ( ts_ms >= now_ms - window_ms ) && ( ts_ms <= now_ms + window_ms );
+    }
+
     outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
                                                                                   const std::string &proposer_id,
                                                                                   const std::string &registry_cid,
@@ -551,36 +576,6 @@ namespace sgns::blockchain
     void ConsensusManager::HandleProposal( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: HandleProposal called proposal_id={}", __func__, proposal.proposal_id() );
-        if ( proposal_handler_ )
-        {
-            proposal_handler_( proposal );
-        }
-
-        if ( !registry_ )
-        {
-            ConsensusManagerLogger()->error( "{}: HandleProposal aborted: registry is null", __func__ );
-            return;
-        }
-
-        const auto registry_cid = registry_->GetRegistryCid();
-        if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
-        {
-            ConsensusManagerLogger()->error(
-                "{}: HandleProposal rejected: registry cid mismatch proposal={} registry={}",
-                __func__,
-                proposal.registry_cid(),
-                registry_cid );
-            return;
-        }
-        if ( proposal.registry_epoch() != registry_->GetRegistryEpoch() )
-        {
-            ConsensusManagerLogger()->error(
-                "{}: HandleProposal rejected: registry epoch mismatch proposal={} registry={}",
-                __func__,
-                proposal.registry_epoch(),
-                registry_->GetRegistryEpoch() );
-            return;
-        }
 
         auto signing_bytes = ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
@@ -596,6 +591,47 @@ namespace sgns::blockchain
                 "{}: HandleProposal rejected: signature verification failed proposer_id={}",
                 __func__,
                 proposal.proposer_id() );
+            return;
+        }
+
+        if ( !IsTimestampSane( proposal.timestamp() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: timestamp out of bounds proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return;
+        }
+
+        if ( !registry_ )
+        {
+            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: registry is null", __func__ );
+            return;
+        }
+
+        const auto registry_cid = registry_->GetRegistryCid();
+        if ( proposal.registry_cid().empty() || registry_cid.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: registry cid missing proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return;
+        }
+        if ( proposal.registry_cid() != registry_cid )
+        {
+            ConsensusManagerLogger()->error(
+                "{}: HandleProposal rejected: registry cid mismatch proposal={} registry={}",
+                __func__,
+                proposal.registry_cid(),
+                registry_cid );
+            return;
+        }
+        if ( proposal.registry_epoch() != registry_->GetRegistryEpoch() )
+        {
+            ConsensusManagerLogger()->error(
+                "{}: HandleProposal rejected: registry epoch mismatch proposal={} registry={}",
+                __func__,
+                proposal.registry_epoch(),
+                registry_->GetRegistryEpoch() );
             return;
         }
 
@@ -665,6 +701,17 @@ namespace sgns::blockchain
                                                  proposal.proposal_id(),
                                                  vote_result.error().message() );
             }
+        }
+
+        if ( proposal_handler_ )
+        {
+            proposal_handler_( proposal );
+        }
+
+        if ( !registry_ )
+        {
+            ConsensusManagerLogger()->error( "{}: HandleProposal aborted: registry is null", __func__ );
+            return;
         }
     }
 
