@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <shared_mutex>
 #include <vector>
 #include <unordered_map>
 #include <mutex>
@@ -39,6 +40,13 @@ namespace sgns::blockchain
         using CertificateHandler = std::function<void( const Certificate &certificate )>;
         using CertificateCallback = std::function<void( const Proposal &proposal, const Certificate &certificate )>;
         using ProposalValidator   = std::function<bool( const Proposal &proposal )>;
+        enum class SubjectCheck
+        {
+            Approve,
+            Reject,
+            Pending
+        };
+        using SubjectHandler = std::function<outcome::result<SubjectCheck>( const Subject &subject )>;
 
         struct QuorumTally
         {
@@ -53,6 +61,8 @@ namespace sgns::blockchain
                                                       std::string                                consensus_topic = "" );
 
         void SetProposalValidator( ProposalValidator validator );
+        void RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
+        void UnregisterSubjectHandler( SubjectType type );
         void SetCertificateCallback( CertificateCallback callback );
 
         outcome::result<void> Publish( const ConsensusMessage &message );
@@ -90,16 +100,17 @@ namespace sgns::blockchain
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
         static outcome::result<std::vector<uint8_t>> VoteBundleSigningBytes( const VoteBundle &bundle );
         static outcome::result<std::string>          ComputeSubjectId( const Subject &subject );
-        static outcome::result<Subject>              CreateNonceSubject( const std::string          &account_id,
-                                                                         uint64_t                    nonce,
+        static outcome::result<Subject>              CreateNonceSubject( const std::string &account_id,
+                                                                         uint64_t           nonce,
                                                                          const std::string &tx_hash );
-        static outcome::result<Subject>              CreateTaskResultSubject( const std::string          &account_id,
-                                                                              const std::string          &escrow_path,
+        static outcome::result<Subject>              CreateTaskResultSubject( const std::string &account_id,
+                                                                              const std::string &escrow_path,
                                                                               const std::string &task_result_hash,
-                                                                              uint64_t                    result_epoch );
+                                                                              uint64_t           result_epoch );
         outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
         outcome::result<void>                        SubmitVote( const Vote &vote );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
+        outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
 
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
@@ -110,7 +121,7 @@ namespace sgns::blockchain
                                    Signer                                     signer,
                                    std::string                                consensus_topic );
 
-        static constexpr std::string_view CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
+        static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes( 5 );
 
         struct ProposalState
@@ -128,14 +139,18 @@ namespace sgns::blockchain
             bool        voted = false;
         };
 
-        void        HandleProposal( const Proposal &proposal );
-        void        HandleVote( const Vote &vote );
-        void        HandleVoteBundle( const VoteBundle &bundle );
-        void        HandleCertificate( const Certificate &certificate );
-        void        NotifyCertificate( const Proposal &proposal, const Certificate &certificate );
-        std::string GetSlotKey( const Proposal &proposal ) const;
-        bool        IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
-        bool        IsTimestampSane( uint64_t timestamp_ms ) const;
+        void                         HandleProposal( const Proposal &proposal );
+        void                         HandleVote( const Vote &vote );
+        void                         HandleVoteBundle( const VoteBundle &bundle );
+        void                         HandleCertificate( const Certificate &certificate );
+        void                         NotifyCertificate( const Proposal &proposal, const Certificate &certificate );
+        std::string                  GetSlotKey( const Proposal &proposal ) const;
+        bool                         IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
+        bool                         IsTimestampSane( uint64_t timestamp_ms ) const;
+        outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
+        void                         ContinueProposalAfterSubject( const Proposal &proposal );
+        void                         AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
+        std::vector<Proposal>        TakePendingProposals( const std::string &subject_hash );
 
         static std::string                       CreateProposalId( const Proposal &proposal );
         static bool                              ValidateSubject( const Subject &subject );
@@ -144,22 +159,25 @@ namespace sgns::blockchain
 
         void OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
 
-        std::shared_ptr<ValidatorRegistry>             registry_;
-        ProposalHandler                                proposal_handler_;
-        VoteHandler                                    vote_handler_;
-        VoteBundleHandler                              vote_bundle_handler_;
-        CertificateHandler                             certificate_handler_;
-        CertificateCallback                            certificate_callback_;
-        ProposalValidator                              proposal_validator_;
-        Signer                                         signer_;
-        std::string                                    account_address_;
-        std::unordered_map<std::string, ProposalState> proposals_;
-        std::unordered_map<std::string, SlotState>     slot_states_;
-        mutable std::mutex                             proposals_mutex_;
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>     pubsub_;
+        std::shared_ptr<ValidatorRegistry>                        registry_;
+        VoteHandler                                               vote_handler_;
+        VoteBundleHandler                                         vote_bundle_handler_;
+        CertificateHandler                                        certificate_handler_;
+        CertificateCallback                                       certificate_callback_;
+        ProposalValidator                                         proposal_validator_;
+        std::unordered_map<int, SubjectHandler>                   subject_handlers_;
+        mutable std::shared_mutex                                 subject_handlers_mutex_;
+        Signer                                                    signer_;
+        std::string                                               account_address_;
+        std::unordered_map<std::string, ProposalState>            proposals_;
+        std::unordered_map<std::string, SlotState>                slot_states_;
+        std::unordered_map<std::string, Proposal>                 pending_proposals_;
+        std::unordered_map<std::string, std::vector<std::string>> pending_by_subject_hash_;
+        mutable std::mutex                                        proposals_mutex_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                pubsub_;
 
         std::string                                                         consensus_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
-        std::chrono::milliseconds                                           timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
+        std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
     };
 }

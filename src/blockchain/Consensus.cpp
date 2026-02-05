@@ -102,11 +102,6 @@ namespace sgns::blockchain
         return outcome::success();
     }
 
-    void ConsensusManager::SetProposalHandler( ProposalHandler handler )
-    {
-        proposal_handler_ = std::move( handler );
-    }
-
     void ConsensusManager::SetVoteHandler( VoteHandler handler )
     {
         vote_handler_ = std::move( handler );
@@ -122,11 +117,31 @@ namespace sgns::blockchain
         certificate_handler_ = std::move( handler );
     }
 
+    void ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->warn( "{}: ignored empty handler type={}", __func__, static_cast<int>( type ) );
+            return;
+        }
+        std::unique_lock lock( subject_handlers_mutex_ );
+        subject_handlers_[static_cast<int>( type )] = std::move( handler );
+    }
+
+    void ConsensusManager::UnregisterSubjectHandler( SubjectType type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing Subject handler with type={}",
+                                         __func__,
+                                         static_cast<int>( type ) );
+        std::unique_lock lock( subject_handlers_mutex_ );
+        subject_handlers_.erase( static_cast<int>( type ) );
+    }
+
     void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
     {
         if ( window.count() <= 0 )
         {
-            ConsensusManagerLogger()->warn( "{}: ConfigureTimestampWindow using default window", __func__ );
+            ConsensusManagerLogger()->warn( "{}: using default window", __func__ );
             timestamp_window_ = DEFAULT_TIMESTAMP_WINDOW;
             return;
         }
@@ -145,6 +160,123 @@ namespace sgns::blockchain
         const auto window_ms = timestamp_window_.count();
         const auto ts_ms     = static_cast<std::int64_t>( timestamp_ms );
         return ( ts_ms >= now_ms - window_ms ) && ( ts_ms <= now_ms + window_ms );
+    }
+
+    outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject ) const
+    {
+        if ( subject.type() == SubjectType::SUBJECT_NONCE )
+        {
+            if ( !subject.has_nonce() || subject.nonce().tx_hash().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return subject.nonce().tx_hash();
+        }
+        if ( subject.type() == SubjectType::SUBJECT_TASK_RESULT )
+        {
+            if ( !subject.has_task_result() || subject.task_result().task_result_hash().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return subject.task_result().task_result_hash();
+        }
+        return outcome::failure( std::errc::invalid_argument );
+    }
+
+    void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal )
+    {
+        const auto slot_key    = GetSlotKey( proposal );
+        bool       should_vote = false;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+            {
+                ProposalState state;
+                state.proposal = proposal;
+                state.slot_key = slot_key;
+                proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+            }
+
+            auto &slot_state = slot_states_[slot_key];
+            if ( slot_state.best_proposal_id.empty() )
+            {
+                slot_state.best_proposal_id = proposal.proposal_id();
+                if ( proposal.subject().has_nonce() )
+                {
+                    slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
+                }
+            }
+            else
+            {
+                const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
+                if ( IsBetterProposal( proposal, current ) )
+                {
+                    slot_state.best_proposal_id = proposal.proposal_id();
+                    if ( proposal.subject().has_nonce() )
+                    {
+                        slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
+                    }
+                }
+            }
+
+            if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
+            {
+                slot_state.voted = true;
+                should_vote      = true;
+            }
+        }
+
+        if ( should_vote && signer_ && !account_address_.empty() )
+        {
+            auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
+            if ( vote_result.has_value() )
+            {
+                (void)SubmitVote( vote_result.value() );
+                ConsensusManagerLogger()->debug( "{}: HandleProposal self-vote submitted proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id() );
+            }
+            else
+            {
+                ConsensusManagerLogger()->error( "{}: HandleProposal self-vote failed proposal_id={} error={}",
+                                                 __func__,
+                                                 proposal.proposal_id(),
+                                                 vote_result.error().message() );
+            }
+        }
+    }
+
+    void ConsensusManager::AddPendingProposal( const Proposal &proposal, const std::string &subject_hash )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        if ( pending_proposals_.find( proposal.proposal_id() ) != pending_proposals_.end() )
+        {
+            return;
+        }
+        pending_proposals_.emplace( proposal.proposal_id(), proposal );
+        pending_by_subject_hash_[subject_hash].push_back( proposal.proposal_id() );
+    }
+
+    std::vector<ConsensusManager::Proposal> ConsensusManager::TakePendingProposals( const std::string &subject_hash )
+    {
+        std::vector<Proposal> result;
+        std::lock_guard       lock( proposals_mutex_ );
+        auto                  it = pending_by_subject_hash_.find( subject_hash );
+        if ( it == pending_by_subject_hash_.end() )
+        {
+            return result;
+        }
+        for ( const auto &proposal_id : it->second )
+        {
+            auto prop_it = pending_proposals_.find( proposal_id );
+            if ( prop_it != pending_proposals_.end() )
+            {
+                result.push_back( prop_it->second );
+                pending_proposals_.erase( prop_it );
+            }
+        }
+        pending_by_subject_hash_.erase( it );
+        return result;
     }
 
     outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
@@ -643,76 +775,68 @@ namespace sgns::blockchain
             return;
         }
 
-        const auto slot_key    = GetSlotKey( proposal );
-        bool       should_vote = false;
+        SubjectHandler subject_handler;
         {
-            std::lock_guard lock( proposals_mutex_ );
-            if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+            std::shared_lock lock( subject_handlers_mutex_ );
+            auto             handler_it = subject_handlers_.find( static_cast<int>( proposal.subject().type() ) );
+            if ( handler_it == subject_handlers_.end() )
             {
-                ProposalState state;
-                state.proposal = proposal;
-                state.slot_key = slot_key;
-                proposals_.emplace( proposal.proposal_id(), std::move( state ) );
-            }
-
-            auto &slot_state = slot_states_[slot_key];
-            if ( slot_state.best_proposal_id.empty() )
-            {
-                slot_state.best_proposal_id = proposal.proposal_id();
-                if ( proposal.subject().has_nonce() )
-                {
-                    slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
-                }
-            }
-            else
-            {
-                const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
-                if ( IsBetterProposal( proposal, current ) )
-                {
-                    slot_state.best_proposal_id = proposal.proposal_id();
-                    if ( proposal.subject().has_nonce() )
-                    {
-                        slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
-                    }
-                }
-            }
-
-            if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
-            {
-                slot_state.voted = true;
-                should_vote      = true;
-            }
-        }
-
-        if ( should_vote && signer_ && !account_address_.empty() )
-        {
-            auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
-            if ( vote_result.has_value() )
-            {
-                (void)SubmitVote( vote_result.value() );
-                ConsensusManagerLogger()->debug( "{}: HandleProposal self-vote submitted proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject handler missing type={}",
                                                  __func__,
-                                                 proposal.proposal_id() );
+                                                 static_cast<int>( proposal.subject().type() ) );
+                return;
             }
-            else
-            {
-                ConsensusManagerLogger()->error( "{}: HandleProposal self-vote failed proposal_id={} error={}",
-                                                 __func__,
-                                                 proposal.proposal_id(),
-                                                 vote_result.error().message() );
-            }
+            subject_handler = handler_it->second;
         }
 
-        if ( proposal_handler_ )
+        auto subject_result = subject_handler( proposal.subject() );
+        if ( subject_result.has_error() )
         {
-            proposal_handler_( proposal );
-        }
-
-        if ( !registry_ )
-        {
-            ConsensusManagerLogger()->error( "{}: HandleProposal aborted: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject handler error proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
             return;
         }
+
+        if ( subject_result.value() == SubjectCheck::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject check failed proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return;
+        }
+
+        if ( subject_result.value() == SubjectCheck::Pending )
+        {
+            auto subject_hash = GetSubjectHash( proposal.subject() );
+            if ( subject_hash.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject hash missing proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id() );
+                return;
+            }
+            AddPendingProposal( proposal, subject_hash.value() );
+            return;
+        }
+
+        ContinueProposalAfterSubject( proposal );
+    }
+
+    outcome::result<void> ConsensusManager::ResumeProposalHandling( const std::string &subject_hash )
+    {
+        if ( subject_hash.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto to_process = TakePendingProposals( subject_hash );
+
+        for ( const auto &proposal : to_process )
+        {
+            ContinueProposalAfterSubject( proposal );
+        }
+        return outcome::success();
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
