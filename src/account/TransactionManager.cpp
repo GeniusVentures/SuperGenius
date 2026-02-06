@@ -49,14 +49,24 @@ namespace sgns
                                                                                      mutability_window ) );
 
         instance->blockchain_->SetCertificateCallback(
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const ConsensusProposal    &proposal,
-                const ConsensusCertificate &certificate )
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const ConsensusProposal    &proposal,
+                                                                         const ConsensusCertificate &certificate )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
                     strong->OnConsensusCertificate( proposal, certificate );
                 }
+            } );
+        instance->blockchain_->RegisterSubjectHandler(
+            SubjectType::SUBJECT_NONCE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::SubjectCheck>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->HandleNonceConsensusSubject( subject );
+                }
+                return outcome::failure( std::errc::owner_dead );
             } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
@@ -176,9 +186,9 @@ namespace sgns
             auto monitored_networks = GetMonitoredNetworkIDs();
             for ( auto network_id : monitored_networks )
             {
-                std::string blockchain_base = GetBlockChainBase( network_id );
-                const std::string tx_pattern = "^/?" + blockchain_base + "tx/[^/]+";
-                const std::string proof_pattern = "^/?" + blockchain_base + "proof/[^/]+";
+                std::string       blockchain_base = GetBlockChainBase( network_id );
+                const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
+                const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
 
                 globaldb_m->UnregisterNewElementCallback( tx_pattern );
                 globaldb_m->UnregisterDeletedElementCallback( tx_pattern );
@@ -2027,30 +2037,20 @@ namespace sgns
                                      __func__,
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
-                                     tracked.tx->dag_st.nonce(),
+                                     tracked.cached_nonce,
                                      nonce );
 
-                    if ( tracked.tx->dag_st.nonce() == nonce )
+                    if ( tracked.cached_nonce == nonce )
                     {
                         bool valid_tx = true;
-                        if ( !tracked.tx->CheckSignature() )
+                        if ( !CheckTransactionAuthorization( *tracked.tx ) )
                         {
-                            if ( !tracked.tx->CheckDAGSignatureLegacy() )
-                            {
-                                m_logger->error(
-                                    "[{} - full: {}] Could not validate signature of transaction with nonce {}",
-                                    account_m->GetAddress().substr( 0, 8 ),
-                                    full_node_m,
-                                    nonce );
-                                valid_tx = false;
-                            }
-                            else
-                            {
-                                m_logger->debug( "[{} - full: {}] Legacy transaction validated with nonce: {}",
-                                                 account_m->GetAddress().substr( 0, 8 ),
-                                                 full_node_m,
-                                                 nonce );
-                            }
+                            m_logger->error(
+                                "[{} - full: {}] Could not validate signature of transaction with nonce {}",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                nonce );
+                            valid_tx = false;
                         }
                         else
                         {
@@ -2145,12 +2145,27 @@ namespace sgns
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( tracked.tx && ( tracked.tx->dag_st.nonce() == nonce ) && ( tracked.tx->GetSrcAddress() == address ) )
+            if ( tracked.tx && ( tracked.cached_nonce == nonce ) && ( tracked.tx->GetSrcAddress() == address ) )
             {
                 return tracked.tx;
             }
         }
         return nullptr;
+    }
+
+    std::optional<TransactionManager::TrackedTx> TransactionManager::GetTrackedTxByNonceAndAddress(
+        uint64_t           nonce,
+        const std::string &address ) const
+    {
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
+        {
+            if ( tracked.tx && ( tracked.cached_nonce == nonce ) && ( tracked.tx->GetSrcAddress() == address ) )
+            {
+                return tracked;
+            }
+        }
+        return std::nullopt;
     }
 
     TransactionManager::TransactionStatus TransactionManager::GetOutgoingStatusByTxId( const std::string &txId ) const
@@ -2192,7 +2207,7 @@ namespace sgns
             {
                 continue;
             }
-            if ( tracked.tx->dag_st.nonce() != nonce )
+            if ( tracked.cached_nonce != nonce )
             {
                 continue;
             }
@@ -2252,7 +2267,7 @@ namespace sgns
                 }
                 if ( tracked.status == TransactionStatus::VERIFYING )
                 {
-                    verifying_nonces.push_back( tracked.tx->dag_st.nonce() );
+                    verifying_nonces.push_back( tracked.cached_nonce );
                 }
             }
         }
@@ -2299,7 +2314,7 @@ namespace sgns
                         {
                             continue;
                         }
-                        if ( tracked.tx->dag_st.nonce() != nonce )
+                        if ( tracked.cached_nonce != nonce )
                         {
                             continue;
                         }
@@ -2341,21 +2356,14 @@ namespace sgns
             }
             new_tx = maybe_new_tx.value();
 
-            if ( !new_tx->CheckSignature() )
+            if ( !CheckTransactionAuthorization( *new_tx ) )
             {
-                if ( !new_tx->CheckDAGSignatureLegacy() )
-                {
-                    m_logger->error( "[{} - full: {}] Could not validate signature of transaction {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     element.key() );
-                    should_delete = true;
-                    break;
-                }
-                m_logger->debug( "[{} - full: {}] Legacy transaction validated: {}",
+                m_logger->error( "[{} - full: {}] Could not validate signature of transaction {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  element.key() );
+                should_delete = true;
+                break;
             }
             std::shared_ptr<IGeniusTransactions> conflicting_tx;
 
@@ -2670,7 +2678,7 @@ namespace sgns
                         auto topics = it->second.tx->GetTopics();
                         OUTCOME_TRY( DeleteTransaction( transaction_key, topics ) );
                     }
-                    account_m->RollBackPeerConfirmedNonce( it->second.tx->dag_st.nonce(),
+                    account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce,
                                                            it->second.tx->dag_st.source_addr() );
                     if ( it->second.status == TransactionStatus::VERIFYING )
                     {
@@ -3004,6 +3012,283 @@ namespace sgns
     void TransactionManager::OnConsensusCertificate( const ConsensusProposal    &proposal,
                                                      const ConsensusCertificate &certificate )
     {
+    }
+
+    outcome::result<ConsensusManager::SubjectCheck> TransactionManager::HandleNonceConsensusSubject(
+        const ConsensusManager::Subject &subject )
+    {
+        if ( subject.type() != SubjectType::SUBJECT_NONCE )
+        {
+            m_logger->error( "[{} - full: {}] {}: Received unexpected subject type: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             static_cast<int>( subject.type() ) );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        const std::string tx_hash = subject.nonce().tx_hash();
+        const auto        key     = GetTransactionPath( tx_hash );
+
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        auto                                it = tx_processed_m.find( key );
+        if ( it == tx_processed_m.end() )
+        {
+            m_logger->debug( "[{} - full: {}] {}: Transaction not found for hash {}, pending",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return ConsensusManager::SubjectCheck::Pending;
+        }
+
+        auto &tracked = it->second;
+        if ( !tracked.tx )
+        {
+            m_logger->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        if ( tracked.cached_nonce != subject.nonce().nonce() )
+        {
+            m_logger->error( "[{} - full: {}] {}: Nonce mismatch for hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return ConsensusManager::SubjectCheck::Reject;
+        }
+
+        if ( !subject.account_id().empty() && tracked.tx->GetSrcAddress() != subject.account_id() )
+        {
+            m_logger->error( "[{} - full: {}] {}: Account mismatch for hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return ConsensusManager::SubjectCheck::Reject;
+        }
+
+        if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
+        {
+            m_logger->error( "[{} - full: {}] {}: Transaction status invalid for hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return ConsensusManager::SubjectCheck::Reject;
+        }
+
+        auto validate_result = ValidateTransactionForConsensus( tracked.tx );
+
+        return validate_result ? ConsensusManager::SubjectCheck::Approve : ConsensusManager::SubjectCheck::Reject;
+    }
+
+    bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
+                                                                 const std::string      &address ) const
+    {
+        if ( params.first.empty() || params.second.empty() )
+        {
+            return false;
+        }
+
+        if ( !full_node_m && address != account_m->GetAddress() )
+        {
+            return false;
+        }
+
+        if ( !utxo_manager_.VerifyParameters( params, address ) )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        bool ret = false;
+        do
+        {
+            if ( !CheckTransactionWellFormed( *tx ) )
+            {
+                break;
+            }
+            if ( !CheckTransactionAuthorization( *tx ) )
+            {
+                break;
+            }
+            if ( !CheckTransactionTimestamp( *tx ) )
+            {
+                break;
+            }
+            if ( !CheckTransactionReplayProtection( *tx ) )
+            {
+                break;
+            }
+            ret = CheckTransactionTypeRules( tx );
+        } while ( 0 );
+
+        return ret;
+    }
+
+    bool TransactionManager::CheckTransactionWellFormed( const IGeniusTransactions &tx ) const
+    {
+        if ( tx.GetHash().empty() || !tx.CheckHash() )
+        {
+            return false;
+        }
+
+        if ( tx.GetSrcAddress().empty() )
+        {
+            return false;
+        }
+
+        if ( tx.GetTimestamp() == 0 )
+        {
+            return false;
+        }
+
+        if ( transaction_parsers.find( tx.GetType() ) == transaction_parsers.end() )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool TransactionManager::CheckTransactionAuthorization( const IGeniusTransactions &tx ) const
+    {
+        return tx.CheckSignature() || tx.CheckDAGSignatureLegacy();
+    }
+
+    bool TransactionManager::CheckTransactionTimestamp( const IGeniusTransactions &tx ) const
+    {
+        const auto ts = tx.GetTimestamp();
+        if ( ts == 0 )
+        {
+            return false;
+        }
+
+        const auto elapsed = GetElapsedTime( ts );
+        if ( elapsed < 0 && timestamp_tolerance_m.count() > 0 &&
+             ( -elapsed ) > static_cast<int64_t>( timestamp_tolerance_m.count() ) )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool TransactionManager::CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const
+    {
+        auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
+        if ( nonce_result.has_error() )
+        {
+            return false;
+        }
+
+        const auto confirmed_nonce = nonce_result.value();
+        const auto tx_nonce        = tx.dag_st.nonce();
+
+        if ( tx_nonce <= confirmed_nonce )
+        {
+            return false;
+        }
+
+        if ( tx_nonce > confirmed_nonce + nonce_window_m )
+        {
+            return false;
+        }
+
+        if ( tx_nonce > confirmed_nonce + 1 )
+        {
+            for ( uint64_t n = confirmed_nonce + 1; n < tx_nonce; ++n )
+            {
+                auto tracked = GetTrackedTxByNonceAndAddress( n, tx.GetSrcAddress() );
+                if ( !tracked.has_value() )
+                {
+                    return false;
+                }
+                if ( tracked->status == TransactionStatus::FAILED || tracked->status == TransactionStatus::INVALID )
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return false;
+        }
+
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
+            if ( !transfer_tx )
+            {
+                return false;
+            }
+            return ValidateUTXOParametersForConsensus(
+                UTXOTxParameters{ transfer_tx->GetInputInfos(), transfer_tx->GetDstInfos() },
+                transfer_tx->GetSrcAddress() );
+        }
+
+        if ( tx->GetType() == "escrow-hold" )
+        {
+            auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
+            if ( !escrow_tx )
+            {
+                return false;
+            }
+            return ValidateUTXOParametersForConsensus( escrow_tx->GetUTXOParameters(), escrow_tx->GetSrcAddress() );
+        }
+
+        if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+            if ( !escrow_release_tx )
+            {
+                return false;
+            }
+            return ValidateUTXOParametersForConsensus( escrow_release_tx->GetUTXOParameters(),
+                                                       escrow_release_tx->GetSrcAddress() );
+        }
+
+        if ( tx->GetType() == "mint" )
+        {
+            auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+            if ( !mint_tx )
+            {
+                return false;
+            }
+            if ( mint_tx->GetAmount() == 0 )
+            {
+                return false;
+            }
+            return true;
+        }
+
+        return true;
+    }
+
+    void TransactionManager::SetNonceWindow( uint64_t window )
+    {
+        if ( window == 0 )
+        {
+            nonce_window_m = DEFAULT_NONCE_WINDOW;
+            return;
+        }
+        nonce_window_m = window;
     }
 }
 

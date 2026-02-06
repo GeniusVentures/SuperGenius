@@ -199,6 +199,13 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
+        struct TrackedTx
+        {
+            std::shared_ptr<IGeniusTransactions> tx;
+            TransactionStatus                    status;
+            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
+        };
+
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             UTXOManager                             &utxo_manager,
@@ -247,11 +254,11 @@ namespace sgns
         std::shared_ptr<IGeniusTransactions> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
                                                                               const std::string &address ) const;
+        std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
-        void OnConsensusCertificate( const ConsensusProposal    &proposal,
-                                     const ConsensusCertificate &certificate );
+        void OnConsensusCertificate( const ConsensusProposal &proposal, const ConsensusCertificate &certificate );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -282,24 +289,19 @@ namespace sgns
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
-        struct TrackedTx
-        {
-            std::shared_ptr<IGeniusTransactions> tx;
-            TransactionStatus                    status;
-            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
-        };
-
         mutable std::shared_mutex                  tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> tx_processed_m;
         std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
-        std::function<void()>                                                   task_m;
-        std::atomic<bool>                                                       stopped_{ false };
-        std::chrono::milliseconds                                               timestamp_tolerance_m;
-        std::chrono::milliseconds                                               mutability_window_m;
+        std::function<void()>                                       task_m;
+        std::atomic<bool>                                           stopped_{ false };
+        std::chrono::milliseconds                                   timestamp_tolerance_m;
+        std::chrono::milliseconds                                   mutability_window_m;
+        uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
 
-        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
-        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );
+        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
+        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
+        static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -365,6 +367,15 @@ namespace sgns
 
     public:
         outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject( const ConsensusManager::Subject &subject );
+        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionAuthorization( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionTimestamp( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
+        void SetNonceWindow( uint64_t window );
     };
 }
 
