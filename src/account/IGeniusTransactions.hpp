@@ -97,8 +97,8 @@ namespace sgns
         bool CheckHash() const;
 
         std::vector<uint8_t> MakeSignature( GeniusAccount &account );
-        bool                 CheckSignature();
-        bool                 CheckDAGSignatureLegacy();
+        bool                 CheckSignature() const;
+        bool                 CheckDAGSignatureLegacy() const;
 
         SGTransaction::DAGStruct dag_st;
 

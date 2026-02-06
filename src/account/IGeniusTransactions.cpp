@@ -71,24 +71,25 @@ namespace sgns
         return signed_vector;
     }
 
-    bool IGeniusTransactions::CheckSignature()
+    bool IGeniusTransactions::CheckSignature() const
     {
-        auto str_signature = dag_st.signature();
-        dag_st.clear_signature();
-        auto serialized = SerializeByteVector();
-        dag_st.set_signature( str_signature );
+        auto       str_signature = dag_st.signature();
+
+        SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        auto serialized = SerializeByteVector(dag_copy);
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
     }
 
-    bool IGeniusTransactions::CheckDAGSignatureLegacy()
+    bool IGeniusTransactions::CheckDAGSignatureLegacy() const
     {
         auto str_signature = dag_st.signature();
-        dag_st.clear_signature();
-        auto                 size = dag_st.ByteSizeLong();
+                SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        auto                 size = dag_copy.ByteSizeLong();
         std::vector<uint8_t> serialized( size );
-        dag_st.SerializeToArray( serialized.data(), size );
-        dag_st.set_signature( str_signature );
+        dag_copy.SerializeToArray( serialized.data(), size );
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
