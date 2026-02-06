@@ -117,6 +117,8 @@ namespace sgns
 
         outcome::result<void> SubmitProposal( const ConsensusManager::Proposal &proposal );
 
+        outcome::result<void> TryResumeProposal( const std::string &hash );
+
     protected:
         friend class Migration3_5_1To3_6_0;
 

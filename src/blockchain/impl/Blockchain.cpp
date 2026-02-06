@@ -1562,4 +1562,9 @@ namespace sgns
         return consensus_manager_->SubmitProposal( std::move( proposal ) );
     }
 
+    outcome::result<void> Blockchain::TryResumeProposal( const std::string &hash )
+    {
+        return consensus_manager_->ResumeProposalHandling( hash );
+    }
+
 }

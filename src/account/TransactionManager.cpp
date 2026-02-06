@@ -2770,6 +2770,8 @@ namespace sgns
                          key );
         OUTCOME_TRY( ParseTransaction( new_tx ) );
 
+        (void)blockchain_->TryResumeProposal( tx_hash );
+
         auto proposal_it = pending_proposals_.find( tx_hash );
         if ( proposal_it != pending_proposals_.end() )
         {
