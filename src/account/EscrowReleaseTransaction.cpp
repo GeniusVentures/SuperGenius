@@ -44,10 +44,10 @@ namespace sgns
         return instance;
     }
 
-    std::vector<uint8_t> EscrowReleaseTransaction::SerializeByteVector()
+    std::vector<uint8_t> EscrowReleaseTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::EscrowReleaseTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         auto *utxo_proto_params = tx_struct.mutable_utxo_params();
         for ( const auto &[txid_hash_, output_idx_, signature_] : utxo_params_.first )
         {

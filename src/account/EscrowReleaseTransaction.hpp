@@ -56,7 +56,8 @@ namespace sgns
           *
           * @return A vector of bytes representing the serialized transaction.
           */
-        std::vector<uint8_t> SerializeByteVector() override;
+        using IGeniusTransactions::SerializeByteVector;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
           * @brief Gets the UTXO parameters.

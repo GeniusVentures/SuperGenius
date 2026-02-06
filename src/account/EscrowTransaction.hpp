@@ -26,7 +26,8 @@ namespace sgns
 
         ~EscrowTransaction() override = default;
 
-        std::vector<uint8_t> SerializeByteVector() override;
+        using IGeniusTransactions::SerializeByteVector;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
         uint64_t             GetNumChunks() const;
 
         std::string GetTransactionSpecificPath() const override

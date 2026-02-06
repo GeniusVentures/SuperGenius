@@ -55,7 +55,12 @@ namespace sgns
             return dag;
         }
 
-        virtual std::vector<uint8_t> SerializeByteVector() = 0;
+        virtual std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const = 0;
+
+        std::vector<uint8_t> SerializeByteVector() const
+        {
+            return SerializeByteVector( dag_st );
+        }
 
         virtual std::string GetTransactionSpecificPath() const = 0;
 
@@ -89,7 +94,7 @@ namespace sgns
         virtual std::unordered_set<std::string> GetTopics() const;
 
         void FillHash();
-        bool CheckHash();
+        bool CheckHash() const;
 
         std::vector<uint8_t> MakeSignature( GeniusAccount &account );
         bool                 CheckSignature();

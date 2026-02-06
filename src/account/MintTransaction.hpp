@@ -27,7 +27,8 @@ namespace sgns
                                     TokenID                                         token_id,
                                     SGTransaction::DAGStruct                        dag );
 
-        std::vector<uint8_t> SerializeByteVector() override;
+        using IGeniusTransactions::SerializeByteVector;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         uint64_t GetAmount() const;
 

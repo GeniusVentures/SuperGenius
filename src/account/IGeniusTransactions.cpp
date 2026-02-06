@@ -44,17 +44,16 @@ namespace sgns
         dag_st.set_signature( std::move( signature ) );
     }
 
-    bool IGeniusTransactions::CheckHash()
+    bool IGeniusTransactions::CheckHash() const
     {
-        auto signature = dag_st.signature();
-        auto hash      = dag_st.data_hash();
-        dag_st.clear_signature();
-        dag_st.clear_data_hash();
+        const auto hash = dag_st.data_hash();
+
+        SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        dag_copy.clear_data_hash();
 
         auto hasher_         = std::make_shared<crypto::HasherImpl>();
-        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector() );
-        dag_st.set_data_hash( hash );
-        dag_st.set_signature( std::move( signature ) );
+        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector( dag_copy ) );
 
         return hash == calculated_hash.toReadableString();
     }
