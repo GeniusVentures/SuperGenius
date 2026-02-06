@@ -158,6 +158,7 @@ namespace sgns
                                                                 const std::string                 &validator_id ) const;
 
         void OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        bool CheckSubject( const Subject &subject );
 
         std::shared_ptr<ValidatorRegistry>                        registry_;
         VoteHandler                                               vote_handler_;

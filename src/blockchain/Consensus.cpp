@@ -708,28 +708,27 @@ namespace sgns
 
     void ConsensusManager::HandleProposal( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: HandleProposal called proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
 
         auto signing_bytes = ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: signing bytes error={}",
+            ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
                                              __func__,
                                              signing_bytes.error().message() );
             return;
         }
         if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
         {
-            ConsensusManagerLogger()->error(
-                "{}: HandleProposal rejected: signature verification failed proposer_id={}",
-                __func__,
-                proposal.proposer_id() );
+            ConsensusManagerLogger()->error( "{}: rejected: signature verification failed proposer_id={}",
+                                             __func__,
+                                             proposal.proposer_id() );
             return;
         }
 
         if ( !IsTimestampSane( proposal.timestamp() ) )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: timestamp out of bounds proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: timestamp out of bounds proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
@@ -737,40 +736,45 @@ namespace sgns
 
         if ( !registry_ )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: rejected: registry is null", __func__ );
             return;
         }
 
         const auto registry_cid = registry_->GetRegistryCid();
         if ( proposal.registry_cid().empty() || registry_cid.empty() )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: registry cid missing proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: registry cid missing proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
         }
         if ( proposal.registry_cid() != registry_cid )
         {
-            ConsensusManagerLogger()->error(
-                "{}: HandleProposal rejected: registry cid mismatch proposal={} registry={}",
-                __func__,
-                proposal.registry_cid(),
-                registry_cid );
+            ConsensusManagerLogger()->error( "{}: rejected: registry cid mismatch proposal={} registry={}",
+                                             __func__,
+                                             proposal.registry_cid(),
+                                             registry_cid );
             return;
         }
         if ( proposal.registry_epoch() != registry_->GetRegistryEpoch() )
         {
-            ConsensusManagerLogger()->error(
-                "{}: HandleProposal rejected: registry epoch mismatch proposal={} registry={}",
-                __func__,
-                proposal.registry_epoch(),
-                registry_->GetRegistryEpoch() );
+            ConsensusManagerLogger()->error( "{}: rejected: registry epoch mismatch proposal={} registry={}",
+                                             __func__,
+                                             proposal.registry_epoch(),
+                                             registry_->GetRegistryEpoch() );
+            return;
+        }
+        if ( !CheckSubject( proposal.subject() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
             return;
         }
 
         if ( proposal_validator_ && !proposal_validator_( proposal ) )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: proposal validator failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: proposal validator failed proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
@@ -782,7 +786,7 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( static_cast<int>( proposal.subject().type() ) );
             if ( handler_it == subject_handlers_.end() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject handler missing type={}",
+                ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type={}",
                                                  __func__,
                                                  static_cast<int>( proposal.subject().type() ) );
                 return;
@@ -793,7 +797,7 @@ namespace sgns
         auto subject_result = subject_handler( proposal.subject() );
         if ( subject_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject handler error proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
@@ -801,7 +805,7 @@ namespace sgns
 
         if ( subject_result.value() == SubjectCheck::Reject )
         {
-            ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject check failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
@@ -812,7 +816,7 @@ namespace sgns
             auto subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleProposal rejected: subject hash missing proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
                                                  __func__,
                                                  proposal.proposal_id() );
                 return;
@@ -1367,5 +1371,64 @@ namespace sgns
             ConsensusManagerLogger()->debug( "{}: OnConsensusMessage decoded certificate", __func__ );
             HandleCertificate( decoded.certificate() );
         }
+    }
+
+    bool ConsensusManager::CheckSubject( const Subject &subject )
+    {
+        ConsensusManagerLogger()->trace( "{}: subject_type={}", __func__, static_cast<int>( subject.type() ) );
+
+        if ( subject.account_id().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: subject account_id is empty", __func__ );
+            return false;
+        }
+
+        if ( subject.subject_id().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: subject subject_id is empty", __func__ );
+            return false;
+        }
+
+        if ( subject.type() != SubjectType::SUBJECT_NONCE && subject.type() != SubjectType::SUBJECT_TASK_RESULT )
+        {
+            ConsensusManagerLogger()->error( "{}: Invalid Subject type {}",
+                                             __func__,
+                                             static_cast<int>( subject.type() ) );
+            return false;
+        }
+        if ( subject.type() == SubjectType::SUBJECT_NONCE )
+        {
+            if ( !subject.has_nonce() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject missing nonce payload", __func__ );
+                return false;
+            }
+            if ( subject.nonce().tx_hash().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject nonce tx_hash is empty", __func__ );
+                return false;
+            }
+        }
+
+        if ( subject.type() == SubjectType::SUBJECT_TASK_RESULT )
+        {
+            if ( !subject.has_task_result() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject missing task_result payload", __func__ );
+                return false;
+            }
+            if ( subject.task_result().escrow_path().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_result escrow_path is empty", __func__ );
+                return false;
+            }
+            if ( subject.task_result().task_result_hash().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_result task_result_hash is empty", __func__ );
+                return false;
+            }
+        }
+
+        return true;
     }
 }
