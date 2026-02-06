@@ -501,7 +501,7 @@ jobs:
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: cmake --build . --config ${{matrix.build-type}} -j8
+        run: cmake --build . --config ${{matrix.build-type}} -j
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
