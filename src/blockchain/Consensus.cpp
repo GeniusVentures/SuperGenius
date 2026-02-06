@@ -764,17 +764,17 @@ namespace sgns
                                              registry_->GetRegistryEpoch() );
             return;
         }
-        if ( !CheckSubject( proposal.subject() ) )
+        if ( proposal_validator_ && !proposal_validator_( proposal ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: proposal validator failed proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
         }
 
-        if ( proposal_validator_ && !proposal_validator_( proposal ) )
+        if ( !CheckSubject( proposal.subject() ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: proposal validator failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
             return;
@@ -839,6 +839,52 @@ namespace sgns
 
         for ( const auto &proposal : to_process )
         {
+
+            SubjectHandler subject_handler;
+            {
+                std::shared_lock lock( subject_handlers_mutex_ );
+                auto             handler_it = subject_handlers_.find( static_cast<int>( proposal.subject().type() ) );
+                if ( handler_it == subject_handlers_.end() )
+                {
+                    ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type={}",
+                                                     __func__,
+                                                     static_cast<int>( proposal.subject().type() ) );
+                    continue;
+                }
+                subject_handler = handler_it->second;
+            }
+
+            auto subject_result = subject_handler( proposal.subject() );
+            if ( subject_result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id() );
+                continue;
+            }
+
+            if ( subject_result.value() == SubjectCheck::Reject )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id() );
+                continue;
+            }
+
+            if ( subject_result.value() == SubjectCheck::Pending )
+            {
+                auto subject_hash_result = GetSubjectHash( proposal.subject() );
+                if ( subject_hash_result.has_error() )
+                {
+                    ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
+                                                     __func__,
+                                                     proposal.proposal_id() );
+                    continue;
+                }
+                AddPendingProposal( proposal, subject_hash_result.value() );
+                continue;
+            }
+
             ContinueProposalAfterSubject( proposal );
         }
         return outcome::success();
