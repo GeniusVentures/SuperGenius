@@ -3091,86 +3091,211 @@ namespace sgns
     bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
                                                                  const std::string      &address ) const
     {
+        m_logger->debug( "[{} - full: {}] {}: Validating UTXO params for address {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         address );
         if ( params.first.empty() || params.second.empty() )
         {
+            m_logger->error( "[{} - full: {}] {}: Empty inputs or outputs",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__ );
             return false;
         }
 
         if ( !full_node_m && address != account_m->GetAddress() )
         {
+            m_logger->error( "[{} - full: {}] {}: Non-full node cannot verify address {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             address );
             return false;
         }
 
         if ( !utxo_manager_.VerifyParameters( params, address ) )
         {
+            m_logger->error( "[{} - full: {}] {}: VerifyParameters failed for address {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             address );
             return false;
         }
 
+        m_logger->debug( "[{} - full: {}] {}: UTXO params valid for address {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         address );
         return true;
     }
 
     bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
-        bool ret = false;
-        do
+        m_logger->debug( "[{} - full: {}] {}: Validating transaction",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__ );
+        if ( !tx )
         {
-            if ( !CheckTransactionWellFormed( *tx ) )
-            {
-                break;
-            }
-            if ( !CheckTransactionAuthorization( *tx ) )
-            {
-                break;
-            }
-            if ( !CheckTransactionTimestamp( *tx ) )
-            {
-                break;
-            }
-            if ( !CheckTransactionReplayProtection( *tx ) )
-            {
-                break;
-            }
-            ret = CheckTransactionTypeRules( tx );
-        } while ( 0 );
+            m_logger->error( "[{} - full: {}] {}: Null transaction",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__ );
+            return false;
+        }
 
-        return ret;
+        if ( !CheckTransactionWellFormed( *tx ) )
+        {
+            m_logger->error( "[{} - full: {}] {}: Well-formed check failed tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx->GetHash() );
+            return false;
+        }
+        if ( !CheckTransactionAuthorization( *tx ) )
+        {
+            m_logger->error( "[{} - full: {}] {}: Authorization check failed tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx->GetHash() );
+            return false;
+        }
+        if ( !CheckTransactionTimestamp( *tx ) )
+        {
+            m_logger->error( "[{} - full: {}] {}: Timestamp check failed tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx->GetHash() );
+            return false;
+        }
+        if ( !CheckTransactionReplayProtection( *tx ) )
+        {
+            m_logger->error( "[{} - full: {}] {}: Replay protection failed tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx->GetHash() );
+            return false;
+        }
+        if ( !CheckTransactionTypeRules( tx ) )
+        {
+            m_logger->error( "[{} - full: {}] {}: Type rules failed tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx->GetHash() );
+            return false;
+        }
+
+        m_logger->debug( "[{} - full: {}] {}: Transaction valid tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx->GetHash() );
+        return true;
     }
 
     bool TransactionManager::CheckTransactionWellFormed( const IGeniusTransactions &tx ) const
     {
+        m_logger->debug( "[{} - full: {}] {}: Checking well-formed tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         if ( tx.GetHash().empty() || !tx.CheckHash() )
         {
+            m_logger->error( "[{} - full: {}] {}: Hash invalid tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
             return false;
         }
 
         if ( tx.GetSrcAddress().empty() )
         {
+            m_logger->error( "[{} - full: {}] {}: Empty source address tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
             return false;
         }
 
         if ( tx.GetTimestamp() == 0 )
         {
+            m_logger->error( "[{} - full: {}] {}: Missing timestamp tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
             return false;
         }
 
         if ( transaction_parsers.find( tx.GetType() ) == transaction_parsers.end() )
         {
+            m_logger->error( "[{} - full: {}] {}: Unknown tx type {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetType() );
             return false;
         }
 
+        m_logger->debug( "[{} - full: {}] {}: Well-formed ok tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionAuthorization( const IGeniusTransactions &tx ) const
     {
-        return tx.CheckSignature() || tx.CheckDAGSignatureLegacy();
+        m_logger->debug( "[{} - full: {}] {}: Checking authorization tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
+        if ( tx.CheckSignature() || tx.CheckDAGSignatureLegacy() )
+        {
+            m_logger->debug( "[{} - full: {}] {}: Authorization ok tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
+            return true;
+        }
+        m_logger->error( "[{} - full: {}] {}: Authorization failed tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
+        return false;
     }
 
     bool TransactionManager::CheckTransactionTimestamp( const IGeniusTransactions &tx ) const
     {
+        m_logger->debug( "[{} - full: {}] {}: Checking timestamp tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         const auto ts = tx.GetTimestamp();
         if ( ts == 0 )
         {
+            m_logger->error( "[{} - full: {}] {}: Missing timestamp tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
             return false;
         }
 
@@ -3178,17 +3303,37 @@ namespace sgns
         if ( elapsed < 0 && timestamp_tolerance_m.count() > 0 &&
              ( -elapsed ) > static_cast<int64_t>( timestamp_tolerance_m.count() ) )
         {
+            m_logger->error( "[{} - full: {}] {}: Timestamp out of tolerance tx={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash() );
             return false;
         }
 
+        m_logger->debug( "[{} - full: {}] {}: Timestamp ok tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const
     {
+        m_logger->debug( "[{} - full: {}] {}: Checking replay protection tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
         if ( nonce_result.has_error() )
         {
+            m_logger->error( "[{} - full: {}] {}: Missing peer nonce for address {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetSrcAddress() );
             return false;
         }
 
@@ -3197,11 +3342,26 @@ namespace sgns
 
         if ( tx_nonce <= confirmed_nonce )
         {
+            m_logger->error( "[{} - full: {}] {}: Nonce too low tx={} nonce={} confirmed={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce );
             return false;
         }
 
         if ( tx_nonce > confirmed_nonce + nonce_window_m )
         {
+            m_logger->error( "[{} - full: {}] {}: Nonce too high tx={} nonce={} confirmed={} window={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce,
+                             nonce_window_m );
             return false;
         }
 
@@ -3212,22 +3372,47 @@ namespace sgns
                 auto tracked = GetTrackedTxByNonceAndAddress( n, tx.GetSrcAddress() );
                 if ( !tracked.has_value() )
                 {
+                    m_logger->error( "[{} - full: {}] {}: Missing intermediate nonce {} for address {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return false;
                 }
                 if ( tracked->status == TransactionStatus::FAILED || tracked->status == TransactionStatus::INVALID )
                 {
+                    m_logger->error( "[{} - full: {}] {}: Intermediate nonce {} invalid for address {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return false;
                 }
             }
         }
 
+        m_logger->debug( "[{} - full: {}] {}: Replay protection ok tx={}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
+        m_logger->debug( "[{} - full: {}] {}: Checking type rules",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__ );
         if ( !tx )
         {
+            m_logger->error( "[{} - full: {}] {}: Null transaction",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__ );
             return false;
         }
 
@@ -3236,6 +3421,10 @@ namespace sgns
             auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
             if ( !transfer_tx )
             {
+                m_logger->error( "[{} - full: {}] {}: Failed to cast transfer tx",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
                 return false;
             }
             return ValidateUTXOParametersForConsensus(
@@ -3248,6 +3437,10 @@ namespace sgns
             auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
             if ( !escrow_tx )
             {
+                m_logger->error( "[{} - full: {}] {}: Failed to cast escrow-hold tx",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
                 return false;
             }
             return ValidateUTXOParametersForConsensus( escrow_tx->GetUTXOParameters(), escrow_tx->GetSrcAddress() );
@@ -3258,6 +3451,10 @@ namespace sgns
             auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
             if ( !escrow_release_tx )
             {
+                m_logger->error( "[{} - full: {}] {}: Failed to cast escrow-release tx",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
                 return false;
             }
             return ValidateUTXOParametersForConsensus( escrow_release_tx->GetUTXOParameters(),
@@ -3269,10 +3466,18 @@ namespace sgns
             auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
             if ( !mint_tx )
             {
+                m_logger->error( "[{} - full: {}] {}: Failed to cast mint tx",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
                 return false;
             }
             if ( mint_tx->GetAmount() == 0 )
             {
+                m_logger->error( "[{} - full: {}] {}: Mint amount is zero",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
                 return false;
             }
             return true;
@@ -3285,9 +3490,19 @@ namespace sgns
     {
         if ( window == 0 )
         {
+            m_logger->warn( "[{} - full: {}] {}: Nonce window 0, using default {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            DEFAULT_NONCE_WINDOW );
             nonce_window_m = DEFAULT_NONCE_WINDOW;
             return;
         }
+        m_logger->info( "[{} - full: {}] {}: Setting nonce window to {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        window );
         nonce_window_m = window;
     }
 }
