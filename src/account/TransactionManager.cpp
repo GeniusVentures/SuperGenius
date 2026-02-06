@@ -809,7 +809,7 @@ namespace sgns
                              blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                    transaction->dag_st.nonce(),
                                                                    transaction->GetHash() ) );
-                pending_proposals_[transaction->GetHash()] = proposal;
+                OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
             }
             else
             {
@@ -2771,25 +2771,6 @@ namespace sgns
         OUTCOME_TRY( ParseTransaction( new_tx ) );
 
         (void)blockchain_->TryResumeProposal( tx_hash );
-
-        auto proposal_it = pending_proposals_.find( tx_hash );
-        if ( proposal_it != pending_proposals_.end() )
-        {
-            m_logger->debug( "[{} - full: {}] Found pending proposal for transaction {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             key );
-            auto submit_result = blockchain_->SubmitProposal( proposal_it->second );
-            if ( submit_result.has_error() )
-            {
-                m_logger->error( "[{} - full: {}] Failed to submit Proposal for tx {}: {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 tx_hash,
-                                 submit_result.error().message() );
-                return outcome::failure( submit_result.error() );
-            }
-        }
 
         const auto nonce = new_tx->dag_st.nonce();
 
