@@ -252,13 +252,13 @@ namespace sgns
             if ( vote_result.has_value() )
             {
                 (void)SubmitVote( vote_result.value() );
-                ConsensusManagerLogger()->debug( "{}: HandleProposal self-vote submitted proposal_id={}",
+                ConsensusManagerLogger()->debug( "{}: self-vote submitted proposal_id={}",
                                                  __func__,
                                                  proposal.proposal_id() );
             }
             else
             {
-                ConsensusManagerLogger()->error( "{}: HandleProposal self-vote failed proposal_id={} error={}",
+                ConsensusManagerLogger()->error( "{}: self-vote failed proposal_id={} error={}",
                                                  __func__,
                                                  proposal.proposal_id(),
                                                  vote_result.error().message() );
@@ -313,16 +313,16 @@ namespace sgns
                                                                                   uint64_t           registry_epoch,
                                                                                   Signer             sign )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateProposal called for proposer_id={}", __func__, proposer_id );
+        ConsensusManagerLogger()->trace( "{}: called for proposer_id={}", __func__, proposer_id );
         if ( !sign )
         {
-            ConsensusManagerLogger()->error( "{}: CreateProposal failed: signer is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
         if ( !ValidateSubject( subject ) )
         {
-            ConsensusManagerLogger()->error( "{}: CreateProposal failed: subject validation failed", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: subject validation failed", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -340,7 +340,7 @@ namespace sgns
             auto subject_id_result = ComputeSubjectId( proposal.subject() );
             if ( subject_id_result.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: CreateProposal failed: subject id computation error={}",
+                ConsensusManagerLogger()->error( "{}: failed: subject id computation error={}",
                                                  __func__,
                                                  subject_id_result.error().message() );
                 return outcome::failure( subject_id_result.error() );
@@ -352,7 +352,7 @@ namespace sgns
         auto signing_bytes = ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateProposal failed: signing bytes error={}",
+            ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
                                              __func__,
                                              signing_bytes.error().message() );
             return outcome::failure( signing_bytes.error() );
@@ -360,7 +360,7 @@ namespace sgns
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         proposal.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: CreateProposal success proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
         return proposal;
@@ -371,14 +371,14 @@ namespace sgns
                                                                           bool               approve,
                                                                           Signer             sign )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateVote called proposal_id={} voter_id={} approve={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={} approve={}",
                                          __func__,
                                          proposal_id,
                                          voter_id,
                                          approve );
         if ( !sign )
         {
-            ConsensusManagerLogger()->error( "{}: CreateVote failed: signer is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -393,7 +393,7 @@ namespace sgns
         auto signing_bytes = VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateVote failed: signing bytes error={}",
+            ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
                                              __func__,
                                              signing_bytes.error().message() );
             return outcome::failure( signing_bytes.error() );
@@ -402,7 +402,7 @@ namespace sgns
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         vote.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: CreateVote success proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={} voter_id={}",
                                          __func__,
                                          proposal_id,
                                          voter_id );
@@ -414,14 +414,14 @@ namespace sgns
                                                                                       const std::vector<Vote> &votes,
                                                                                       Signer                   sign )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateVoteBundle called proposal_id={} aggregator_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} aggregator_id={} votes={}",
                                          __func__,
                                          proposal_id,
                                          aggregator_id,
                                          votes.size() );
         if ( !sign )
         {
-            ConsensusManagerLogger()->error( "{}: CreateVoteBundle failed: signer is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -439,7 +439,7 @@ namespace sgns
         auto signing_bytes = VoteBundleSigningBytes( bundle );
         if ( signing_bytes.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateVoteBundle failed: signing bytes error={}",
+            ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
                                              __func__,
                                              signing_bytes.error().message() );
             return outcome::failure( signing_bytes.error() );
@@ -448,7 +448,7 @@ namespace sgns
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         bundle.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: CreateVoteBundle success proposal_id={} votes={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={} votes={}",
                                          __func__,
                                          proposal_id,
                                          votes.size() );
@@ -458,14 +458,14 @@ namespace sgns
     outcome::result<ConsensusManager::Certificate> ConsensusManager::CreateCertificate( const Proposal &proposal,
                                                                                         const std::vector<Vote> &votes )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateCertificate called proposal_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
                                          proposal.proposal_id(),
                                          votes.size() );
         auto tally_result = TallyVotes( proposal, votes );
         if ( tally_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateCertificate failed: tally error={}",
+            ConsensusManagerLogger()->error( "{}: failed: tally error={}",
                                              __func__,
                                              tally_result.error().message() );
             return outcome::failure( tally_result.error() );
@@ -487,7 +487,7 @@ namespace sgns
         }
         *cert.mutable_proposal() = proposal;
 
-        ConsensusManagerLogger()->debug( "{}: CreateCertificate success proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
         return cert;
@@ -592,7 +592,7 @@ namespace sgns
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::ProposalSigningBytes( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: ProposalSigningBytes called proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
         Proposal copy = proposal;
@@ -600,7 +600,7 @@ namespace sgns
         std::string serialized;
         if ( !copy.SerializeToString( &serialized ) )
         {
-            ConsensusManagerLogger()->error( "{}: ProposalSigningBytes failed: serialization error", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: serialization error", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
@@ -608,7 +608,7 @@ namespace sgns
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteSigningBytes( const Vote &vote )
     {
-        ConsensusManagerLogger()->trace( "{}: VoteSigningBytes called voter_id={} proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called voter_id={} proposal_id={}",
                                          __func__,
                                          vote.voter_id(),
                                          vote.proposal_id() );
@@ -617,7 +617,7 @@ namespace sgns
         std::string serialized;
         if ( !copy.SerializeToString( &serialized ) )
         {
-            ConsensusManagerLogger()->error( "{}: VoteSigningBytes failed: serialization error", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: serialization error", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
@@ -625,7 +625,7 @@ namespace sgns
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteBundleSigningBytes( const VoteBundle &bundle )
     {
-        ConsensusManagerLogger()->trace( "{}: VoteBundleSigningBytes called proposal_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
                                          bundle.proposal_id(),
                                          bundle.votes_size() );
@@ -634,7 +634,7 @@ namespace sgns
         std::string serialized;
         if ( !copy.SerializeToString( &serialized ) )
         {
-            ConsensusManagerLogger()->error( "{}: VoteBundleSigningBytes failed: serialization error", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: serialization error", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
@@ -642,7 +642,7 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitProposal( const Proposal &proposal, bool self_vote )
     {
-        ConsensusManagerLogger()->trace( "{}: SubmitProposal called proposal_id={} self_vote={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} self_vote={}",
                                          __func__,
                                          proposal.proposal_id(),
                                          self_vote );
@@ -664,12 +664,12 @@ namespace sgns
         auto publish_result         = Publish( message );
         if ( publish_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: SubmitProposal failed: publish error={}",
+            ConsensusManagerLogger()->error( "{}: failed: publish error={}",
                                              __func__,
                                              publish_result.error().message() );
             return publish_result;
         }
-        ConsensusManagerLogger()->debug( "{}: SubmitProposal success proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
 
@@ -683,7 +683,7 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitVote( const Vote &vote )
     {
-        ConsensusManagerLogger()->trace( "{}: SubmitVote called proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={}",
                                          __func__,
                                          vote.proposal_id(),
                                          vote.voter_id() );
@@ -692,12 +692,12 @@ namespace sgns
         auto result             = Publish( message );
         if ( result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: SubmitVote failed: publish error={}",
+            ConsensusManagerLogger()->error( "{}: failed: publish error={}",
                                              __func__,
                                              result.error().message() );
             return result;
         }
-        ConsensusManagerLogger()->debug( "{}: SubmitVote success proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={} voter_id={}",
                                          __func__,
                                          vote.proposal_id(),
                                          vote.voter_id() );
@@ -706,7 +706,7 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitCertificate( const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: SubmitCertificate called proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}",
                                          __func__,
                                          certificate.proposal_id() );
         ConsensusMessage message;
@@ -714,12 +714,12 @@ namespace sgns
         auto result                    = Publish( message );
         if ( result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: SubmitCertificate failed: publish error={}",
+            ConsensusManagerLogger()->error( "{}: failed: publish error={}",
                                              __func__,
                                              result.error().message() );
             return result;
         }
-        ConsensusManagerLogger()->debug( "{}: SubmitCertificate success proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}",
                                          __func__,
                                          certificate.proposal_id() );
         return result;
@@ -1060,7 +1060,7 @@ namespace sgns
 
     void ConsensusManager::HandleVoteBundle( const VoteBundle &bundle )
     {
-        ConsensusManagerLogger()->trace( "{}: HandleVoteBundle called proposal_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
                                          bundle.proposal_id(),
                                          bundle.votes_size() );
@@ -1070,14 +1070,14 @@ namespace sgns
         }
         for ( const auto &vote : bundle.votes() )
         {
-            ConsensusManagerLogger()->trace( "{}: HandleVoteBundle processing voter_id={}", __func__, vote.voter_id() );
+            ConsensusManagerLogger()->trace( "{}: processing voter_id={}", __func__, vote.voter_id() );
             HandleVote( vote );
         }
     }
 
     void ConsensusManager::HandleCertificate( const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: HandleCertificate called proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}",
                                          __func__,
                                          certificate.proposal_id() );
         if ( certificate_handler_ )
@@ -1087,7 +1087,7 @@ namespace sgns
 
         if ( !registry_ )
         {
-            ConsensusManagerLogger()->error( "{}: HandleCertificate aborted: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: aborted: registry is null", __func__ );
             return;
         }
 
@@ -1101,7 +1101,7 @@ namespace sgns
             if ( proposal.proposal_id() != certificate.proposal_id() )
             {
                 ConsensusManagerLogger()->error(
-                    "{}: HandleCertificate rejected: proposal_id mismatch cert={} proposal={}",
+                    "{}: rejected: proposal_id mismatch cert={} proposal={}",
                     __func__,
                     certificate.proposal_id(),
                     proposal.proposal_id() );
@@ -1111,7 +1111,7 @@ namespace sgns
             if ( proposal.registry_cid() != certificate.registry_cid() ||
                  proposal.registry_epoch() != certificate.registry_epoch() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate rejected: registry mismatch proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
                                                  __func__,
                                                  certificate.proposal_id() );
                 return;
@@ -1119,7 +1119,7 @@ namespace sgns
 
             if ( !ValidateSubject( proposal.subject() ) )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate rejected: invalid subject proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
                                                  __func__,
                                                  proposal.proposal_id() );
                 return;
@@ -1128,7 +1128,7 @@ namespace sgns
             auto signing_bytes = ProposalSigningBytes( proposal );
             if ( signing_bytes.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate rejected: signing bytes error={}",
+                ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
                                                  __func__,
                                                  signing_bytes.error().message() );
                 return;
@@ -1138,7 +1138,7 @@ namespace sgns
                                                   signing_bytes.value() ) )
             {
                 ConsensusManagerLogger()->error(
-                    "{}: HandleCertificate rejected: signature verification failed proposer_id={}",
+                    "{}: rejected: signature verification failed proposer_id={}",
                     __func__,
                     proposal.proposer_id() );
                 return;
@@ -1147,13 +1147,13 @@ namespace sgns
             const auto computed_id = CreateProposalId( proposal );
             if ( computed_id.empty() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate rejected: computed_id empty", __func__ );
+                ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
                 return;
             }
             if ( computed_id != certificate.proposal_id() )
             {
                 ConsensusManagerLogger()->error(
-                    "{}: HandleCertificate rejected: computed_id mismatch cert={} computed={}",
+                    "{}: rejected: computed_id mismatch cert={} computed={}",
                     __func__,
                     certificate.proposal_id(),
                     computed_id );
@@ -1170,7 +1170,7 @@ namespace sgns
                 if ( it->second.certificate.has_value() )
                 {
                     ConsensusManagerLogger()->debug(
-                        "{}: HandleCertificate skipped: already have certificate proposal_id={}",
+                        "{}: skipped: already have certificate proposal_id={}",
                         __func__,
                         certificate.proposal_id() );
                     return;
@@ -1199,7 +1199,7 @@ namespace sgns
             }
             else
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate aborted: missing proposal proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: aborted: missing proposal proposal_id={}",
                                                  __func__,
                                                  certificate.proposal_id() );
                 return;
@@ -1208,7 +1208,7 @@ namespace sgns
             auto slot_it = slot_states_.find( state.slot_key );
             if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate rejected: not best proposal proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: not best proposal proposal_id={}",
                                                  __func__,
                                                  certificate.proposal_id() );
                 return;
@@ -1219,7 +1219,7 @@ namespace sgns
         votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
         for ( const auto &vote : certificate.votes() )
         {
-            ConsensusManagerLogger()->trace( "{}: HandleCertificate processing vote voter_id={}",
+            ConsensusManagerLogger()->trace( "{}: processing vote voter_id={}",
                                              __func__,
                                              vote.voter_id() );
             votes.push_back( vote );
@@ -1230,7 +1230,7 @@ namespace sgns
         {
             if ( tally_result.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleCertificate aborted: tally error={}",
+                ConsensusManagerLogger()->error( "{}: aborted: tally error={}",
                                                  __func__,
                                                  tally_result.error().message() );
             }
@@ -1247,14 +1247,14 @@ namespace sgns
         }
 
         NotifyCertificate( proposal, certificate );
-        ConsensusManagerLogger()->debug( "{}: HandleCertificate success proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}",
                                          __func__,
                                          certificate.proposal_id() );
     }
 
     void ConsensusManager::NotifyCertificate( const Proposal &proposal, const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: NotifyCertificate called proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
         if ( certificate_callback_ )
@@ -1265,7 +1265,7 @@ namespace sgns
 
     std::string ConsensusManager::GetSlotKey( const Proposal &proposal ) const
     {
-        ConsensusManagerLogger()->trace( "{}: GetSlotKey called proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
         if ( proposal.subject().type() == SubjectType::SUBJECT_NONCE && proposal.subject().has_nonce() )
         {
             return proposal.subject().account_id() + ":" + std::to_string( proposal.subject().nonce().nonce() );
@@ -1279,7 +1279,7 @@ namespace sgns
 
     bool ConsensusManager::IsBetterProposal( const Proposal &candidate, const Proposal &current ) const
     {
-        ConsensusManagerLogger()->trace( "{}: IsBetterProposal called candidate={} current={}",
+        ConsensusManagerLogger()->trace( "{}: called candidate={} current={}",
                                          __func__,
                                          candidate.proposal_id(),
                                          current.proposal_id() );
@@ -1306,7 +1306,7 @@ namespace sgns
 
     outcome::result<std::string> ConsensusManager::ComputeSubjectId( const Subject &subject )
     {
-        ConsensusManagerLogger()->trace( "{}: ComputeSubjectId called subject_type={}",
+        ConsensusManagerLogger()->trace( "{}: called subject_type={}",
                                          __func__,
                                          static_cast<int>( subject.type() ) );
         Subject copy = subject;
@@ -1314,14 +1314,14 @@ namespace sgns
         std::string serialized;
         if ( !copy.SerializeToString( &serialized ) )
         {
-            ConsensusManagerLogger()->error( "{}: ComputeSubjectId failed: serialization error", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: serialization error", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
         sgns::crypto::HasherImpl hasher;
         auto                     hash = hasher.sha2_256(
             gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( serialized.data() ), serialized.size() ) );
-        ConsensusManagerLogger()->debug( "{}: ComputeSubjectId success", __func__ );
+        ConsensusManagerLogger()->debug( "{}: success", __func__ );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
@@ -1329,7 +1329,7 @@ namespace sgns
                                                                                      uint64_t           nonce,
                                                                                      const std::string &tx_hash )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateNonceSubject called account_id={} nonce={}",
+        ConsensusManagerLogger()->trace( "{}: called account_id={} nonce={}",
                                          __func__,
                                          account_id,
                                          nonce );
@@ -1343,13 +1343,13 @@ namespace sgns
         auto subject_id = ComputeSubjectId( subject );
         if ( subject_id.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateNonceSubject failed: subject id error={}",
+            ConsensusManagerLogger()->error( "{}: failed: subject id error={}",
                                              __func__,
                                              subject_id.error().message() );
             return outcome::failure( subject_id.error() );
         }
         subject.set_subject_id( subject_id.value() );
-        ConsensusManagerLogger()->debug( "{}: CreateNonceSubject success subject_id={}",
+        ConsensusManagerLogger()->debug( "{}: success subject_id={}",
                                          __func__,
                                          subject.subject_id() );
         return subject;
@@ -1361,7 +1361,7 @@ namespace sgns
         const std::string &task_result_hash,
         uint64_t           result_epoch )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateTaskResultSubject called account_id={} result_epoch={}",
+        ConsensusManagerLogger()->trace( "{}: called account_id={} result_epoch={}",
                                          __func__,
                                          account_id,
                                          result_epoch );
@@ -1376,13 +1376,13 @@ namespace sgns
         auto subject_id = ComputeSubjectId( subject );
         if ( subject_id.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateTaskResultSubject failed: subject id error={}",
+            ConsensusManagerLogger()->error( "{}: failed: subject id error={}",
                                              __func__,
                                              subject_id.error().message() );
             return outcome::failure( subject_id.error() );
         }
         subject.set_subject_id( subject_id.value() );
-        ConsensusManagerLogger()->debug( "{}: CreateTaskResultSubject success subject_id={}",
+        ConsensusManagerLogger()->debug( "{}: success subject_id={}",
                                          __func__,
                                          subject.subject_id() );
         return subject;
@@ -1390,7 +1390,7 @@ namespace sgns
 
     std::string ConsensusManager::CreateProposalId( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: CreateProposalId called proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={}",
                                          __func__,
                                          proposal.proposal_id() );
         // Proposal ID must be derived from the proposal contents excluding the proposal_id itself.
@@ -1399,7 +1399,7 @@ namespace sgns
         auto signing_bytes = ProposalSigningBytes( copy );
         if ( signing_bytes.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: CreateProposalId failed: signing bytes error={}",
+            ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
                                              __func__,
                                              signing_bytes.error().message() );
             return {};
@@ -1408,13 +1408,13 @@ namespace sgns
         sgns::crypto::HasherImpl hasher;
         auto                     hash = hasher.sha2_256(
             gsl::span<const uint8_t>( signing_bytes.value().data(), signing_bytes.value().size() ) );
-        ConsensusManagerLogger()->debug( "{}: CreateProposalId success", __func__ );
+        ConsensusManagerLogger()->debug( "{}: success", __func__ );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
     bool ConsensusManager::ValidateSubject( const Subject &subject )
     {
-        ConsensusManagerLogger()->trace( "{}: ValidateSubject called subject_type={}",
+        ConsensusManagerLogger()->trace( "{}: called subject_type={}",
                                          __func__,
                                          static_cast<int>( subject.type() ) );
         if ( subject.account_id().empty() )
@@ -1449,7 +1449,7 @@ namespace sgns
         const ValidatorRegistry::Registry &registry,
         const std::string                 &validator_id ) const
     {
-        ConsensusManagerLogger()->trace( "{}: FindValidator called validator_id={}", __func__, validator_id );
+        ConsensusManagerLogger()->trace( "{}: called validator_id={}", __func__, validator_id );
         for ( const auto &validator : registry.validators() )
         {
             if ( validator.validator_id() == validator_id )
@@ -1462,10 +1462,10 @@ namespace sgns
 
     void ConsensusManager::OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
     {
-        ConsensusManagerLogger()->trace( "{}: OnConsensusMessage called", __func__ );
+        ConsensusManagerLogger()->trace( "{}: called", __func__ );
         if ( !message )
         {
-            ConsensusManagerLogger()->error( "{}: OnConsensusMessage ignored: message is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: ignored: message is empty", __func__ );
             return;
         }
 
@@ -1478,25 +1478,25 @@ namespace sgns
 
         if ( decoded.has_proposal() )
         {
-            ConsensusManagerLogger()->debug( "{}: OnConsensusMessage decoded proposal", __func__ );
+            ConsensusManagerLogger()->debug( "{}: decoded proposal", __func__ );
             HandleProposal( decoded.proposal() );
             return;
         }
         if ( decoded.has_vote() )
         {
-            ConsensusManagerLogger()->debug( "{}: OnConsensusMessage decoded vote", __func__ );
+            ConsensusManagerLogger()->debug( "{}: decoded vote", __func__ );
             HandleVote( decoded.vote() );
             return;
         }
         if ( decoded.has_vote_bundle() )
         {
-            ConsensusManagerLogger()->debug( "{}: OnConsensusMessage decoded vote bundle", __func__ );
+            ConsensusManagerLogger()->debug( "{}: decoded vote bundle", __func__ );
             HandleVoteBundle( decoded.vote_bundle() );
             return;
         }
         if ( decoded.has_certificate() )
         {
-            ConsensusManagerLogger()->debug( "{}: OnConsensusMessage decoded certificate", __func__ );
+            ConsensusManagerLogger()->debug( "{}: decoded certificate", __func__ );
             HandleCertificate( decoded.certificate() );
         }
     }
