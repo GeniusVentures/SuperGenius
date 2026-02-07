@@ -144,7 +144,8 @@ namespace sgns
                     return strong->account_->Sign( std::move( payload ) );
                 }
                 return outcome::failure( std::errc::owner_dead );
-            } );
+            },
+            instance->account_->GetAddress() );
 
         auto ensure_registry_result = instance->EnsureValidatorRegistry();
         if ( ensure_registry_result.has_error() )
@@ -827,7 +828,7 @@ namespace sgns
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
         GenesisBlock g;
-        auto                           timestamp = std::chrono::system_clock::now();
+        auto         timestamp = std::chrono::system_clock::now();
 
         g.set_chain_id( "supergenius" );
         g.set_timestamp(
@@ -1073,7 +1074,7 @@ namespace sgns
                        cids_.genesis_.value() );
 
         AccountCreationBlock ac;
-        auto                                   timestamp = std::chrono::system_clock::now();
+        auto                 timestamp = std::chrono::system_clock::now();
 
         ac.set_account_address( account_->GetAddress() );
         ac.set_genesis_block_cid( cids_.genesis_.value() );
@@ -1380,8 +1381,7 @@ namespace sgns
         return std::nullopt;
     }
 
-    bool Blockchain::ShouldReplaceGenesis( const GenesisBlock &existing,
-                                           const GenesisBlock &candidate ) const
+    bool Blockchain::ShouldReplaceGenesis( const GenesisBlock &existing, const GenesisBlock &candidate ) const
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1526,8 +1526,7 @@ namespace sgns
             std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
 
-    bool Blockchain::RegisterSubjectHandler( SubjectType    type,
-                                             ConsensusManager::SubjectHandler handler )
+    bool Blockchain::RegisterSubjectHandler( SubjectType type, ConsensusManager::SubjectHandler handler )
     {
         return consensus_manager_->RegisterSubjectHandler( type, std::move( handler ) );
     }
@@ -1542,10 +1541,9 @@ namespace sgns
         consensus_manager_->SetCertificateCallback( std::move( callback ) );
     }
 
-    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
-        const std::string &account_id,
-        uint64_t           nonce,
-        const std::string &tx_hash )
+    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,
+                                                                                     uint64_t           nonce,
+                                                                                     const std::string &tx_hash )
     {
         OUTCOME_TRY( auto &&nonce_subject, consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash ) );
         OUTCOME_TRY( auto &&nonce_proposal,

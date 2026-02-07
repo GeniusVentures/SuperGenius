@@ -15,6 +15,7 @@
 #include <shared_mutex>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <mutex>
 
 #include "blockchain/ValidatorRegistry.hpp"
@@ -58,6 +59,7 @@ namespace sgns
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
+                                                      std::string                                address,
                                                       std::string                                consensus_topic = "" );
 
         void SetProposalValidator( ProposalValidator validator );
@@ -119,6 +121,7 @@ namespace sgns
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
+                                   std::string                                address,
                                    std::string                                consensus_topic );
 
         static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
@@ -130,6 +133,9 @@ namespace sgns
             std::vector<Vote>          votes;
             std::optional<Certificate> certificate;
             std::string                slot_key;
+            uint64_t                   total_weight    = 0;
+            uint64_t                   approved_weight = 0;
+            std::unordered_set<std::string> seen_voters;
         };
 
         struct SlotState

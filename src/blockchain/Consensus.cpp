@@ -31,18 +31,35 @@ namespace sgns
     std::shared_ptr<ConsensusManager> ConsensusManager::New( std::shared_ptr<ValidatorRegistry>         registry,
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                              Signer                                     signer,
+                                                             std::string                                address,
                                                              std::string consensus_topic )
     {
+        if ( !registry )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: registry is null", __func__ );
+            return nullptr;
+        }
         if ( !pubsub )
         {
             ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: pubsub is null", __func__ );
+            return nullptr;
+        }
+        if ( !signer )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: signer is null", __func__ );
+            return nullptr;
+        }
+        if ( address.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: address is empty", __func__ );
             return nullptr;
         }
 
         auto instance = std::shared_ptr<ConsensusManager>( new ConsensusManager( std::move( registry ),
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
-                                                                                 std::move( consensus_topic ) ) );
+                                                                                 address,
+                                                                                 consensus_topic ) );
 
         instance->consensus_subs_future_ = std::move( instance->pubsub_->Subscribe(
             instance->consensus_topic_,
@@ -65,10 +82,12 @@ namespace sgns
     ConsensusManager::ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         Signer                                     signer,
+                                        std::string                                address,
                                         std::string                                consensus_topic ) :
         registry_( std::move( registry ) ), //
         pubsub_( std::move( pubsub ) ),     //
         signer_( std::move( signer ) ),     //
+        account_address_( address ),        //
         consensus_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
                           consensus_topic )
     {
@@ -227,7 +246,7 @@ namespace sgns
             }
         }
 
-        if ( should_vote && signer_ && !account_address_.empty() )
+        if ( should_vote )
         {
             auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
             if ( vote_result.has_value() )
@@ -477,20 +496,20 @@ namespace sgns
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
                                                                                  const std::vector<Vote> &votes )
     {
-        ConsensusManagerLogger()->trace( "{}: TallyVotes called proposal_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
                                          proposal.proposal_id(),
                                          votes.size() );
         if ( !registry_ )
         {
-            ConsensusManagerLogger()->error( "{}: TallyVotes failed: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed: registry is null", __func__ );
             return outcome::failure( std::errc::not_supported );
         }
 
         auto registry_result = registry_->LoadRegistry();
         if ( registry_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: TallyVotes failed: registry load error={}",
+            ConsensusManagerLogger()->error( "{}: failed: registry load error={}",
                                              __func__,
                                              registry_result.error().message() );
             return outcome::failure( registry_result.error() );
@@ -500,7 +519,7 @@ namespace sgns
         const auto  registry_cid = registry_->GetRegistryCid();
         if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
         {
-            ConsensusManagerLogger()->error( "{}: TallyVotes failed: registry cid mismatch proposal={} registry={}",
+            ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
                                              __func__,
                                              proposal.registry_cid(),
                                              registry_cid );
@@ -508,7 +527,7 @@ namespace sgns
         }
         if ( proposal.registry_epoch() != registry.epoch() )
         {
-            ConsensusManagerLogger()->error( "{}: TallyVotes failed: registry epoch mismatch proposal={} registry={}",
+            ConsensusManagerLogger()->error( "{}: failed: registry epoch mismatch proposal={} registry={}",
                                              __func__,
                                              proposal.registry_epoch(),
                                              registry.epoch() );
@@ -521,7 +540,7 @@ namespace sgns
 
         for ( const auto &vote : votes )
         {
-            ConsensusManagerLogger()->trace( "{}: TallyVotes processing vote voter_id={} approve={}",
+            ConsensusManagerLogger()->trace( "{}: processing vote voter_id={} approve={}",
                                              __func__,
                                              vote.voter_id(),
                                              vote.approve() );
@@ -562,7 +581,7 @@ namespace sgns
         tally.approved_weight = approved_weight;
         tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
         ConsensusManagerLogger()->debug(
-            "{}: TallyVotes success proposal_id={} approved_weight={} total_weight={} quorum={}",
+            "{}: success proposal_id={} approved_weight={} total_weight={} quorum={}",
             __func__,
             proposal.proposal_id(),
             approved_weight,
@@ -839,7 +858,6 @@ namespace sgns
 
         for ( const auto &proposal : to_process )
         {
-
             SubjectHandler subject_handler;
             {
                 std::shared_lock lock( subject_handlers_mutex_ );
@@ -892,7 +910,7 @@ namespace sgns
 
     void ConsensusManager::HandleVote( const Vote &vote )
     {
-        ConsensusManagerLogger()->trace( "{}: HandleVote called proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={}",
                                          __func__,
                                          vote.proposal_id(),
                                          vote.voter_id() );
@@ -903,49 +921,113 @@ namespace sgns
 
         if ( !registry_ )
         {
-            ConsensusManagerLogger()->error( "{}: HandleVote aborted: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: aborted: registry is null", __func__ );
             return;
         }
 
+        if ( !vote.approve() )
+        {
+            ConsensusManagerLogger()->debug( "{}: ignored: vote not approved voter_id={}",
+                                             __func__,
+                                             vote.voter_id() );
+            return;
+        }
+
+        auto signing_bytes = VoteSigningBytes( vote );
+        if ( signing_bytes.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
+                                             __func__,
+                                             signing_bytes.error().message() );
+            return;
+        }
+        if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: signature verification failed voter_id={}",
+                                             __func__,
+                                             vote.voter_id() );
+            return;
+        }
+
+        auto registry_result = registry_->LoadRegistry();
+        if ( registry_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: registry load error={}",
+                                             __func__,
+                                             registry_result.error().message() );
+            return;
+        }
+        const auto &registry = registry_result.value();
+
+        bool          has_quorum = false;
         ProposalState state;
         {
             std::lock_guard lock( proposals_mutex_ );
             auto            it = proposals_.find( vote.proposal_id() );
             if ( it == proposals_.end() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleVote ignored: proposal not found proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: ignored: proposal not found proposal_id={}",
                                                  __func__,
                                                  vote.proposal_id() );
                 return;
             }
-            it->second.votes.push_back( vote );
-            state = it->second;
 
-            auto slot_it = slot_states_.find( state.slot_key );
+            auto slot_it = slot_states_.find( it->second.slot_key );
             if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
             {
-                ConsensusManagerLogger()->error( "{}: HandleVote ignored: not best proposal proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: ignored: not best proposal proposal_id={}",
                                                  __func__,
                                                  vote.proposal_id() );
                 return;
             }
+
+            if ( it->second.seen_voters.find( vote.voter_id() ) != it->second.seen_voters.end() )
+            {
+                ConsensusManagerLogger()->trace( "{}: ignored: duplicate vote voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return;
+            }
+
+            if ( it->second.proposal.registry_cid() != registry_->GetRegistryCid() ||
+                 it->second.proposal.registry_epoch() != registry.epoch() )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
+                                                 __func__,
+                                                 vote.proposal_id() );
+                return;
+            }
+
+            const auto *validator = FindValidator( registry, vote.voter_id() );
+            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: validator not active voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return;
+            }
+
+            if ( it->second.total_weight == 0 )
+            {
+                it->second.total_weight = registry_->TotalWeight( registry );
+            }
+
+            it->second.votes.push_back( vote );
+            it->second.seen_voters.insert( vote.voter_id() );
+            it->second.approved_weight += validator->weight();
+            state = it->second;
+            has_quorum =
+                registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
         }
 
-        auto tally_result = TallyVotes( state.proposal, state.votes );
-        if ( tally_result.has_error() || !tally_result.value().has_quorum )
+        if ( !has_quorum )
         {
-            if ( tally_result.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: HandleVote aborted: tally error={}",
-                                                 __func__,
-                                                 tally_result.error().message() );
-            }
             return;
         }
 
         if ( state.certificate.has_value() )
         {
-            ConsensusManagerLogger()->debug( "{}: HandleVote skipped: certificate already present proposal_id={}",
+            ConsensusManagerLogger()->debug( "{}: skipped: certificate already present proposal_id={}",
                                              __func__,
                                              vote.proposal_id() );
             return;
@@ -954,7 +1036,7 @@ namespace sgns
         auto certificate_result = CreateCertificate( state.proposal, state.votes );
         if ( certificate_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: HandleVote failed: certificate creation error={}",
+            ConsensusManagerLogger()->error( "{}: failed: certificate creation error={}",
                                              __func__,
                                              certificate_result.error().message() );
             return;
@@ -971,7 +1053,7 @@ namespace sgns
 
         (void)SubmitCertificate( certificate_result.value() );
         NotifyCertificate( state.proposal, certificate_result.value() );
-        ConsensusManagerLogger()->debug( "{}: HandleVote certificate submitted proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: certificate submitted proposal_id={}",
                                          __func__,
                                          vote.proposal_id() );
     }
