@@ -40,7 +40,6 @@ namespace sgns
         using VoteBundleHandler  = std::function<void( const VoteBundle &bundle )>;
         using CertificateHandler = std::function<void( const Certificate &certificate )>;
         using CertificateCallback = std::function<void( const Proposal &proposal, const Certificate &certificate )>;
-        using ProposalValidator   = std::function<bool( const Proposal &proposal )>;
         enum class SubjectCheck
         {
             Approve,
@@ -62,15 +61,12 @@ namespace sgns
                                                       std::string                                address,
                                                       std::string                                consensus_topic = "" );
 
-        void SetProposalValidator( ProposalValidator validator );
         bool RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
         void UnregisterSubjectHandler( SubjectType type );
         void SetCertificateCallback( CertificateCallback callback );
 
         outcome::result<void> Publish( const ConsensusMessage &message );
 
-        void SetProposalHandler( ProposalHandler handler );
-        void SetVoteHandler( VoteHandler handler );
         void SetVoteBundleHandler( VoteBundleHandler handler );
         void SetCertificateHandler( CertificateHandler handler );
 
@@ -129,12 +125,12 @@ namespace sgns
 
         struct ProposalState
         {
-            Proposal                   proposal;
-            std::vector<Vote>          votes;
-            std::optional<Certificate> certificate;
-            std::string                slot_key;
-            uint64_t                   total_weight    = 0;
-            uint64_t                   approved_weight = 0;
+            Proposal                        proposal;
+            std::vector<Vote>               votes;
+            std::optional<Certificate>      certificate;
+            std::string                     slot_key;
+            uint64_t                        total_weight    = 0;
+            uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
         };
 
@@ -160,18 +156,15 @@ namespace sgns
 
         static std::string                       CreateProposalId( const Proposal &proposal );
         static bool                              ValidateSubject( const Subject &subject );
-        const ValidatorRegistry::ValidatorEntry *FindValidator( const ValidatorRegistry::Registry &registry,
-                                                                const std::string                 &validator_id ) const;
 
-        void OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
-        bool CheckSubject( const Subject &subject );
-
+        void        OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        static bool CheckSubject( const Subject &subject );
+        static bool CheckProposal( const Proposal &proposal );
+        static bool CheckVote( const Vote &vote );
         std::shared_ptr<ValidatorRegistry>                        registry_;
-        VoteHandler                                               vote_handler_;
         VoteBundleHandler                                         vote_bundle_handler_;
         CertificateHandler                                        certificate_handler_;
         CertificateCallback                                       certificate_callback_;
-        ProposalValidator                                         proposal_validator_;
         std::unordered_map<int, SubjectHandler>                   subject_handlers_;
         mutable std::shared_mutex                                 subject_handlers_mutex_;
         Signer                                                    signer_;
