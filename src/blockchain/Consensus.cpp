@@ -17,7 +17,7 @@
 #include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
 #include "account/GeniusAccount.hpp"
-#include "blockchain/ConsensusSigning.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 
 namespace sgns
 {

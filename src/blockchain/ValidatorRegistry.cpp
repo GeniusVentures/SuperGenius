@@ -17,7 +17,7 @@
 #include <gsl/span>
 
 #include "account/GeniusAccount.hpp"
-#include "blockchain/ConsensusSigning.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crdt/graphsync_dagsyncer.hpp"
 
@@ -862,27 +862,55 @@ namespace sgns
         std::unordered_map<std::string, bool> &unregistered_votes_out ) const
     {
         logger_->trace( "{}: entry proposal_id={}", __func__, certificate.proposal_id() );
+        if ( !certificate.has_proposal() )
+        {
+            logger_->error( "{}: missing proposal in certificate", __func__ );
+            return false;
+        }
+
+        const auto &proposal = certificate.proposal();
+        if ( !ValidateProposal( proposal ) )
+        {
+            logger_->error( "{}: invalid proposal signature", __func__ );
+            return false;
+        }
+        if ( proposal.proposal_id() != certificate.proposal_id() )
+        {
+            logger_->error( "{}: proposal_id mismatch cert={} proposal={}",
+                            __func__,
+                            certificate.proposal_id(),
+                            proposal.proposal_id() );
+            return false;
+        }
+        if ( proposal.registry_epoch() != certificate.registry_epoch() ||
+             proposal.registry_cid() != certificate.registry_cid() )
+        {
+            logger_->error( "{}: registry metadata mismatch proposal_id={}",
+                            __func__,
+                            proposal.proposal_id() );
+            return false;
+        }
         if ( certificate.proposal_id().empty() )
         {
             logger_->error( "{}: empty proposal_id", __func__ );
             return false;
         }
 
-        if ( certificate.registry_epoch() != current_registry.epoch() )
+        if ( proposal.registry_epoch() != current_registry.epoch() )
         {
             logger_->error( "{}: registry epoch mismatch cert={} registry={}",
                             __func__,
-                            certificate.registry_epoch(),
+                            proposal.registry_epoch(),
                             current_registry.epoch() );
             return false;
         }
 
         const std::string current_id = GetRegistryCid();
-        if ( !current_id.empty() && !certificate.registry_cid().empty() && certificate.registry_cid() != current_id )
+        if ( !current_id.empty() && !proposal.registry_cid().empty() && proposal.registry_cid() != current_id )
         {
             logger_->error( "{}: registry CID mismatch cert={} registry={}",
                             __func__,
-                            certificate.registry_cid(),
+                            proposal.registry_cid(),
                             current_id );
             return false;
         }
