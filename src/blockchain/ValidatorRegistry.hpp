@@ -13,11 +13,14 @@
 #include <optional>
 #include <shared_mutex>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
+#include "blockchain/impl/proto/Consensus.pb.h"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crdt/crdt_callback_manager.hpp"
 #include "crdt/proto/delta.pb.h"
@@ -35,23 +38,34 @@ namespace sgns
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
     {
     public:
-        using ValidatorEntry = validator::ValidatorEntry;
-        using Registry       = validator::Registry;
-        using SignatureEntry = validator::SignatureEntry;
-        using RegistryUpdate = validator::RegistryUpdate;
-        using Role           = validator::Role;
-        using Status         = validator::Status;
-        using InitCallback   = std::function<void( bool )>;
+        static constexpr size_t DefaultMaxNewValidatorsPerUpdate = 10;
+        using ValidatorEntry                                     = validator::ValidatorEntry;
+        using Registry                                           = validator::Registry;
+        using SignatureEntry                                     = validator::SignatureEntry;
+        using RegistryUpdate                                     = validator::RegistryUpdate;
+        using Role                                               = validator::Role;
+        using Status                                             = validator::Status;
+        using InitCallback                                       = std::function<void( bool )>;
         using BlockRequestMethod =
             std::function<void( const std::string &, std::function<void( outcome::result<std::string> )> )>;
 
         struct WeightConfig
         {
-            uint64_t base_weight_        = 1;
-            uint64_t full_multiplier_    = 3;
-            uint64_t genesis_multiplier_ = 5;
-            uint64_t sharded_multiplier_ = 1;
-            uint64_t max_weight_         = 10;
+            uint64_t genesis_weight_              = 50000;
+            uint64_t full_weight_                 = 1000;
+            uint64_t regular_weight_              = 1;
+            uint64_t sharded_weight_              = 1;
+            uint64_t genesis_max_weight_          = 50000;
+            uint64_t full_max_weight_             = 5000;
+            uint64_t regular_max_weight_          = 100;
+            uint64_t sharded_max_weight_          = 100;
+            uint64_t approval_increment_          = 1;
+            uint32_t penalty_threshold_           = 10;
+            uint32_t penalty_cap_                 = 100;
+            uint32_t blacklist_bump_              = 10;
+            uint32_t missed_epoch_threshold_      = 5;
+            uint32_t inactivity_decrement_        = 1;
+            uint64_t total_weight_cap_multiplier_ = 4;
         };
 
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
@@ -75,6 +89,9 @@ namespace sgns
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
         bool                            RegisterFilter();
+        outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
+        outcome::result<void>           StoreRegistryUpdate( const RegistryUpdate &update );
+        void                            SetMaxNewValidatorsPerUpdate( size_t max_new );
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
@@ -98,6 +115,8 @@ namespace sgns
             return "gnus-validator-registry-cid";
         }
 
+        static const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id );
+
     protected:
         friend class sgns::Migration3_5_1To3_6_0;
 
@@ -116,12 +135,30 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         void RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
-        bool                  VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
-        const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
-        void                  InitializeCache();
-        void                  NotifyInitialized( bool success ) const;
-        void                  PersistLocalState( const std::string &cid ) const;
-        void                  RequestHeadCids( const std::set<CID> &cids );
+        bool        VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
+        bool        VerifyCertificateForUpdate( const sgns::ConsensusCertificate      &certificate,
+                                                const Registry                        &current_registry,
+                                                std::unordered_set<std::string>       &approved_out,
+                                                std::unordered_set<std::string>       &unregistered_out,
+                                                std::unordered_map<std::string, bool> &registered_votes_out,
+                                                std::unordered_map<std::string, bool> &unregistered_votes_out ) const;
+        Registry    BuildRegistryFromCertificate( const Registry                              &current_registry,
+                                                  const sgns::ConsensusCertificate            &certificate,
+                                                  const std::unordered_map<std::string, bool> &registered_votes,
+                                                  const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void        InsertNewValidators( Registry &registry,
+                                         const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void        ApplyVoteEffects( std::vector<ValidatorEntry>                     &entries,
+                                      const std::unordered_map<std::string, bool>    &registered_votes ) const;
+        void        ApplyInactivityDecay( std::vector<ValidatorEntry> &entries,
+                                          const std::unordered_set<std::string> &participants ) const;
+        void        ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
+        static void NormalizeRegistry( Registry &registry );
+
+        void InitializeCache();
+        void NotifyInitialized( bool success ) const;
+        void PersistLocalState( const std::string &cid ) const;
+        void RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -133,7 +170,8 @@ namespace sgns
         std::optional<Registry>         cached_registry_;
         std::optional<RegistryUpdate>   cached_update_;
         std::string                     cached_registry_id_;
-        bool                            cache_initialized_ = false;
+        bool                            cache_initialized_             = false;
+        size_t                          max_new_validators_per_update_ = DefaultMaxNewValidatorsPerUpdate;
 
         InitCallback init_callback_;
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
