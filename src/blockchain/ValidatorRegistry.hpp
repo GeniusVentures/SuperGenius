@@ -66,6 +66,7 @@ namespace sgns
             uint32_t missed_epoch_threshold_      = 5;
             uint32_t inactivity_decrement_        = 1;
             uint64_t total_weight_cap_multiplier_ = 4;
+            uint64_t certificate_timestamp_window_ms_ = 300000;
         };
 
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
@@ -124,6 +125,14 @@ namespace sgns
                                                   const std::shared_ptr<crdt::GlobalDB> &new_db );
 
     private:
+        struct CertificateVotes
+        {
+            std::unordered_set<std::string>       approved;
+            std::unordered_set<std::string>       unregistered;
+            std::unordered_map<std::string, bool> registered_votes;
+            std::unordered_map<std::string, bool> unregistered_votes;
+        };
+
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                            uint64_t                        quorum_numerator,
                            uint64_t                        quorum_denominator,
@@ -135,13 +144,15 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         void RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
-        bool        VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
-        bool        VerifyCertificateForUpdate( const sgns::ConsensusCertificate      &certificate,
-                                                const Registry                        &current_registry,
-                                                std::unordered_set<std::string>       &approved_out,
-                                                std::unordered_set<std::string>       &unregistered_out,
-                                                std::unordered_map<std::string, bool> &registered_votes_out,
-                                                std::unordered_map<std::string, bool> &unregistered_votes_out ) const;
+        bool        VerifyUpdate( const RegistryUpdate &update,
+                                  const Registry      *current_registry,
+                                  bool                 enforce_time_window ) const;
+        bool        ValidateCertificate( const sgns::ConsensusCertificate &certificate,
+                                         const Registry                   &current_registry ) const;
+        bool        ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
+                                                  const Registry                   &current_registry ) const;
+        CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
+                                                  const Registry                   &current_registry ) const;
         Registry    BuildRegistryFromCertificate( const Registry                              &current_registry,
                                                   const sgns::ConsensusCertificate            &certificate,
                                                   const std::unordered_map<std::string, bool> &registered_votes,

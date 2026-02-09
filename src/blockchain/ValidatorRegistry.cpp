@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <limits>
 #include <set>
 #include <system_error>
@@ -485,22 +486,20 @@ namespace sgns
         }
 
         auto                                  current_registry = registry_result.value();
-        std::unordered_set<std::string>       approved;
-        std::unordered_set<std::string>       unregistered;
-        std::unordered_map<std::string, bool> registered_votes;
-        std::unordered_map<std::string, bool> unregistered_votes;
-        if ( !VerifyCertificateForUpdate( certificate, current_registry, approved, unregistered, registered_votes, unregistered_votes ) )
+        if ( !ValidateCertificateForUpdate( certificate, current_registry ) )
         {
             logger_->error( "{}: invalid certificate", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
+        auto votes = ExtractCertificateVotes( certificate, current_registry );
+
         RegistryUpdate update;
         update.set_prev_registry_hash( GetRegistryCid() );
         *update.mutable_registry() = BuildRegistryFromCertificate( current_registry,
                                                                    certificate,
-                                                                   registered_votes,
-                                                                   unregistered_votes );
+                                                                   votes.registered_votes,
+                                                                   votes.unregistered_votes );
 
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
@@ -644,7 +643,7 @@ namespace sgns
             }
         }
 
-        if ( !VerifyUpdate( update, current_ptr ) )
+        if ( !VerifyUpdate( update, current_ptr, false ) )
         {
             logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
@@ -698,7 +697,9 @@ namespace sgns
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const
+    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update,
+                                          const Registry      *current_registry,
+                                          bool                 enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
@@ -747,32 +748,35 @@ namespace sgns
                 return false;
             }
 
-            std::unordered_set<std::string>       approved;
-            std::unordered_set<std::string>       unregistered;
-            std::unordered_map<std::string, bool> registered_votes;
-            std::unordered_map<std::string, bool> unregistered_votes;
-            if ( !VerifyCertificateForUpdate( certificate,
-                                              *current_registry,
-                                              approved,
-                                              unregistered,
-                                              registered_votes,
-                                              unregistered_votes ) )
+            if ( enforce_time_window )
             {
-                logger_->error( "{}: certificate verification failed", __func__ );
-                return false;
+                if ( !ValidateCertificateForUpdate( certificate, *current_registry ) )
+                {
+                    logger_->error( "{}: certificate verification failed", __func__ );
+                    return false;
+                }
+            }
+            else
+            {
+                if ( !ValidateCertificate( certificate, *current_registry ) )
+                {
+                    logger_->error( "{}: certificate verification failed", __func__ );
+                    return false;
+                }
             }
 
+            auto votes = ExtractCertificateVotes( certificate, *current_registry );
             Registry expected = BuildRegistryFromCertificate( *current_registry,
                                                               certificate,
-                                                              registered_votes,
-                                                              unregistered_votes );
+                                                              votes.registered_votes,
+                                                              votes.unregistered_votes );
             Registry provided = update.registry();
             NormalizeRegistry( provided );
             NormalizeRegistry( expected );
 
-            if ( provided.epoch() <= current_registry->epoch() )
+            if ( provided.epoch() != current_registry->epoch() + 1 )
             {
-                logger_->error( "{}: epoch not increasing", __func__ );
+                logger_->error( "{}: epoch not next expected", __func__ );
                 return false;
             }
 
@@ -811,9 +815,9 @@ namespace sgns
             return false;
         }
 
-        if ( update.registry().epoch() <= current_registry->epoch() )
+        if ( update.registry().epoch() != current_registry->epoch() + 1 )
         {
-            logger_->error( "{}: epoch not increasing", __func__ );
+            logger_->error( "{}: epoch not next expected", __func__ );
             return false;
         }
 
@@ -853,13 +857,9 @@ namespace sgns
         return false;
     }
 
-    bool ValidatorRegistry::VerifyCertificateForUpdate(
-        const sgns::ConsensusCertificate      &certificate,
-        const Registry                        &current_registry,
-        std::unordered_set<std::string>       &approved_out,
-        std::unordered_set<std::string>       &unregistered_out,
-        std::unordered_map<std::string, bool> &registered_votes_out,
-        std::unordered_map<std::string, bool> &unregistered_votes_out ) const
+    bool ValidatorRegistry::ValidateCertificate(
+        const sgns::ConsensusCertificate &certificate,
+        const Registry                   &current_registry ) const
     {
         logger_->trace( "{}: entry proposal_id={}", __func__, certificate.proposal_id() );
         if ( !certificate.has_proposal() )
@@ -890,12 +890,6 @@ namespace sgns
                             proposal.proposal_id() );
             return false;
         }
-        if ( certificate.proposal_id().empty() )
-        {
-            logger_->error( "{}: empty proposal_id", __func__ );
-            return false;
-        }
-
         if ( proposal.registry_epoch() != current_registry.epoch() )
         {
             logger_->error( "{}: registry epoch mismatch cert={} registry={}",
@@ -915,14 +909,44 @@ namespace sgns
             return false;
         }
 
+        if ( certificate.proposal_id().empty() )
+        {
+            logger_->error( "{}: empty proposal_id", __func__ );
+            return false;
+        }
+
+        return true;
+    }
+
+    bool ValidatorRegistry::ValidateCertificateForUpdate(
+        const sgns::ConsensusCertificate &certificate,
+        const Registry                   &current_registry ) const
+    {
+        const uint64_t window_ms = weight_config_.certificate_timestamp_window_ms_;
+        if ( window_ms > 0 )
+        {
+            const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::system_clock::now().time_since_epoch() )
+                                    .count();
+            const auto cert_ms = static_cast<int64_t>( certificate.timestamp() );
+            const auto diff    = std::llabs( now_ms - cert_ms );
+            if ( cert_ms == 0 || static_cast<uint64_t>( diff ) > window_ms )
+            {
+                logger_->error( "{}: certificate timestamp outside window", __func__ );
+                return false;
+            }
+        }
+        return ValidateCertificate( certificate, current_registry );
+    }
+
+    ValidatorRegistry::CertificateVotes ValidatorRegistry::ExtractCertificateVotes(
+        const sgns::ConsensusCertificate &certificate,
+        const Registry                   &current_registry ) const
+    {
+        CertificateVotes result;
         uint64_t                        total_weight    = TotalWeight( current_registry );
         uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
-
-        approved_out.clear();
-        unregistered_out.clear();
-        registered_votes_out.clear();
-        unregistered_votes_out.clear();
 
         for ( const auto &vote : certificate.votes() )
         {
@@ -948,28 +972,32 @@ namespace sgns
             const auto *validator = FindValidator( current_registry, vote.voter_id() );
             if ( !validator )
             {
-                unregistered_out.insert( vote.voter_id() );
-                unregistered_votes_out[vote.voter_id()] = vote.approve();
+                result.unregistered.insert( vote.voter_id() );
+                result.unregistered_votes[vote.voter_id()] = vote.approve();
                 continue;
             }
 
-            registered_votes_out[vote.voter_id()] = vote.approve();
+            result.registered_votes[vote.voter_id()] = vote.approve();
 
             if ( vote.approve() && validator->status() == Status::ACTIVE )
             {
                 approved_weight += validator->weight();
-                approved_out.insert( vote.voter_id() );
+                result.approved.insert( vote.voter_id() );
             }
         }
 
         if ( !IsQuorum( approved_weight, total_weight ) )
         {
             logger_->error( "{}: quorum not reached approved={} total={}", __func__, approved_weight, total_weight );
-            return false;
+            result.approved.clear();
+            result.unregistered.clear();
+            result.registered_votes.clear();
+            result.unregistered_votes.clear();
+            return result;
         }
 
         logger_->debug( "{}: quorum verified approved={} total={}", __func__, approved_weight, total_weight );
-        return true;
+        return result;
     }
 
     ValidatorRegistry::Registry ValidatorRegistry::BuildRegistryFromCertificate(
