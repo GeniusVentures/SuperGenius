@@ -189,7 +189,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     auto mint_result = node_main->MintTokens( 50000000000,
                                               "",
                                               "",
-                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              TokenID::FromBytes( { 0x00 } ),
                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_main";
 
@@ -207,7 +207,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     mint_result = node_proc1->MintTokens( 50000000000,
                                           "",
                                           "",
-                                          sgns::TokenID::FromBytes( { 0x00 } ),
+                                          TokenID::FromBytes( { 0x00 } ),
                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_proc1";
 
@@ -279,11 +279,11 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     test::assertWaitForCondition(
         [&]() { return node_same_addr_1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_same_addr_1 not synched" );
+        "node_same_addr_1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_same_addr_2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_same_addr_2 not synched" );
+        "node_same_addr_2 not synced" );
 
     // Verify nodes have the same address (they should since they use same self_address)
     ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )

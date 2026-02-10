@@ -452,16 +452,17 @@ namespace sgns
             "full_node not synched" );
 
         // Mint tokens with timeout
-        node_proc1->MintTokens( 10000000000,
-                                "",
-                                "",
-                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         auto mint_result = node_proc1->MintTokens( 10000000000,
                                                    "",
                                                    "",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   TokenID::FromBytes( { 0x00 } ),
                                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+        mint_result = node_proc1->MintTokens( 10000000000,
+                                              "",
+                                              "",
+                                              TokenID::FromBytes( { 0x00 } ),
+                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
         auto [mint_tx_id, mint_duration] = mint_result.value();

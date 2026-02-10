@@ -19,20 +19,20 @@
 
 namespace test
 {
-    struct CRDTFixture : public FSFixture
+    class CRDTFixture : public FSFixture
     {
-        CRDTFixture( fs::path path );
+    public:
+        explicit CRDTFixture( fs::path path );
 
         ~CRDTFixture() override;
 
         static void SetUpTestSuite();
 
-        static const std::string basePath;
-
-        static bool                                             initializedDb;
+        static const std::string                                basePath;
         static std::shared_ptr<boost::asio::io_context>         io_;
         static std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs_;
-        static std::shared_ptr<sgns::crdt::GlobalDB>            db_;
+
+        std::shared_ptr<sgns::crdt::GlobalDB> db_;
     };
 
 }

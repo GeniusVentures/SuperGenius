@@ -20,23 +20,24 @@ else()
     )
 endif()
 
-addtest(account_balance_test
-        utxo_manager_test.cpp
+addtest(utxo_manager_test
+    utxo_manager_test.cpp
 )
 
-target_include_directories(account_balance_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+target_include_directories(utxo_manager_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
-target_link_libraries(account_balance_test
+target_link_libraries(utxo_manager_test
     genius_node
     json_secure_storage
+    base_crdt_test
 )
 
 if(MSVC)
-    target_link_options(account_balance_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(utxo_manager_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
-    target_link_options(account_balance_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(utxo_manager_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
-    target_link_options(account_balance_test PUBLIC
+    target_link_options(utxo_manager_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"

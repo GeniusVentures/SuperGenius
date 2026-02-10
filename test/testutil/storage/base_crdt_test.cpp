@@ -44,13 +44,32 @@ groups:
 
 namespace test
 {
-    const std::string             CRDTFixture::basePath      = "CRDT.Datastore.TEST";
-    bool                          CRDTFixture::initializedDb = false;
+    const std::string             CRDTFixture::basePath = "CRDT.Datastore.TEST";
     std::shared_ptr<io_context>   CRDTFixture::io_;
     std::shared_ptr<GossipPubSub> CRDTFixture::pubs_;
-    std::shared_ptr<GlobalDB>     CRDTFixture::db_;
 
-    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) ) {}
+    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
+    {
+        auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
+        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+        auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
+                                                                                             scheduler );
+
+        auto globaldb_ret =
+            GlobalDB::New( io_, basePath + ".unit", pubs_, crdtOptions, graphsyncnetwork, scheduler, generator );
+        BOOST_ASSERT( globaldb_ret.has_value() );
+        db_ = std::move( globaldb_ret.value() );
+
+        db_->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
+        db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
+        db_->Start();
+
+        // Start GossipPubSub after Init
+        auto future = pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
+        auto result = future.get();
+        BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
+    }
 
     CRDTFixture::~CRDTFixture()
     {
@@ -60,55 +79,25 @@ namespace test
 
     void CRDTFixture::SetUpTestSuite()
     {
-        // Logging antics
-        {
-            auto logging_system = std::make_shared<soralog::LoggingSystem>(
-                std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
-                                                                 logger_config ) );
+        auto logging_system = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
+                                                             logger_config ) );
 
-            BOOST_ASSERT( !logging_system->configure().has_error );
+        BOOST_ASSERT( !logging_system->configure().has_error );
 
-            libp2p::log::setLoggingSystem( std::move( logging_system ) );
-            libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR_ );
+        libp2p::log::setLoggingSystem( std::move( logging_system ) );
+        libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR_ );
 
-            auto loggerGlobalDB = sgns::base::createLogger( "GlobalDB" );
-            loggerGlobalDB->set_level( spdlog::level::debug );
+        auto loggerGlobalDB = sgns::base::createLogger( "GlobalDB" );
+        loggerGlobalDB->set_level( spdlog::level::debug );
 
-            auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
-            loggerDAGSyncer->set_level( spdlog::level::debug );
-        }
+        auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
 
-        if ( !initializedDb )
-        {
-            io_ = std::make_shared<io_context>();
+        io_ = std::make_shared<io_context>();
 
-            pubs_ = std::make_shared<GossipPubSub>(
-                KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
+        pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
 
-            BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
-
-            auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
-            auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
-                                                                                libp2p::protocol::SchedulerConfig{} );
-            auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
-                                                                                                 scheduler );
-
-            auto globaldb_ret =
-                GlobalDB::New( io_, basePath + ".unit", pubs_, crdtOptions, graphsyncnetwork, scheduler, generator );
-            BOOST_ASSERT( globaldb_ret.has_value() );
-            db_ = std::move( globaldb_ret.value() );
-
-            db_->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
-            db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
-            db_->Start();
-
-            // Start GossipPubSub after Init
-            auto future = pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
-            auto result = future.get();
-            BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
-
-            initializedDb = true;
-        }
+        BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
     }
 }

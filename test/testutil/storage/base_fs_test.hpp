@@ -1,5 +1,4 @@
-#ifndef SUPERGENIUS_BASE_FS_TEST_HPP
-#define SUPERGENIUS_BASE_FS_TEST_HPP
+#pragma once
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -12,39 +11,25 @@ namespace fs = boost::filesystem;
 namespace test
 {
     /**
-   * @brief Base test, which involves filesystem. Can be created with given
-   * path. Clears path before test and after test.
-   */
+    * @brief Base test, which involves filesystem. Can be created with given
+    * path. Clears path before test and after test.
+    */
     struct FSFixture : public ::testing::Test
     {
         // not explicit, intentionally
         FSFixture( fs::path path );
 
-        ~FSFixture() override
-        {
-            clear();
-        }
+        ~FSFixture() override;
 
-        void clear();
-
-        inline void mkdir()
-        {
-            fs::create_directory( base_path );
-        }
+        void clear() const;
 
         [[nodiscard]] std::string getPathString() const
         {
             return fs::canonical( base_path ).string();
         }
 
-        void TearDown() override;
-
-        void SetUp() override;
-
     protected:
         fs::path           base_path;
         sgns::base::Logger logger;
     };
 }
-
-#endif
