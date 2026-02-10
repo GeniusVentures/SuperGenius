@@ -135,6 +135,7 @@ namespace sgns
 
         instance->consensus_manager_ = ConsensusManager::New(
             instance->validator_registry_,
+            instance->db_,
             std::move( pubsub ),
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
                 std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>

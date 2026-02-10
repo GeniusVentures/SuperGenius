@@ -10,6 +10,7 @@
 #include <chrono>
 #include <set>
 #include <system_error>
+#include <boost/format.hpp>
 
 #include <gsl/span>
 
@@ -30,6 +31,7 @@ namespace sgns
     }
 
     std::shared_ptr<ConsensusManager> ConsensusManager::New( std::shared_ptr<ValidatorRegistry>         registry,
+                                                             std::shared_ptr<crdt::GlobalDB>            db,
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                              Signer                                     signer,
                                                              std::string                                address,
@@ -38,6 +40,11 @@ namespace sgns
         if ( !registry )
         {
             ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: registry is null", __func__ );
+            return nullptr;
+        }
+        if ( !db )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: db is null", __func__ );
             return nullptr;
         }
         if ( !pubsub )
@@ -57,13 +64,14 @@ namespace sgns
         }
 
         auto instance = std::shared_ptr<ConsensusManager>( new ConsensusManager( std::move( registry ),
+                                                                                 std::move( db ),
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
                                                                                  address,
                                                                                  consensus_topic ) );
 
         instance->consensus_subs_future_ = std::move( instance->pubsub_->Subscribe(
-            instance->consensus_topic_,
+            instance->consensus_messages_topic_,
             [weakptr( std::weak_ptr<ConsensusManager>( instance ) )](
                 boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
             {
@@ -71,27 +79,78 @@ namespace sgns
                 {
                     ConsensusManagerLogger()->trace( "{}: Received Consensus Message on topic {}",
                                                      __func__,
-                                                     self->consensus_topic_ );
+                                                     self->consensus_messages_topic_ );
                     self->OnConsensusMessage( message );
                 }
             } ) );
-        ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}", __func__, instance->consensus_topic_ );
+        ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}",
+                                         __func__,
+                                         instance->consensus_messages_topic_ );
+        instance->StartRoundTimer();
 
         return instance;
     }
 
     ConsensusManager::ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
+                                        std::shared_ptr<crdt::GlobalDB>            db,
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         Signer                                     signer,
                                         std::string                                address,
                                         std::string                                consensus_topic ) :
         registry_( std::move( registry ) ), //
+        db_( std::move( db ) ),             //
         pubsub_( std::move( pubsub ) ),     //
         signer_( std::move( signer ) ),     //
         account_address_( address ),        //
-        consensus_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
-                          consensus_topic )
+        consensus_messages_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
+                                   consensus_topic ),
+        consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )
     {
+    }
+
+    ConsensusManager::~ConsensusManager()
+    {
+        stop_timer_.store( true );
+        timer_cv_.notify_all();
+        if ( round_timer_.joinable() )
+        {
+            round_timer_.join();
+        }
+    }
+
+    void ConsensusManager::StartRoundTimer()
+    {
+        if ( round_timer_.joinable() )
+        {
+            return;
+        }
+
+        std::weak_ptr<ConsensusManager> weak_self = shared_from_this();
+        round_timer_                              = std::thread(
+            [weak_self]()
+            {
+                while ( true )
+                {
+                    auto self = weak_self.lock();
+                    if ( !self )
+                    {
+                        return;
+                    }
+
+                    std::unique_lock<std::mutex> lock( self->timer_mutex_ );
+                    auto                         interval = self->round_duration_ / 2;
+                    if ( interval.count() <= 0 )
+                    {
+                        interval = DEFAULT_ROUND_DURATION / 2;
+                    }
+                    if ( self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } ) )
+                    {
+                        return;
+                    }
+                    lock.unlock();
+                    self->ProcessCertificates();
+                }
+            } );
     }
 
     void ConsensusManager::SetCertificateCallback( CertificateCallback callback )
@@ -108,8 +167,8 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        ConsensusManagerLogger()->debug( "{}: Sending consensus packet to {}", __func__, consensus_topic_ );
-        pubsub_->Publish( consensus_topic_, serialized_proto );
+        ConsensusManagerLogger()->debug( "{}: Sending consensus packet to {}", __func__, consensus_messages_topic_ );
+        pubsub_->Publish( consensus_messages_topic_, serialized_proto );
         ConsensusManagerLogger()->debug( "{}: Consensus packet published (bytes={})",
                                          __func__,
                                          serialized_proto.size() );
@@ -159,6 +218,28 @@ namespace sgns
         timestamp_window_ = window;
     }
 
+    void ConsensusManager::ConfigureRoundDuration( std::chrono::milliseconds duration )
+    {
+        if ( duration.count() <= 0 )
+        {
+            ConsensusManagerLogger()->warn( "{}: using default round duration", __func__ );
+            round_duration_ = DEFAULT_ROUND_DURATION;
+            return;
+        }
+        round_duration_ = duration;
+    }
+
+    void ConsensusManager::ConfigureRoundSkew( std::chrono::milliseconds skew )
+    {
+        if ( skew.count() < 0 )
+        {
+            ConsensusManagerLogger()->warn( "{}: using default round skew", __func__ );
+            round_skew_ = DEFAULT_ROUND_SKEW;
+            return;
+        }
+        round_skew_ = skew;
+    }
+
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
     {
         if ( timestamp_ms == 0 )
@@ -171,6 +252,71 @@ namespace sgns
         const auto window_ms = timestamp_window_.count();
         const auto ts_ms     = static_cast<std::int64_t>( timestamp_ms );
         return ( ts_ms >= now_ms - window_ms ) && ( ts_ms <= now_ms + window_ms );
+    }
+
+    uint64_t ConsensusManager::GetCurrentRound( uint64_t proposal_ts_ms ) const
+    {
+        if ( proposal_ts_ms == 0 || round_duration_.count() <= 0 )
+        {
+            return 0;
+        }
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+        const auto elapsed = static_cast<int64_t>( now_ms ) - static_cast<int64_t>( proposal_ts_ms );
+        if ( elapsed <= 0 )
+        {
+            return 0;
+        }
+        const auto skew_ms = static_cast<int64_t>( round_skew_.count() );
+        if ( elapsed <= skew_ms )
+        {
+            return 0;
+        }
+        const auto round_ms = static_cast<int64_t>( round_duration_.count() );
+        return static_cast<uint64_t>( ( elapsed - skew_ms ) / round_ms );
+    }
+
+    std::vector<std::string> ConsensusManager::GetOrderedActiveValidators(
+        const ValidatorRegistry::Registry &registry ) const
+    {
+        std::vector<std::string> validators;
+        validators.reserve( registry.validators_size() );
+        for ( const auto &entry : registry.validators() )
+        {
+            if ( entry.status() == ValidatorRegistry::Status::ACTIVE )
+            {
+                validators.push_back( entry.validator_id() );
+            }
+        }
+        std::sort( validators.begin(), validators.end() );
+        return validators;
+    }
+
+    bool ConsensusManager::IsCurrentAggregator( const Proposal                    &proposal,
+                                                const ValidatorRegistry::Registry &registry ) const
+    {
+        auto ordered = GetOrderedActiveValidators( registry );
+        if ( ordered.empty() )
+        {
+            return false;
+        }
+
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( proposal.proposal_id().data() ),
+                                      proposal.proposal_id().size() ) );
+        uint64_t base_index = 0;
+        for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
+        {
+            base_index = ( base_index << 8 ) | hash[i];
+        }
+        base_index = base_index % ordered.size();
+
+        const auto round = GetCurrentRound( proposal.timestamp() );
+        const auto index = ( base_index + round ) % ordered.size();
+
+        return ordered[index] == account_address_;
     }
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject ) const
@@ -459,9 +605,21 @@ namespace sgns
         cert.set_registry_epoch( proposal.registry_epoch() );
         cert.set_total_weight( tally.total_weight );
         cert.set_approved_weight( tally.approved_weight );
-        cert.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
+        uint64_t max_vote_ts = 0;
+        for ( const auto &vote : votes )
+        {
+            if ( vote.timestamp() > max_vote_ts )
+            {
+                max_vote_ts = vote.timestamp();
+            }
+        }
+        if ( max_vote_ts == 0 )
+        {
+            max_vote_ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::system_clock::now().time_since_epoch() )
+                              .count();
+        }
+        cert.set_timestamp( max_vote_ts );
         for ( const auto &vote : votes )
         {
             *cert.add_votes() = vote;
@@ -663,6 +821,48 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: failed: publish error={}", __func__, result.error().message() );
             return result;
         }
+
+        if ( !db_ )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: db is null", __func__ );
+            return outcome::failure( std::errc::not_supported );
+        }
+        if ( !certificate.has_proposal() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: certificate missing proposal proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: subject hash error proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return outcome::failure( subject_hash_result.error() );
+        }
+
+        std::string serialized;
+        if ( !certificate.SerializeToString( &serialized ) )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: certificate serialize error", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        const auto             key = "/cert/" + subject_hash_result.value();
+        crdt::HierarchicalKey  cert_key( key );
+        crdt::GlobalDB::Buffer cert_value;
+        cert_value.put( serialized );
+
+        auto put_result = db_->Put( cert_key, cert_value, { consensus_datastore_topic_ } );
+        if ( put_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: crdt put error={}", __func__, put_result.error().message() );
+            return outcome::failure( put_result.error() );
+        }
+
         ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
         return result;
     }
@@ -845,6 +1045,79 @@ namespace sgns
         return outcome::success();
     }
 
+    void ConsensusManager::ProcessCertificates()
+    {
+        auto registry_result = registry_->LoadRegistry();
+        if ( registry_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: aborted: registry load error={}",
+                                             __func__,
+                                             registry_result.error().message() );
+            return;
+        }
+        const auto &registry = registry_result.value();
+
+        std::vector<ProposalState> to_process;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto &kv : proposals_ )
+            {
+                auto &state = kv.second;
+                if ( !state.quorum_reached || state.certificate.has_value() )
+                {
+                    continue;
+                }
+                to_process.push_back( state );
+            }
+        }
+
+        for ( auto &state : to_process )
+        {
+            const auto round = GetCurrentRound( state.proposal.timestamp() );
+            if ( round == state.last_attempt_round )
+            {
+                continue;
+            }
+            if ( !IsCurrentAggregator( state.proposal, registry ) )
+            {
+                continue;
+            }
+
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto            it = proposals_.find( state.proposal.proposal_id() );
+                if ( it != proposals_.end() )
+                {
+                    it->second.last_attempt_round = round;
+                }
+            }
+
+            auto certificate_result = CreateCertificate( state.proposal, state.votes );
+            if ( certificate_result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: failed: certificate creation error={}",
+                                                 __func__,
+                                                 certificate_result.error().message() );
+                continue;
+            }
+
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto            it = proposals_.find( state.proposal.proposal_id() );
+                if ( it != proposals_.end() && !it->second.certificate.has_value() )
+                {
+                    it->second.certificate = certificate_result.value();
+                }
+            }
+
+            (void)SubmitCertificate( certificate_result.value() );
+            NotifyCertificate( state.proposal, certificate_result.value() );
+            ConsensusManagerLogger()->debug( "{}: certificate submitted proposal_id={}",
+                                             __func__,
+                                             state.proposal.proposal_id() );
+        }
+    }
+
     void ConsensusManager::HandleVote( const Vote &vote )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={}",
@@ -946,44 +1219,17 @@ namespace sgns
             it->second.votes.push_back( vote );
             it->second.seen_voters.insert( vote.voter_id() );
             it->second.approved_weight += validator->weight();
-            state                       = it->second;
             has_quorum                  = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
-        }
-
-        if ( !has_quorum )
-        {
-            return;
-        }
-
-        if ( state.certificate.has_value() )
-        {
-            ConsensusManagerLogger()->debug( "{}: skipped: certificate already present proposal_id={}",
-                                             __func__,
-                                             vote.proposal_id() );
-            return;
-        }
-
-        auto certificate_result = CreateCertificate( state.proposal, state.votes );
-        if ( certificate_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: certificate creation error={}",
-                                             __func__,
-                                             certificate_result.error().message() );
-            return;
-        }
-
-        {
-            std::lock_guard lock( proposals_mutex_ );
-            auto            it = proposals_.find( vote.proposal_id() );
-            if ( it != proposals_.end() )
+            if ( has_quorum )
             {
-                it->second.certificate = certificate_result.value();
+                it->second.quorum_reached = true;
+                ConsensusManagerLogger()->debug(
+                    "{}: quorum reached; certificate will be created by timer proposal_id={}",
+                    __func__,
+                    vote.proposal_id() );
             }
+            state = it->second;
         }
-
-        (void)SubmitCertificate( certificate_result.value() );
-        NotifyCertificate( state.proposal, certificate_result.value() );
-        ConsensusManagerLogger()->debug( "{}: certificate submitted proposal_id={}", __func__, vote.proposal_id() );
     }
 
     void ConsensusManager::HandleVoteBundle( const VoteBundle &bundle )

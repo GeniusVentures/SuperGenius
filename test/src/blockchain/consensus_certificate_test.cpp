@@ -73,6 +73,7 @@ namespace sgns::test
 
         auto manager = ConsensusManager::New(
             registry,
+            db_,
             pubs_,
             [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
             account->GetAddress() );
@@ -109,6 +110,7 @@ namespace sgns::test
 
         auto manager = ConsensusManager::New(
             registry,
+            db_,
             pubs_,
             [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
             account->GetAddress() );

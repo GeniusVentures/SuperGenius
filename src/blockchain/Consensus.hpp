@@ -13,13 +13,17 @@
 #include <optional>
 #include <string>
 #include <shared_mutex>
+#include <thread>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
+#include "crdt/globaldb/globaldb.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 
@@ -28,6 +32,7 @@ namespace sgns
     class ConsensusManager : public std::enable_shared_from_this<ConsensusManager>
     {
     public:
+        ~ConsensusManager();
         using Proposal    = ConsensusProposal;
         using Vote        = ConsensusVote;
         using VoteBundle  = ConsensusVoteBundle;
@@ -56,6 +61,7 @@ namespace sgns
         };
 
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
+                                                      std::shared_ptr<crdt::GlobalDB>            db,
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
@@ -109,19 +115,26 @@ namespace sgns
         outcome::result<void>                        SubmitVote( const Vote &vote );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
         outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
+        void                                         ProcessCertificates();
 
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
+        void ConfigureRoundDuration( std::chrono::milliseconds duration );
+        void ConfigureRoundSkew( std::chrono::milliseconds skew );
 
     private:
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
+                                   std::shared_ptr<crdt::GlobalDB>            db,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
                                    std::string                                consensus_topic );
+        void StartRoundTimer();
 
         static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes( 5 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION  = std::chrono::milliseconds( 500 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW      = std::chrono::milliseconds( 250 );
 
         struct ProposalState
         {
@@ -132,6 +145,8 @@ namespace sgns
             uint64_t                        total_weight    = 0;
             uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
+            bool                            quorum_reached = false;
+            uint64_t                        last_attempt_round = 0;
         };
 
         struct SlotState
@@ -149,6 +164,10 @@ namespace sgns
         std::string                  GetSlotKey( const Proposal &proposal ) const;
         bool                         IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
         bool                         IsTimestampSane( uint64_t timestamp_ms ) const;
+        bool                         IsCurrentAggregator( const Proposal &proposal,
+                                                           const ValidatorRegistry::Registry &registry ) const;
+        std::vector<std::string>     GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
+        uint64_t                     GetCurrentRound( uint64_t proposal_ts_ms ) const;
         outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
         void                         ContinueProposalAfterSubject( const Proposal &proposal );
         void                         AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
@@ -162,6 +181,7 @@ namespace sgns
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
         std::shared_ptr<ValidatorRegistry>                        registry_;
+        std::shared_ptr<crdt::GlobalDB>                           db_;
         VoteBundleHandler                                         vote_bundle_handler_;
         CertificateHandler                                        certificate_handler_;
         CertificateCallback                                       certificate_callback_;
@@ -176,8 +196,15 @@ namespace sgns
         mutable std::mutex                                        proposals_mutex_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                pubsub_;
 
-        std::string                                                         consensus_topic_;
+        std::string                                                         consensus_messages_topic_;
+        std::string                                                         consensus_datastore_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
-        std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
+        std::chrono::milliseconds                                           timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
+        std::chrono::milliseconds                                           round_duration_{ DEFAULT_ROUND_DURATION };
+        std::chrono::milliseconds                                           round_skew_{ DEFAULT_ROUND_SKEW };
+        std::atomic<bool>                                                  stop_timer_{ false };
+        std::condition_variable                                            timer_cv_;
+        std::mutex                                                         timer_mutex_;
+        std::thread                                                        round_timer_;
     };
 }
