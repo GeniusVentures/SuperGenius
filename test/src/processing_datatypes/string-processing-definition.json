@@ -1,0 +1,86 @@
+{
+  "name": "bert-tiny-string-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for string input using bert-tiny",
+  "tags": ["string", "nlp", "test"],
+  
+  "inputs": [
+    {
+      "name": "inputText",
+      "source_uri_param": "textInput",
+      "type": "string",
+      "description": "Input text string for BERT processing"
+    }
+  ],
+  
+  "outputs": [
+    {
+      "name": "textEmbedding",
+      "source_uri_param": "embeddingOutput",
+      "type": "tensor",
+      "description": "Output text embedding from BERT"
+    }
+  ],
+  
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "bert-tiny.mnn",
+      "description": "URI to the BERT tiny model"
+    },
+    {
+      "name": "textInput",
+      "type": "string",
+      "default": "Hello world this is a test sentence",
+      "description": "Input text to process"
+    },
+    {
+      "name": "maxLength",
+      "type": "int",
+      "default": 128,
+      "description": "Maximum sequence length",
+      "constraints": {
+        "min": 1,
+        "max": 512
+      }
+    }
+  ],
+  
+  "passes": [
+    {
+      "name": "text_inference",
+      "type": "inference",
+      "description": "BERT text embedding inference",
+      "model": {
+        "source_uri_param": "bert-tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input_ids",
+            "type": "tensor",
+            "source": "input:inputText",
+            "shape": [1, 128]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:textEmbedding",
+            "shape": [1, 128, 128]
+          }
+        ]
+      }
+    }
+  ],
+  
+  "metadata": {
+    "created_date": "2026-02-11",
+    "framework": "MNN",
+    "test_case": "string_datatype"
+  }
+}
