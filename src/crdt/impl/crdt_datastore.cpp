@@ -598,11 +598,9 @@ namespace sgns::crdt
     {
         std::set<CID> cids_to_fetch;
         auto          node_to_process = job.node_;
-        bool          processing_root = false;
         if ( node_to_process == nullptr )
         {
             node_to_process = job.root_node_;
-            processing_root = true;
         }
 
         std::set<std::string> topics_to_update_cid = node_to_process->getDestinations();
@@ -646,17 +644,14 @@ namespace sgns::crdt
                         {
                             logger_->error( "{}: Topic {} different from known {} ", __func__, topic, _dontcare );
                         }
-                        std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
+                        std::lock_guard lock( pendingHeadsMutex_ );
                         pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( cid, topic );
-                        if ( logger_->level() <= spdlog::level::debug )
-                        {
-                            logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
-                                            __func__,
-                                            cid.toString().value(),
-                                            job.root_node_->getCID().toString().value(),
-                                            topic,
-                                            _dontcare );
-                        }
+                        logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
+                                        __func__,
+                                        cid.toString().value(),
+                                        job.root_node_->getCID().toString().value(),
+                                        topic,
+                                        _dontcare );
                     }
                 }
 
@@ -955,7 +950,7 @@ namespace sgns::crdt
             pending_topics = pendingBroadcastTopics_;
         }
 
-        std::unordered_set<std::string> topics_to_broadcast = topicNames_;
+        std::unordered_set<std::string> topics_to_broadcast = GetTopicNames();
         topics_to_broadcast.insert( pending_topics.begin(), pending_topics.end() );
 
         if ( topics_to_broadcast.empty() )
@@ -1748,11 +1743,13 @@ namespace sgns::crdt
         {
             has_full_node_topic_ = true;
         }
+        std::lock_guard lock( topicNamesMutex_ );
         topicNames_.emplace( topic );
     }
 
     std::unordered_set<std::string> CrdtDatastore::GetTopicNames() const
     {
+        std::lock_guard lock( topicNamesMutex_ );
         return topicNames_;
     }
 }
