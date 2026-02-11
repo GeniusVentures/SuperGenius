@@ -175,7 +175,7 @@ namespace sgns
 
         if ( !stopped_.load() )
         {
-            CheckTransactions();
+            QueryTransactions();
         }
         // First kick: keep self alive during the first dispatch only
         if ( !stopped_.load() )
@@ -273,8 +273,8 @@ namespace sgns
 
                     m_logger->error( "[{} - full: {}] Error in SendTransactionItem: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
-                                     send_result.error().message(),
-                                     full_node_m );
+                                     full_node_m,
+                                     send_result.error().message() );
 
                     auto rollback_result = RollbackTransactions( tx_queue_m.front() );
                     if ( rollback_result.has_error() )
@@ -593,24 +593,6 @@ namespace sgns
 
         EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->GetHash();
-    }
-
-    void TransactionManager::Update()
-    {
-        auto check_result = CheckTransactions();
-        if ( check_result.has_error() )
-        {
-            m_logger->error( "[{} - full: {}] Unknown CheckTransactions error in Update()",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-        }
-        auto confirm_result = ConfirmTransactions();
-        if ( confirm_result.has_error() )
-        {
-            m_logger->trace( "[{} - full: {}] Unknown ConfirmTransactions error in Update()",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-        }
     }
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
@@ -1021,7 +1003,7 @@ namespace sgns
         const std::shared_ptr<crdt::GlobalDB> &db,
         std::string_view                       transaction_key )
     {
-        OUTCOME_TRY( ( auto &&, transaction_data ), db->Get( { std::string( transaction_key ) } ) );
+        OUTCOME_TRY( auto transaction_data, db->Get( { std::string( transaction_key ) } ) );
 
         return DeSerializeTransaction( transaction_data );
     }
@@ -1029,7 +1011,7 @@ namespace sgns
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
         const base::Buffer &tx_data )
     {
-        auto transaction_data_vector = tx_data.toVector();
+        const auto &transaction_data_vector = tx_data.toVector();
 
         OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
 
@@ -1058,7 +1040,7 @@ namespace sgns
         return IBasicProof::VerifyFullProof( proof_data_vector );
     }
 
-    outcome::result<void> TransactionManager::CheckTransactions()
+    outcome::result<void> TransactionManager::QueryTransactions()
     {
         auto monitored_networks = GetMonitoredNetworkIDs();
 
@@ -1070,7 +1052,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              query_path );
-            OUTCOME_TRY( ( auto &&, transaction_list ), globaldb_m->QueryKeyValues( query_path ) );
+            OUTCOME_TRY( auto transaction_list, globaldb_m->QueryKeyValues( query_path ) );
 
             m_logger->trace( "[{} - full: {}] Transaction list grabbed from CRDT with Size {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1143,6 +1125,7 @@ namespace sgns
                 }
             }
         }
+
         return outcome::success();
     }
 

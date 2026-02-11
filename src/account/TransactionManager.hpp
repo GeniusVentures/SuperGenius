@@ -183,6 +183,8 @@ namespace sgns
         }
 
         static std::string GetBlockChainBase( uint16_t network_id );
+        
+        outcome::result<void> QueryTransactions();
 
     protected:
         friend class GeniusNode;
@@ -208,7 +210,6 @@ namespace sgns
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
-        void                                          Update();
         SGTransaction::DAGStruct                      FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<std::unordered_set<uint64_t>> SendTransactionItem( TransactionItem &item );
         outcome::result<void>                         ConfirmTransactions();
@@ -226,8 +227,6 @@ namespace sgns
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-
-        outcome::result<void> CheckTransactions();
 
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();

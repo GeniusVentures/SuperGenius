@@ -2,7 +2,11 @@
 
 #include "GeniusUTXO.hpp"
 #include "UTXOStructs.hpp"
+
 #include "base/logger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "storage/database_error.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 
 #include <shared_mutex>
 
@@ -23,7 +27,8 @@ namespace sgns
             is_full_node_( is_full_node ),
             address_( std::move( address ) ),
             sign_( std::move( sign ) ),
-            verify_signature_( std::move( verify_signature ) )
+            verify_signature_( std::move( verify_signature ) ),
+            db_( nullptr )
         {
         }
 
@@ -94,11 +99,11 @@ namespace sgns
          * @param[in]   utxos Vector of UTXOs to set for the address
          * @param[in]   address The address to set UTXOs for
          */
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
+        outcome::result<void> SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
 
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos )
+        outcome::result<void> SetUTXOs( const std::vector<GeniusUTXO> &utxos )
         {
-            SetUTXOs( utxos, address_ );
+            return SetUTXOs( utxos, address_ );
         }
 
         outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t           amount,
@@ -119,7 +124,13 @@ namespace sgns
 
         bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
+        outcome::result<bool> LoadUTXOs( std::shared_ptr<crdt::GlobalDB> db );
+
+        outcome::result<void> StoreUTXOs( const std::string &address );
+
     private:
+        static constexpr std::string_view DB_PREFIX = "/utxo";
+
         outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
                                                                                       const TokenID &token_id );
 
@@ -127,12 +138,13 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-        bool                is_full_node_;
-        std::string         address_;
-        SignFunc            sign_;
-        VerifySignatureFunc verify_signature_;
+        bool                            is_full_node_;
+        std::string                     address_;
+        SignFunc                        sign_;
+        VerifySignatureFunc             verify_signature_;
+        std::shared_ptr<crdt::GlobalDB> db_;
 
-        enum class UTXOState
+        enum class UTXOState : uint8_t
         {
             UTXO_READY,
             UTXO_RESERVED,
