@@ -9,7 +9,7 @@
   "inputs": [
     {
       "name": "inputText",
-      "source_uri_param": "textInput",
+      "source_uri_param": "file://processing_datatypes/test_input.txt",
       "type": "string",
       "description": "Input text string for BERT processing"
     }
@@ -28,7 +28,7 @@
     {
       "name": "modelUri",
       "type": "uri",
-      "default": "bert-tiny.mnn",
+      "default": "file://processing_datatypes/bert-tiny.mnn",
       "description": "URI to the BERT tiny model"
     },
     {
@@ -55,7 +55,7 @@
       "type": "inference",
       "description": "BERT text embedding inference",
       "model": {
-        "source_uri_param": "bert-tiny.mnn",
+        "source_uri_param": "file://processing_datatypes/bert-tiny.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
