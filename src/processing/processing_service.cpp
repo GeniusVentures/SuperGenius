@@ -145,8 +145,13 @@ namespace sgns::processing
         m_logger->debug( "List of processing channels requested" );
         m_timerChannelListRequestTimeout.expires_from_now( m_channelListRequestTimeout );
         m_timerChannelListRequestTimeout.async_wait(
-            [instance = shared_from_this()]( const boost::system::error_code & )
-            { instance->HandleRequestTimeout(); } );
+            [instance = weak_from_this()]( const boost::system::error_code & )
+            {
+                if ( auto strong = instance.lock() )
+                {
+                    strong->HandleRequestTimeout();
+                }
+            } );
     }
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
@@ -406,34 +411,39 @@ namespace sgns::processing
         m_channelListRequestTimeout = channelListRequestTimeout;
     }
 
-    ProcessingServiceImpl::ProcessingStatus ProcessingServiceImpl::GetProcessingStatus() const {
-        if (m_isStopped) {
-            return ProcessingStatus(Status::DISABLED, 0.0f);
-        }
-        
-        float totalProgress = 0.0f;
-        size_t nodeCount = 0;
-        
+    ProcessingServiceImpl::ProcessingStatus ProcessingServiceImpl::GetProcessingStatus() const
+    {
+        if ( m_isStopped )
         {
-            std::lock_guard lock(m_mutexNodes);
-            if (m_processingNodes.empty()) {
-                return ProcessingStatus(Status::IDLE, 0.0f);
+            return ProcessingStatus( Status::DISABLED, 0.0f );
+        }
+
+        float  totalProgress = 0.0f;
+        size_t nodeCount     = 0;
+
+        {
+            std::lock_guard lock( m_mutexNodes );
+            if ( m_processingNodes.empty() )
+            {
+                return ProcessingStatus( Status::IDLE, 0.0f );
             }
-            
+
             // Calculate average progress across all processing nodes
-            for (const auto& [queueId, node] : m_processingNodes) {
-                if (node) {
+            for ( const auto &[queueId, node] : m_processingNodes )
+            {
+                if ( node )
+                {
                     totalProgress += node->GetProgress();
                     ++nodeCount;
                 }
             }
         }
-        
-        float averageProgress = (nodeCount > 0) ? (totalProgress / nodeCount) : 0.0f;
+
+        float averageProgress = ( nodeCount > 0 ) ? ( totalProgress / nodeCount ) : 0.0f;
         // Round to 2 decimal places
-        averageProgress = std::round(averageProgress * 100.0f) / 100.0f;
-        
-        return ProcessingStatus(Status::PROCESSING, averageProgress);
+        averageProgress = std::round( averageProgress * 100.0f ) / 100.0f;
+
+        return ProcessingStatus( Status::PROCESSING, averageProgress );
     }
 
     void ProcessingServiceImpl::HandleRequestTimeout()

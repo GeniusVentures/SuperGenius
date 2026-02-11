@@ -75,7 +75,7 @@ protected:
 
         if ( isGenesisAuthorized )
         {
-            auto response = sgns::GeniusAccount::GenerateGeniusAddress(  key.c_str(), outPath );
+            auto response = GeniusAccount::GenerateGeniusAddress( key.c_str(), outPath );
             if ( !response.has_value() )
             {
                 ADD_FAILURE() << "Failed to generate full-node address for authorization";
@@ -141,18 +141,18 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     auto node_full = CreateNode( "node_multi_full",
                                  "0xcafe",
                                  "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                 TokenID::FromBytes( { 0x00 } ),
                                  true, // is full node
                                  true, // is processor
                                  true );
     test::assertWaitForCondition(
         [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_full not synched" );
+        "node_full not synced" );
     auto node_main = CreateNode( "node_multi_1",
                                  "0xcafe",
                                  "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                 TokenID::FromBytes( { 0x00 } ),
                                  false, // not full node
                                  false  // not processor
     );
@@ -160,7 +160,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     auto node_proc1 = CreateNode( "node_multi_1",
                                   "0xcafe",
                                   "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                  TokenID::FromBytes( { 0x00 } ),
                                   false, // not full node
                                   true   // is processor
     );
@@ -173,11 +173,11 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_proc1 not synched" );
+        "node_proc1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_main not synched" );
+        "node_main not synced" );
 
     // Get initial state
     auto transcount_main_start  = node_main->GetOutTransactions().size();
@@ -195,9 +195,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     std::cout << "Mint transaction on main node completed, waiting for sync..." << std::endl;
 
-    test::assertWaitForCondition( [&]() { return node_proc1->GetBalance() == 50000000000; },
+    test::assertWaitForCondition( [&] { return node_proc1->GetBalance() == 50000000000; },
                                   std::chrono::milliseconds( 30000 ),
-                                  "node_proc1 balance not synched" );
+                                  "node_proc1 balance not synced" );
 
     //TODO - this is not working at the moment
     //auto mint_received = node_proc1->WaitForTransactionOutgoing(
@@ -211,9 +211,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_proc1";
 
-    test::assertWaitForCondition( [&]() { return node_main->GetBalance() == 100000000000; },
+    test::assertWaitForCondition( [&] { return node_main->GetBalance() == 100000000000; },
                                   std::chrono::milliseconds( 30000 ),
-                                  "node_main balance not synched" );
+                                  "node_main balance not synced" );
     //TODO - this is not working at the moment
     //auto mint_received2 = node_main->WaitForTransactionOutgoing(
     //    mint_result.value().first,
