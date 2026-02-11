@@ -24,6 +24,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/globaldb.hpp"
+#include "crdt/proto/delta.pb.h"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 
@@ -39,12 +40,10 @@ namespace sgns
         using Certificate = ConsensusCertificate;
         using Subject     = ConsensusSubject;
 
-        using Signer             = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
-        using ProposalHandler    = std::function<void( const Proposal &proposal )>;
-        using VoteHandler        = std::function<void( const Vote &vote )>;
-        using VoteBundleHandler  = std::function<void( const VoteBundle &bundle )>;
-        using CertificateHandler = std::function<void( const Certificate &certificate )>;
-        using CertificateCallback = std::function<void( const Proposal &proposal, const Certificate &certificate )>;
+        using Signer            = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
+        using ProposalHandler   = std::function<void( const Proposal &proposal )>;
+        using VoteHandler       = std::function<void( const Vote &vote )>;
+        using VoteBundleHandler = std::function<void( const VoteBundle &bundle )>;
         enum class SubjectCheck
         {
             Approve,
@@ -52,6 +51,8 @@ namespace sgns
             Pending
         };
         using SubjectHandler = std::function<outcome::result<SubjectCheck>( const Subject &subject )>;
+        using CertificateSubjectHandler =
+            std::function<void( const std::string &subject_hash, const Certificate &certificate )>;
 
         struct QuorumTally
         {
@@ -69,12 +70,12 @@ namespace sgns
 
         bool RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
         void UnregisterSubjectHandler( SubjectType type );
-        void SetCertificateCallback( CertificateCallback callback );
+        bool RegisterCertificateHandler( SubjectType type, CertificateSubjectHandler handler );
+        void UnregisterCertificateHandler( SubjectType type );
 
         outcome::result<void> Publish( const ConsensusMessage &message );
 
         void SetVoteBundleHandler( VoteBundleHandler handler );
-        void SetCertificateHandler( CertificateHandler handler );
 
         outcome::result<Proposal>        CreateProposal( const Subject     &subject,
                                                          const std::string &proposer_id,
@@ -98,7 +99,7 @@ namespace sgns
 
         outcome::result<Certificate> CreateCertificate( const Proposal &proposal, const std::vector<Vote> &votes );
 
-        outcome::result<QuorumTally> TallyVotes( const Proposal &proposal, const std::vector<Vote> &votes );
+        outcome::result<QuorumTally> TallyVotes( const Proposal &proposal, const std::vector<Vote> &votes ) const;
 
         static outcome::result<std::vector<uint8_t>> ProposalSigningBytes( const Proposal &proposal );
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
@@ -133,19 +134,18 @@ namespace sgns
 
         static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes( 5 );
-        static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION  = std::chrono::milliseconds( 500 );
-        static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW      = std::chrono::milliseconds( 250 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION   = std::chrono::milliseconds( 500 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW       = std::chrono::milliseconds( 250 );
 
         struct ProposalState
         {
             Proposal                        proposal;
             std::vector<Vote>               votes;
-            std::optional<Certificate>      certificate;
             std::string                     slot_key;
             uint64_t                        total_weight    = 0;
             uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
-            bool                            quorum_reached = false;
+            bool                            quorum_reached     = false;
             uint64_t                        last_attempt_round = 0;
         };
 
@@ -156,37 +156,49 @@ namespace sgns
             bool        voted = false;
         };
 
-        void                         HandleProposal( const Proposal &proposal );
-        void                         HandleVote( const Vote &vote );
-        void                         HandleVoteBundle( const VoteBundle &bundle );
-        void                         HandleCertificate( const Certificate &certificate );
-        void                         NotifyCertificate( const Proposal &proposal, const Certificate &certificate );
-        std::string                  GetSlotKey( const Proposal &proposal ) const;
-        bool                         IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
-        bool                         IsTimestampSane( uint64_t timestamp_ms ) const;
-        bool                         IsCurrentAggregator( const Proposal &proposal,
-                                                           const ValidatorRegistry::Registry &registry ) const;
-        std::vector<std::string>     GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
-        uint64_t                     GetCurrentRound( uint64_t proposal_ts_ms ) const;
+        void        HandleProposal( const Proposal &proposal );
+        void        HandleVote( const Vote &vote );
+        void        HandleVoteBundle( const VoteBundle &bundle );
+        void        HandleCertificate( const Certificate &certificate );
+        std::string GetSlotKey( const Proposal &proposal ) const;
+        bool        IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
+        bool        IsTimestampSane( uint64_t timestamp_ms ) const;
+        bool        IsCurrentAggregator( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
+        std::vector<std::string> GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
+        uint64_t                 GetCurrentRound( uint64_t proposal_ts_ms ) const;
+        bool                     LoadProposalStateForCertificate( const Certificate &certificate,
+                                                                  ProposalState     &state,
+                                                                  Proposal          &proposal );
+
+        outcome::result<ProposalState> FetchProposalState( const Certificate &certificate );
+        bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
+        std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
+        bool              HasQuorumForCertificate( const Proposal &proposal, const std::vector<Vote> &votes ) const;
+        void              ClearProposalState( const Proposal &proposal );
         outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
         void                         ContinueProposalAfterSubject( const Proposal &proposal );
         void                         AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
         std::vector<Proposal>        TakePendingProposals( const std::string &subject_hash );
+        bool                         RegisterCertificateFilter();
+        std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
+        void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
+        bool ValidateCertificateForCrdt( const Certificate &certificate ) const;
 
-        static std::string                       CreateProposalId( const Proposal &proposal );
-        static bool                              ValidateSubject( const Subject &subject );
+        static std::string CreateProposalId( const Proposal &proposal );
+        static bool        ValidateSubject( const Subject &subject );
 
         void        OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
+        static bool CheckCertificate( const Certificate &certificate );
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
         VoteBundleHandler                                         vote_bundle_handler_;
-        CertificateHandler                                        certificate_handler_;
-        CertificateCallback                                       certificate_callback_;
         std::unordered_map<int, SubjectHandler>                   subject_handlers_;
         mutable std::shared_mutex                                 subject_handlers_mutex_;
+        std::unordered_map<int, CertificateSubjectHandler>        certificate_subject_handlers_;
+        mutable std::shared_mutex                                 certificate_handlers_mutex_;
         Signer                                                    signer_;
         std::string                                               account_address_;
         std::unordered_map<std::string, ProposalState>            proposals_;
@@ -199,12 +211,12 @@ namespace sgns
         std::string                                                         consensus_messages_topic_;
         std::string                                                         consensus_datastore_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
-        std::chrono::milliseconds                                           timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
-        std::chrono::milliseconds                                           round_duration_{ DEFAULT_ROUND_DURATION };
-        std::chrono::milliseconds                                           round_skew_{ DEFAULT_ROUND_SKEW };
-        std::atomic<bool>                                                  stop_timer_{ false };
-        std::condition_variable                                            timer_cv_;
-        std::mutex                                                         timer_mutex_;
-        std::thread                                                        round_timer_;
+        std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
+        std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION };
+        std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };
+        std::atomic<bool>         stop_timer_{ false };
+        std::condition_variable   timer_cv_;
+        std::mutex                timer_mutex_;
+        std::thread               round_timer_;
     };
 }

@@ -87,6 +87,10 @@ namespace sgns
                                          __func__,
                                          instance->consensus_messages_topic_ );
         instance->StartRoundTimer();
+        if ( !instance->RegisterCertificateFilter() )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to register certificate filter", __func__ );
+        }
 
         return instance;
     }
@@ -153,11 +157,6 @@ namespace sgns
             } );
     }
 
-    void ConsensusManager::SetCertificateCallback( CertificateCallback callback )
-    {
-        certificate_callback_ = std::move( callback );
-    }
-
     outcome::result<void> ConsensusManager::Publish( const ConsensusMessage &message )
     {
         std::vector<uint8_t> serialized_proto( message.ByteSizeLong() );
@@ -181,11 +180,6 @@ namespace sgns
         vote_bundle_handler_ = std::move( handler );
     }
 
-    void ConsensusManager::SetCertificateHandler( CertificateHandler handler )
-    {
-        certificate_handler_ = std::move( handler );
-    }
-
     bool ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
     {
         if ( !handler )
@@ -205,6 +199,29 @@ namespace sgns
                                          static_cast<int>( type ) );
         std::unique_lock lock( subject_handlers_mutex_ );
         subject_handlers_.erase( static_cast<int>( type ) );
+    }
+
+    bool ConsensusManager::RegisterCertificateHandler( SubjectType type, CertificateSubjectHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->warn( "{}: ignored empty certificate handler type={}",
+                                            __func__,
+                                            static_cast<int>( type ) );
+            return false;
+        }
+        std::unique_lock lock( certificate_handlers_mutex_ );
+        certificate_subject_handlers_[static_cast<int>( type )] = std::move( handler );
+        return true;
+    }
+
+    void ConsensusManager::UnregisterCertificateHandler( SubjectType type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing Certificate handler with type={}",
+                                         __func__,
+                                         static_cast<int>( type ) );
+        std::unique_lock lock( certificate_handlers_mutex_ );
+        certificate_subject_handlers_.erase( static_cast<int>( type ) );
     }
 
     void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
@@ -631,7 +648,7 @@ namespace sgns
     }
 
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
-                                                                                 const std::vector<Vote> &votes )
+                                                                                 const std::vector<Vote> &votes ) const
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
@@ -879,22 +896,6 @@ namespace sgns
             return;
         }
 
-        auto signing_bytes = ProposalSigningBytes( proposal );
-        if ( signing_bytes.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
-                                             __func__,
-                                             signing_bytes.error().message() );
-            return;
-        }
-        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: signature verification failed proposer_id={}",
-                                             __func__,
-                                             proposal.proposer_id() );
-            return;
-        }
-
         if ( !IsTimestampSane( proposal.timestamp() ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: timestamp out of bounds proposal_id={}",
@@ -1063,7 +1064,7 @@ namespace sgns
             for ( auto &kv : proposals_ )
             {
                 auto &state = kv.second;
-                if ( !state.quorum_reached || state.certificate.has_value() )
+                if ( !state.quorum_reached )
                 {
                     continue;
                 }
@@ -1101,21 +1102,159 @@ namespace sgns
                 continue;
             }
 
-            {
-                std::lock_guard lock( proposals_mutex_ );
-                auto            it = proposals_.find( state.proposal.proposal_id() );
-                if ( it != proposals_.end() && !it->second.certificate.has_value() )
-                {
-                    it->second.certificate = certificate_result.value();
-                }
-            }
-
             (void)SubmitCertificate( certificate_result.value() );
-            NotifyCertificate( state.proposal, certificate_result.value() );
+            ClearProposalState( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted proposal_id={}",
                                              __func__,
                                              state.proposal.proposal_id() );
         }
+    }
+
+    bool ConsensusManager::RegisterCertificateFilter()
+    {
+        const std::string pattern = "^/?cert/[^/]+";
+
+        auto       weak_self         = weak_from_this();
+        const bool filter_registered = db_->RegisterElementFilter(
+            pattern,
+            [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    return strong->FilterCertificate( element );
+                }
+                return std::nullopt;
+            } );
+
+        const bool callback_registered = db_->RegisterNewElementCallback(
+            pattern,
+            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->CertificateReceived( std::move( new_data ), cid );
+                }
+            } );
+
+        db_->AddListenTopic( consensus_datastore_topic_ );
+
+        return filter_registered && callback_registered;
+    }
+
+    std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(
+        const crdt::pb::Element &element )
+    {
+        ConsensusManagerLogger()->trace( "{}: entry key={}", __func__, element.key() );
+        Certificate certificate;
+        if ( !certificate.ParseFromString( element.value() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: parse failed, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
+        if ( !ValidateCertificateForCrdt( certificate ) )
+        {
+            ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
+        ConsensusManagerLogger()->debug( "{}: certificate accepted key={}", __func__, element.key() );
+        return std::nullopt;
+    }
+
+    void ConsensusManager::CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
+                                                const std::string                     &cid )
+    {
+        auto [key, value] = new_data;
+        (void)cid;
+        Certificate certificate;
+        if ( !certificate.ParseFromArray( value.data(), value.size() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
+            return;
+        }
+
+        HandleCertificate( certificate );
+
+        if ( !certificate.has_proposal() )
+        {
+            return;
+        }
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash.has_error() )
+        {
+            return;
+        }
+
+        CertificateSubjectHandler handler;
+        {
+            std::shared_lock lock( certificate_handlers_mutex_ );
+            auto it = certificate_subject_handlers_.find( static_cast<int>( certificate.proposal().subject().type() ) );
+            if ( it == certificate_subject_handlers_.end() )
+            {
+                return;
+            }
+            handler = it->second;
+        }
+
+        handler( subject_hash.value(), certificate );
+    }
+
+    bool ConsensusManager::ValidateCertificateForCrdt( const Certificate &certificate ) const
+    {
+        if ( !registry_ )
+        {
+            return false;
+        }
+        if ( !certificate.has_proposal() )
+        {
+            return false;
+        }
+
+        const auto &proposal = certificate.proposal();
+        if ( proposal.proposal_id() != certificate.proposal_id() )
+        {
+            return false;
+        }
+        if ( proposal.registry_cid() != certificate.registry_cid() ||
+             proposal.registry_epoch() != certificate.registry_epoch() )
+        {
+            return false;
+        }
+        if ( !ValidateSubject( proposal.subject() ) )
+        {
+            return false;
+        }
+
+        auto signing_bytes = ProposalSigningBytes( proposal );
+        if ( signing_bytes.has_error() )
+        {
+            return false;
+        }
+        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
+        {
+            return false;
+        }
+
+        auto computed_id = CreateProposalId( proposal );
+        if ( computed_id.empty() || computed_id != certificate.proposal_id() )
+        {
+            return false;
+        }
+
+        std::vector<Vote> votes;
+        votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
+        for ( const auto &vote : certificate.votes() )
+        {
+            votes.push_back( vote );
+        }
+        auto tally = TallyVotes( proposal, votes );
+        if ( tally.has_error() || !tally.value().has_quorum )
+        {
+            return false;
+        }
+
+        return true;
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
@@ -1252,137 +1391,87 @@ namespace sgns
     void ConsensusManager::HandleCertificate( const Certificate &certificate )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
-        if ( certificate_handler_ )
-        {
-            certificate_handler_( certificate );
-        }
 
-        if ( !registry_ )
+        if ( !CheckCertificate( certificate ) )
         {
-            ConsensusManagerLogger()->error( "{}: aborted: registry is null", __func__ );
+            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
             return;
         }
 
-        ProposalState state;
-        Proposal      proposal;
-        bool          have_proposal = false;
-        if ( certificate.has_proposal() )
+        auto fetch_proposal_state_ret = FetchProposalState( certificate );
+        if ( fetch_proposal_state_ret.has_error() )
         {
-            proposal = certificate.proposal();
-
-            if ( proposal.proposal_id() != certificate.proposal_id() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: proposal_id mismatch cert={} proposal={}",
-                                                 __func__,
-                                                 certificate.proposal_id(),
-                                                 proposal.proposal_id() );
-                return;
-            }
-
-            if ( proposal.registry_cid() != certificate.registry_cid() ||
-                 proposal.registry_epoch() != certificate.registry_epoch() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
-                                                 __func__,
-                                                 certificate.proposal_id() );
-                return;
-            }
-
-            if ( !ValidateSubject( proposal.subject() ) )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
-                                                 __func__,
-                                                 proposal.proposal_id() );
-                return;
-            }
-
-            auto signing_bytes = ProposalSigningBytes( proposal );
-            if ( signing_bytes.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
-                                                 __func__,
-                                                 signing_bytes.error().message() );
-                return;
-            }
-            if ( !GeniusAccount::VerifySignature( proposal.proposer_id(),
-                                                  proposal.signature(),
-                                                  signing_bytes.value() ) )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: signature verification failed proposer_id={}",
-                                                 __func__,
-                                                 proposal.proposer_id() );
-                return;
-            }
-
-            const auto computed_id = CreateProposalId( proposal );
-            if ( computed_id.empty() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
-                return;
-            }
-            if ( computed_id != certificate.proposal_id() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: computed_id mismatch cert={} computed={}",
-                                                 __func__,
-                                                 certificate.proposal_id(),
-                                                 computed_id );
-                return;
-            }
-
-            have_proposal = true;
+            ConsensusManagerLogger()->error( "{}: rejected: Proposal state already has a certificate, proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return;
         }
+        auto &proposal_state = fetch_proposal_state_ret.value();
+        auto &proposal       = certificate.proposal();
+
+        if ( !ValidateCertificateBestProposal( proposal_state, certificate ) )
         {
-            std::lock_guard lock( proposals_mutex_ );
-            auto            it = proposals_.find( certificate.proposal_id() );
-            if ( it != proposals_.end() )
-            {
-                if ( it->second.certificate.has_value() )
-                {
-                    ConsensusManagerLogger()->debug( "{}: skipped: already have certificate proposal_id={}",
-                                                     __func__,
-                                                     certificate.proposal_id() );
-                    return;
-                }
-                state         = it->second;
-                proposal      = state.proposal;
-                have_proposal = true;
-            }
-            else if ( have_proposal )
-            {
-                ProposalState new_state;
-                new_state.proposal = proposal;
-                new_state.slot_key = GetSlotKey( proposal );
-                proposals_.emplace( proposal.proposal_id(), new_state );
-                state = std::move( new_state );
+            return;
+        }
 
-                auto &slot_state = slot_states_[state.slot_key];
-                if ( slot_state.best_proposal_id.empty() )
-                {
-                    slot_state.best_proposal_id = proposal.proposal_id();
-                    if ( proposal.subject().has_nonce() )
-                    {
-                        slot_state.best_tx_hash = proposal.subject().nonce().tx_hash();
-                    }
-                }
-            }
-            else
-            {
-                ConsensusManagerLogger()->error( "{}: aborted: missing proposal proposal_id={}",
-                                                 __func__,
-                                                 certificate.proposal_id() );
-                return;
-            }
+        auto votes = CollectCertificateVotes( certificate );
+        if ( !HasQuorumForCertificate( proposal, votes ) )
+        {
+            return;
+        }
 
-            auto slot_it = slot_states_.find( state.slot_key );
-            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
+        ClearProposalState( proposal );
+        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
+    }
+
+    outcome::result<ConsensusManager::ProposalState> ConsensusManager::FetchProposalState(
+        const Certificate &certificate )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        auto            it = proposals_.find( certificate.proposal_id() );
+        if ( it != proposals_.end() )
+        {
+            return it->second;
+        }
+
+        ProposalState new_state;
+        new_state.proposal = certificate.proposal();
+        new_state.slot_key = GetSlotKey( new_state.proposal );
+        proposals_.emplace( new_state.proposal.proposal_id(), new_state );
+
+        auto &slot_state = slot_states_[new_state.slot_key];
+        if ( slot_state.best_proposal_id.empty() )
+        {
+            slot_state.best_proposal_id = new_state.proposal.proposal_id();
+            if ( new_state.proposal.subject().has_nonce() )
             {
-                ConsensusManagerLogger()->error( "{}: rejected: not best proposal proposal_id={}",
-                                                 __func__,
-                                                 certificate.proposal_id() );
-                return;
+                slot_state.best_tx_hash = new_state.proposal.subject().nonce().tx_hash();
             }
         }
 
+        return new_state;
+    }
+
+    bool ConsensusManager::ValidateCertificateBestProposal( const ProposalState &state,
+                                                            const Certificate   &certificate ) const
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        auto            slot_it = slot_states_.find( state.slot_key );
+        if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: not best proposal proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return false;
+        }
+        return true;
+    }
+
+    std::vector<ConsensusManager::Vote> ConsensusManager::CollectCertificateVotes(
+        const Certificate &certificate ) const
+    {
         std::vector<Vote> votes;
         votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
         for ( const auto &vote : certificate.votes() )
@@ -1390,7 +1479,11 @@ namespace sgns
             ConsensusManagerLogger()->trace( "{}: processing vote voter_id={}", __func__, vote.voter_id() );
             votes.push_back( vote );
         }
+        return votes;
+    }
 
+    bool ConsensusManager::HasQuorumForCertificate( const Proposal &proposal, const std::vector<Vote> &votes ) const
+    {
         auto tally_result = TallyVotes( proposal, votes );
         if ( tally_result.has_error() || !tally_result.value().has_quorum )
         {
@@ -1400,28 +1493,36 @@ namespace sgns
                                                  __func__,
                                                  tally_result.error().message() );
             }
-            return;
+            return false;
         }
+        return true;
+    }
 
+    void ConsensusManager::ClearProposalState( const Proposal &proposal )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        auto            it = proposals_.find( proposal.proposal_id() );
+        if ( it != proposals_.end() )
         {
-            std::lock_guard lock( proposals_mutex_ );
-            auto            it = proposals_.find( certificate.proposal_id() );
-            if ( it != proposals_.end() )
+            const auto slot_key = it->second.slot_key;
+            proposals_.erase( it );
+            auto slot_it = slot_states_.find( slot_key );
+            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id == proposal.proposal_id() )
             {
-                it->second.certificate = certificate;
+                slot_states_.erase( slot_it );
             }
         }
 
-        NotifyCertificate( proposal, certificate );
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
-    }
-
-    void ConsensusManager::NotifyCertificate( const Proposal &proposal, const Certificate &certificate )
-    {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
-        if ( certificate_callback_ )
+        auto pending_it = pending_proposals_.find( proposal.proposal_id() );
+        if ( pending_it != pending_proposals_.end() )
         {
-            certificate_callback_( proposal, certificate );
+            pending_proposals_.erase( pending_it );
+        }
+
+        for ( auto &kv : pending_by_subject_hash_ )
+        {
+            auto &vec = kv.second;
+            vec.erase( std::remove( vec.begin(), vec.end(), proposal.proposal_id() ), vec.end() );
         }
     }
 
@@ -1721,6 +1822,21 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: Proposal without subject ", __func__ );
             return false;
         }
+        auto signing_bytes = ProposalSigningBytes( proposal );
+        if ( signing_bytes.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
+                                             __func__,
+                                             signing_bytes.error().message() );
+            return false;
+        }
+        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: signature verification failed proposer_id={}",
+                                             __func__,
+                                             proposal.proposer_id() );
+            return false;
+        }
         return true;
     }
 
@@ -1734,6 +1850,71 @@ namespace sgns
         if ( vote.voter_id().empty() )
         {
             ConsensusManagerLogger()->error( "{}: Vote voter ID missing ", __func__ );
+            return false;
+        }
+        return true;
+    }
+
+    bool ConsensusManager::CheckCertificate( const Certificate &certificate )
+    {
+        if ( certificate.proposal_id().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: Certificate proposal ID missing ", __func__ );
+            return false;
+        }
+        if ( !certificate.has_proposal() )
+        {
+            ConsensusManagerLogger()->error( "{}: Certificate missing proposal ", __func__ );
+            return false;
+        }
+
+        auto &proposal = certificate.proposal();
+
+        if ( proposal.proposal_id() != certificate.proposal_id() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: proposal_id mismatch cert={} proposal={}",
+                                             __func__,
+                                             certificate.proposal_id(),
+                                             proposal.proposal_id() );
+            return false;
+        }
+
+        if ( proposal.registry_cid() != certificate.registry_cid() ||
+             proposal.registry_epoch() != certificate.registry_epoch() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return false;
+        }
+
+        if ( !ValidateSubject( proposal.subject() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return false;
+        }
+        if ( !CheckProposal( proposal ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid proposal proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return false;
+        }
+
+        const auto computed_id = CreateProposalId( proposal );
+        if ( computed_id.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
+            return false;
+        }
+        if ( computed_id != certificate.proposal_id() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: computed_id mismatch cert={} computed={}",
+                                             __func__,
+                                             certificate.proposal_id(),
+                                             computed_id );
             return false;
         }
         return true;

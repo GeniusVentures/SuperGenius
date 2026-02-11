@@ -139,18 +139,20 @@ namespace sgns::test
 
         auto cert = cert_result.value();
 
-        bool notified = false;
-        manager->SetCertificateCallback( [&notified]( const ConsensusProposal &, const ConsensusCertificate & )
-                                         { notified = true; } );
-
+        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+                                         []( const ConsensusManager::Subject & )
+                                         { return ConsensusManager::SubjectCheck::Approve; } );
+        manager->HandleProposal( proposal_result.value() );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
         manager->HandleCertificate( cert );
-        EXPECT_TRUE( notified );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) == manager->proposals_.end() );
 
-        notified          = false;
+        manager->HandleProposal( proposal_result.value() );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
         auto *bad_subject = cert.mutable_proposal()->mutable_subject()->mutable_nonce();
         bad_subject->set_nonce( bad_subject->nonce() + 1 );
 
         manager->HandleCertificate( cert );
-        EXPECT_FALSE( notified );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
     }
 } // namespace sgns::test

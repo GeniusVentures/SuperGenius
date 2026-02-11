@@ -1537,9 +1537,14 @@ namespace sgns
         consensus_manager_->UnregisterSubjectHandler( type );
     }
 
-    void Blockchain::SetCertificateCallback( ConsensusManager::CertificateCallback callback )
+    bool Blockchain::RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler )
     {
-        consensus_manager_->SetCertificateCallback( std::move( callback ) );
+        return consensus_manager_->RegisterCertificateHandler( type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterCertificateHandler( SubjectType type )
+    {
+        consensus_manager_->UnregisterCertificateHandler( type );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,

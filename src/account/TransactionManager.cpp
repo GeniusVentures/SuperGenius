@@ -48,13 +48,18 @@ namespace sgns
                                                                                      timestamp_tolerance,
                                                                                      mutability_window ) );
 
-        instance->blockchain_->SetCertificateCallback(
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const ConsensusProposal    &proposal,
-                                                                         const ConsensusCertificate &certificate )
+        instance->blockchain_->RegisterCertificateHandler(
+            SubjectType::SUBJECT_NONCE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::string &subject_hash, const ConsensusCertificate &certificate )
             {
+                (void)subject_hash;
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    strong->OnConsensusCertificate( proposal, certificate );
+                    if ( certificate.has_proposal() )
+                    {
+                        strong->OnConsensusCertificate( certificate.proposal(), certificate );
+                    }
                 }
             } );
         instance->blockchain_->RegisterSubjectHandler(

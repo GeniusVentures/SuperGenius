@@ -108,8 +108,9 @@ namespace sgns
 
         bool RegisterSubjectHandler( SubjectType type, ConsensusManager::SubjectHandler handler );
         void UnregisterSubjectHandler( SubjectType type );
+        bool RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler );
+        void UnregisterCertificateHandler( SubjectType type );
 
-        void SetCertificateCallback( ConsensusManager::CertificateCallback callback );
 
         outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
                                                                              uint64_t           nonce,
