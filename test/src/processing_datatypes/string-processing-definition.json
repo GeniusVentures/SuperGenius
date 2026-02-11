@@ -32,6 +32,12 @@
       "description": "URI to the BERT tiny model"
     },
     {
+      "name": "tokenizerMode",
+      "type": "string",
+      "default": "token_ids",
+      "description": "Tokenizer mode: token_ids or raw_text"
+    },
+    {
       "name": "textInput",
       "type": "string",
       "default": "Hello world this is a test sentence",

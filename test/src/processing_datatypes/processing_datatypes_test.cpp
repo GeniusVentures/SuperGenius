@@ -79,19 +79,23 @@ namespace sgns
         // Test parameters
         ASSERT_TRUE( processing.get_parameters().has_value() );
         auto parameters = processing.get_parameters().value();
-        ASSERT_EQ( parameters.size(), 3 );
+        ASSERT_EQ( parameters.size(), 4 );
 
         // Validate modelUri parameter
         ASSERT_EQ( parameters[0].get_name(), "modelUri" );
         ASSERT_EQ( parameters[0].get_type(), sgns::ParameterType::URI );
 
-        // Validate textInput parameter
-        ASSERT_EQ( parameters[1].get_name(), "textInput" );
+        // Validate tokenizerMode parameter
+        ASSERT_EQ( parameters[1].get_name(), "tokenizerMode" );
         ASSERT_EQ( parameters[1].get_type(), sgns::ParameterType::STRING );
 
+        // Validate textInput parameter
+        ASSERT_EQ( parameters[2].get_name(), "textInput" );
+        ASSERT_EQ( parameters[2].get_type(), sgns::ParameterType::STRING );
+
         // Validate maxLength parameter
-        ASSERT_EQ( parameters[2].get_name(), "maxLength" );
-        ASSERT_EQ( parameters[2].get_type(), sgns::ParameterType::INT );
+        ASSERT_EQ( parameters[3].get_name(), "maxLength" );
+        ASSERT_EQ( parameters[3].get_type(), sgns::ParameterType::INT );
 
         // Test passes array
         const auto &passes = processing.get_passes();

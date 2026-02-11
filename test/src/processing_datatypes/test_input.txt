@@ -1,1 +1,1 @@
-Hello world this is a test sentence for BERT processing
+101 7592 2088 2023 2003 1037 3231 6251 2005 14324 6364 102
