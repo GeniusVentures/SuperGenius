@@ -14,7 +14,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <filesystem>
 #include <functional>
 #include <optional>
 #include <set>
@@ -50,6 +49,12 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
+        struct Credentials
+        {
+            std::string email;
+            std::string password;
+        };
+
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
         static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
@@ -208,6 +213,14 @@ namespace sgns
         static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
                                          std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
         GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path );
+
+        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
+                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
+        GenerateGeniusAddress( const Credentials& credentials, boost::filesystem::path base_path );
+
+        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
+                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
+        GenerateGeniusAddress( boost::filesystem::path base_path );
 
     protected:
         friend class Blockchain;

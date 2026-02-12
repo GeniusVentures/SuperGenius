@@ -1,8 +1,11 @@
 #include "GeniusAccount.hpp"
 
+#include <limits>
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
+#include <openssl/rand.h>
+#include <random>
 #include "WalletCore/Hash.h"
 #include "base/hexutil.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
@@ -384,6 +387,42 @@ namespace sgns
         }
 
         return std::make_pair( storage, std::make_pair( KeyGenerator::ElGamal( key_seed ), eth_key ) );
+    }
+
+    outcome::result<
+        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
+    GeniusAccount::GenerateGeniusAddress( const Credentials &credentials, boost::filesystem::path base_path )
+    {
+        if ( credentials.email.empty() || credentials.password.empty() )
+        {
+            return std::errc::invalid_argument;
+        }
+        std::string s      = credentials.email + credentials.password;
+        auto        hashed = TW::Hash::sha256( s );
+        auto        hexed  = base::hex_lower( hashed );
+
+        return GenerateGeniusAddress( hexed.data(), std::move( base_path ) );
+    }
+
+    outcome::result<
+        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
+    GeniusAccount::GenerateGeniusAddress( boost::filesystem::path base_path )
+    {
+        static std::string_view                 SUFFIX = "@gnus.ai";
+        static std::mt19937_64                  eng( ( std::random_device() )() );
+        std::uniform_int_distribution<uint64_t> dist( 0, std::numeric_limits<uint64_t>::max() );
+
+        uint64_t    num   = dist( eng );
+        std::string email = base::hex_lower(
+            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
+        email.append( SUFFIX );
+
+        num                  = dist( eng );
+        std::string password = base::hex_lower(
+            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
+
+        return GenerateGeniusAddress( Credentials{ std::move( email ), std::move( password ) },
+                                      std::move( base_path ) );
     }
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
