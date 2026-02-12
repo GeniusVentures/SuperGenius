@@ -20,7 +20,7 @@ namespace sgns
             output_idx_( previous_index ), //
             amount_( amount ),             //
             locked_( false ),              //
-            tokein_id_( token_id )         //
+            token_id_( token_id )          //
         {
         }
 
