@@ -1,0 +1,76 @@
+{
+  "name": "spleen-ct-texture3d-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for texture3D input using spleen_ct_seg",
+  "tags": ["texture3d", "volume", "test"],
+  
+  "inputs": [
+    {
+      "name": "inputVolume",
+      "source_uri_param": "file://processing_datatypes/spleen_15.raw",
+      "type": "texture3D",
+      "description": "Input volume for 3D segmentation",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+        "chunk_count": 38
+      },
+      "format": "FLOAT32"
+    }
+  ],
+  
+  "outputs": [
+    {
+      "name": "segmentationOutput",
+      "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Output segmentation tensor"
+    }
+  ],
+  
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/spleen_ct_seg.mnn",
+      "description": "URI to the spleen CT segmentation model"
+    }
+  ],
+  
+  "passes": [
+    {
+      "name": "volume_inference",
+      "type": "inference",
+      "description": "3D segmentation inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/spleen_ct_seg.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVolume",
+            "shape": [1, 1, 38, 512, 512]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:segmentationOutput",
+            "shape": [1, 1, 38, 512, 512]
+          }
+        ]
+      }
+    }
+  ],
+  
+  "metadata": {
+    "created_date": "2026-02-11",
+    "framework": "MNN",
+    "test_case": "texture3d_datatype"
+  }
+}

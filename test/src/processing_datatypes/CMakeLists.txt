@@ -20,6 +20,9 @@ add_custom_command(TARGET processing_datatypes_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/bert-tiny.mnn"
     "${CMAKE_CURRENT_SOURCE_DIR}/string-processing-definition.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_input.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spleen_ct_seg.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spleen_15.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture3d-processing-definition.json"
     "$<TARGET_FILE_DIR:processing_datatypes_test>/processing_datatypes/"
     COMMENT "Copying test files"
 )
