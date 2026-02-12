@@ -19,9 +19,9 @@
         "chunk_subchunk_width": 96,
         "chunk_subchunk_height": 96,
         "block_len": 96,
-        "chunk_stride": 96,
-        "chunk_line_stride": 96,
-        "block_stride": 96
+        "chunk_stride": 48,
+        "chunk_line_stride": 48,
+        "block_stride": 48
       },
       "format": "FLOAT32"
     }
