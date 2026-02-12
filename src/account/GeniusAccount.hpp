@@ -135,21 +135,21 @@ namespace sgns
          * @param[in]   nonce The nonce value to be set
          * @param[in]   address The address of the peer
          */
-        void SetPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Rollback the local confirmed nonce for a peer
          * @param[in]   nonce The nonce value to be rolled back to
          * @param[in]   address The address of the peer
          */
-        void RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Get the confirmed nonce for a peer
          * @param[in]   address The address of the peer
          * @return      The confirmed nonce of the peer if exists, error otherwise
          */
-        outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
+        outcome::result<uint64_t> GetPeerNonce( const std::string &address ) const;
 
         /**
          * @brief       Get the local confirmed nonce
