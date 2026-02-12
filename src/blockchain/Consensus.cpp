@@ -1152,7 +1152,7 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( !ValidateCertificateForCrdt( certificate ) )
+        if ( !ValidateCertificate( certificate ) )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
@@ -1200,45 +1200,63 @@ namespace sgns
         handler( subject_hash.value(), certificate );
     }
 
-    bool ConsensusManager::ValidateCertificateForCrdt( const Certificate &certificate ) const
+    bool ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
     {
-        if ( !registry_ )
+        if ( certificate.proposal_id().empty() )
         {
+            ConsensusManagerLogger()->error( "{}: Certificate proposal ID missing ", __func__ );
             return false;
         }
         if ( !certificate.has_proposal() )
         {
+            ConsensusManagerLogger()->error( "{}: Certificate missing proposal ", __func__ );
             return false;
         }
 
         const auto &proposal = certificate.proposal();
         if ( proposal.proposal_id() != certificate.proposal_id() )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: proposal_id mismatch cert={} proposal={}",
+                                             __func__,
+                                             certificate.proposal_id(),
+                                             proposal.proposal_id() );
             return false;
         }
         if ( proposal.registry_cid() != certificate.registry_cid() ||
              proposal.registry_epoch() != certificate.registry_epoch() )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
             return false;
         }
         if ( !ValidateSubject( proposal.subject() ) )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
+            return false;
+        }
+        if ( !CheckProposal( proposal ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid proposal proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id() );
             return false;
         }
 
-        auto signing_bytes = ProposalSigningBytes( proposal );
-        if ( signing_bytes.has_error() )
+        const auto computed_id = CreateProposalId( proposal );
+        if ( computed_id.empty() )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
             return false;
         }
-        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
+        if ( computed_id != certificate.proposal_id() )
         {
-            return false;
-        }
-
-        auto computed_id = CreateProposalId( proposal );
-        if ( computed_id.empty() || computed_id != certificate.proposal_id() )
-        {
+            ConsensusManagerLogger()->error( "{}: rejected: computed_id mismatch cert={} computed={}",
+                                             __func__,
+                                             certificate.proposal_id(),
+                                             computed_id );
             return false;
         }
 
@@ -1392,7 +1410,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( !CheckCertificate( certificate ) )
+        if ( !ValidateCertificate( certificate ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
@@ -1855,68 +1873,4 @@ namespace sgns
         return true;
     }
 
-    bool ConsensusManager::CheckCertificate( const Certificate &certificate )
-    {
-        if ( certificate.proposal_id().empty() )
-        {
-            ConsensusManagerLogger()->error( "{}: Certificate proposal ID missing ", __func__ );
-            return false;
-        }
-        if ( !certificate.has_proposal() )
-        {
-            ConsensusManagerLogger()->error( "{}: Certificate missing proposal ", __func__ );
-            return false;
-        }
-
-        auto &proposal = certificate.proposal();
-
-        if ( proposal.proposal_id() != certificate.proposal_id() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: proposal_id mismatch cert={} proposal={}",
-                                             __func__,
-                                             certificate.proposal_id(),
-                                             proposal.proposal_id() );
-            return false;
-        }
-
-        if ( proposal.registry_cid() != certificate.registry_cid() ||
-             proposal.registry_epoch() != certificate.registry_epoch() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return false;
-        }
-
-        if ( !ValidateSubject( proposal.subject() ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
-                                             __func__,
-                                             proposal.proposal_id() );
-            return false;
-        }
-        if ( !CheckProposal( proposal ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid proposal proposal_id={}",
-                                             __func__,
-                                             proposal.proposal_id() );
-            return false;
-        }
-
-        const auto computed_id = CreateProposalId( proposal );
-        if ( computed_id.empty() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
-            return false;
-        }
-        if ( computed_id != certificate.proposal_id() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: computed_id mismatch cert={} computed={}",
-                                             __func__,
-                                             certificate.proposal_id(),
-                                             computed_id );
-            return false;
-        }
-        return true;
-    }
 }

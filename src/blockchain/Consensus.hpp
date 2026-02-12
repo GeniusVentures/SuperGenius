@@ -166,10 +166,6 @@ namespace sgns
         bool        IsCurrentAggregator( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
         std::vector<std::string> GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
         uint64_t                 GetCurrentRound( uint64_t proposal_ts_ms ) const;
-        bool                     LoadProposalStateForCertificate( const Certificate &certificate,
-                                                                  ProposalState     &state,
-                                                                  Proposal          &proposal );
-
         outcome::result<ProposalState> FetchProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
         std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
@@ -182,7 +178,7 @@ namespace sgns
         bool                         RegisterCertificateFilter();
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
-        bool ValidateCertificateForCrdt( const Certificate &certificate ) const;
+        bool ValidateCertificate( const Certificate &certificate ) const;
 
         static std::string CreateProposalId( const Proposal &proposal );
         static bool        ValidateSubject( const Subject &subject );
@@ -191,7 +187,6 @@ namespace sgns
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
-        static bool CheckCertificate( const Certificate &certificate );
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
         VoteBundleHandler                                         vote_bundle_handler_;
