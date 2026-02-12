@@ -15,7 +15,13 @@
       "dimensions": {
         "width": 512,
         "height": 512,
-        "chunk_count": 38
+        "chunk_count": 38,
+        "chunk_subchunk_width": 96,
+        "chunk_subchunk_height": 96,
+        "block_len": 96,
+        "chunk_stride": 96,
+        "chunk_line_stride": 96,
+        "block_stride": 96
       },
       "format": "FLOAT32"
     }
