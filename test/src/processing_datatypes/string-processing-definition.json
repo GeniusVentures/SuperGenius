@@ -18,7 +18,7 @@
   "outputs": [
     {
       "name": "textEmbedding",
-      "source_uri_param": "embeddingOutput",
+      "source_uri_param": "file://processing_datatypes/embedding_output.raw",
       "type": "tensor",
       "description": "Output text embedding from BERT"
     }

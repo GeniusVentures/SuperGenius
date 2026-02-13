@@ -30,7 +30,7 @@
   "outputs": [
     {
       "name": "segmentationOutput",
-      "source_uri_param": "dummy",
+      "source_uri_param": "file://processing_datatypes/stitched_logits.raw",
       "type": "tensor",
       "description": "Output segmentation tensor"
     }
