@@ -5,6 +5,8 @@
 #include <memory>
 #include <iostream>
 #include <cstdint>
+#include <vector>
+#include <limits>
 #include <boost/dll.hpp>
 #include <boost/asio.hpp>
 #include <boost/optional/optional_io.hpp>
@@ -385,5 +387,63 @@ namespace sgns
             std::cout << "Process() failed: " << process_result.error().message() << std::endl;
             FAIL() << "Process() should succeed: " << process_result.error().message();
         }
+
+        const std::string output_file = data_path + "texture1d_output.raw";
+        const std::string reference_file = data_path + "texture1d_output_pt.raw";
+
+        std::ifstream output_stream( output_file, std::ios::binary );
+        ASSERT_TRUE( output_stream.is_open() ) << "Failed to open output file: " << output_file;
+
+        std::ifstream reference_stream( reference_file, std::ios::binary );
+        if ( !reference_stream.is_open() )
+        {
+            GTEST_SKIP() << "Reference output file not found: " << reference_file;
+        }
+
+        output_stream.seekg( 0, std::ios::end );
+        reference_stream.seekg( 0, std::ios::end );
+        const auto output_size = output_stream.tellg();
+        const auto reference_size = reference_stream.tellg();
+        ASSERT_EQ( output_size, reference_size ) << "Output size mismatch";
+
+        output_stream.seekg( 0, std::ios::beg );
+        reference_stream.seekg( 0, std::ios::beg );
+
+        std::vector<float> output_data( static_cast<size_t>( output_size ) / sizeof( float ) );
+        std::vector<float> reference_data( static_cast<size_t>( reference_size ) / sizeof( float ) );
+
+        output_stream.read( reinterpret_cast<char *>( output_data.data() ), output_size );
+        reference_stream.read( reinterpret_cast<char *>( reference_data.data() ), reference_size );
+
+        double max_abs_diff = 0.0;
+        double mean_abs_diff = 0.0;
+        float output_min = std::numeric_limits<float>::infinity();
+        float output_max = -std::numeric_limits<float>::infinity();
+        size_t nonzero_count = 0;
+        for ( size_t i = 0; i < output_data.size(); ++i )
+        {
+            const double diff = std::abs( static_cast<double>( output_data[i] ) -
+                                          static_cast<double>( reference_data[i] ) );
+            mean_abs_diff += diff;
+            if ( diff > max_abs_diff )
+            {
+                max_abs_diff = diff;
+            }
+
+            output_min = std::min( output_min, output_data[i] );
+            output_max = std::max( output_max, output_data[i] );
+            if ( std::abs( output_data[i] ) > 1e-8f )
+            {
+                ++nonzero_count;
+            }
+        }
+        mean_abs_diff /= static_cast<double>( output_data.size() );
+
+        std::cout << "Texture1D output diff: mean=" << mean_abs_diff << " max=" << max_abs_diff << std::endl;
+        std::cout << "Texture1D output stats: min=" << output_min << " max=" << output_max
+                  << " nonzero=" << nonzero_count << "/" << output_data.size() << std::endl;
+
+        ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
+        ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
     }
 }
