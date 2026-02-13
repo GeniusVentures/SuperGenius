@@ -13,9 +13,9 @@
       "type": "texture3D",
       "description": "Input volume for 3D segmentation",
       "dimensions": {
-        "width": 512,
-        "height": 512,
-        "chunk_count": 38,
+        "width": 253,
+        "height": 253,
+        "chunk_count": 94,
         "chunk_subchunk_width": 96,
         "chunk_subchunk_height": 96,
         "block_len": 96,
@@ -59,7 +59,7 @@
             "name": "input",
             "type": "tensor",
             "source": "input:inputVolume",
-            "shape": [1, 1, 38, 512, 512]
+            "shape": [1, 1, 96, 96, 96]
           }
         ],
         "output_nodes": [
@@ -67,7 +67,7 @@
             "name": "output",
             "type": "tensor",
             "target": "output:segmentationOutput",
-            "shape": [1, 1, 38, 512, 512]
+            "shape": [1, 2, 96, 96, 96]
           }
         ]
       }

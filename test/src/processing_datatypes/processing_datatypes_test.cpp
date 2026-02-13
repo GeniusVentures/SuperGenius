@@ -243,9 +243,9 @@ namespace sgns
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE3_D );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
         auto dims = inputs[0].get_dimensions().value();
-        ASSERT_EQ( dims.get_width().value(), 512 );
-        ASSERT_EQ( dims.get_height().value(), 512 );
-        ASSERT_EQ( dims.get_chunk_count().value(), 38 );
+        ASSERT_EQ( dims.get_width().value(), 253 );
+        ASSERT_EQ( dims.get_height().value(), 253 );
+        ASSERT_EQ( dims.get_chunk_count().value(), 94 );
         ASSERT_EQ( dims.get_chunk_subchunk_width().value(), 96 );
         ASSERT_EQ( dims.get_chunk_subchunk_height().value(), 96 );
         ASSERT_EQ( dims.get_block_len().value(), 96 );
