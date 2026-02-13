@@ -301,4 +301,89 @@ namespace sgns
             FAIL() << "Process() should succeed: " << process_result.error().message();
         }
     }
+
+    TEST_F( ProcessingDatatypesTest, Texture1DValidationTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "./processing_datatypes/";
+
+        std::string   instance_file = data_path + "texture1d-processing-definition.json";
+        std::ifstream instance_stream( instance_file );
+        ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open instance file: " << instance_file;
+
+        std::string instance_str( ( std::istreambuf_iterator<char>( instance_stream ) ),
+                                  std::istreambuf_iterator<char>() );
+        instance_stream.close();
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
+                                                   << manager_result.error().message();
+
+        auto manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto processing = manager->GetProcessingData();
+        const auto &inputs = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE1_D );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 256 );
+        ASSERT_EQ( dims.get_block_len().value(), 256 );
+        ASSERT_EQ( dims.get_chunk_stride().value(), 256 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+    }
+
+    TEST_F( ProcessingDatatypesTest, Texture1DProcessingTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "./processing_datatypes/";
+
+        std::string   instance_file = data_path + "texture1d-processing-definition.json";
+        std::ifstream instance_stream( instance_file );
+        ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open instance file: " << instance_file;
+
+        std::string instance_str( ( std::istreambuf_iterator<char>( instance_stream ) ),
+                                  std::istreambuf_iterator<char>() );
+        instance_stream.close();
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
+                                                   << manager_result.error().message();
+
+        auto manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto processing = manager->GetProcessingData();
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        sgns::ModelNode model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (texture1D)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+
+        if ( process_result.has_value() ) {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        } else {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+    }
 }
