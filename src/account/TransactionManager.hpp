@@ -64,7 +64,7 @@ namespace sgns
         /**
          * @brief       Status of a transaction
          */
-        enum class TransactionStatus: uint8_t
+        enum class TransactionStatus : uint8_t
         {
             CREATED,   ///< Transaction created but not yet sent
             SENDING,   ///< Transaction is being sent
@@ -131,6 +131,7 @@ namespace sgns
         TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                 std::chrono::milliseconds timeout ) const;
 
+        static std::string GetTransactionPath( uint16_t base, const std::string &tx_hash );
         static std::string GetTransactionPath( const IGeniusTransactions &element );
         static std::string GetTransactionPath( const std::string &tx_hash );
 
@@ -178,8 +179,10 @@ namespace sgns
         }
 
         static std::string GetBlockChainBase( uint16_t network_id );
-        
+
         outcome::result<void> QueryTransactions();
+        outcome::result<void> FetchAndProcessTransaction( const std::string          &tx_key,
+                                                          std::optional<base::Buffer> tx_data = std::nullopt );
 
     protected:
         friend class GeniusNode;
@@ -210,9 +213,8 @@ namespace sgns
         outcome::result<void>                         ConfirmTransactions();
         outcome::result<void>                         RollbackTransactions( TransactionItem &item_to_rollback );
 
-        static std::string           GetTransactionBasePath( const std::string &address );
-        static std::vector<uint16_t> GetMonitoredNetworkIDs();
-        static std::string           GetBlockChainBase();
+        static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
+        static std::string                                           GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
