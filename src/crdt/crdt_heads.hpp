@@ -4,6 +4,7 @@
 #include <shared_mutex>
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include <storage/rocksdb/rocksdb.hpp>
 #include "base/logger.hpp"

@@ -13,7 +13,7 @@
 #include <deque>
 #include <cstdint>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 #include <optional>
 
 #include <boost/format.hpp>
@@ -22,11 +22,6 @@
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
-#include "account/TransferTransaction.hpp"
-#include "account/MintTransaction.hpp"
-#include "account/EscrowTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
-#include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
@@ -69,7 +64,7 @@ namespace sgns
         /**
          * @brief       Status of a transaction
          */
-        enum class TransactionStatus
+        enum class TransactionStatus: uint8_t
         {
             CREATED,   ///< Transaction created but not yet sent
             SENDING,   ///< Transaction is being sent

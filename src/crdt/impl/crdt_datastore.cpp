@@ -644,7 +644,7 @@ namespace sgns::crdt
                         {
                             logger_->error( "{}: Topic {} different from known {} ", __func__, topic, _dontcare );
                         }
-                        std::lock_guard lock( pendingHeadsMutex_ );
+                        std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
                         pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( cid, topic );
                         logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
                                         __func__,

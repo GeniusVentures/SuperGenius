@@ -5,7 +5,6 @@
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 
 using namespace sgns;
@@ -35,7 +34,7 @@ public:
                 auto hashed = HASHER.sha2_256( data );
                 return signature == std::vector( hashed.begin(), hashed.end() );
             } );
-        auto result = utxo_manager->LoadUTXOs( db_ );
+        auto result = utxo_manager->LoadUTXOs( db_->GetDataStore() );
         if ( result.has_error() )
         {
             logger->error( "Error when loading UTXOs" );
@@ -163,7 +162,7 @@ TEST_F( UTXOManagerTest, Storage )
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 420, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 420, TOKEN_1 ) ) );
 
-    auto res = utxo_manager->LoadUTXOs( db_ );
+    auto res = utxo_manager->LoadUTXOs( db_->GetDataStore() );
     EXPECT_TRUE( res.has_value() );
     EXPECT_TRUE( res.value() );
 

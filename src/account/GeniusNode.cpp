@@ -353,18 +353,6 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
-
-                auto utxo_result = utxo_manager_.LoadUTXOs( tx_globaldb_ );
-                if ( utxo_result.has_error() )
-                {
-                    node_logger_->error( "Failed to load UTXOs from storage" );
-                }
-                if ( utxo_result.has_error() || !utxo_result.value() )
-                {
-                    node_logger_->info( "Loading transactions to mount UTXOs" );
-                    transaction_manager_->QueryTransactions();
-                }
-
                 StateTransition( NodeState::READY );
                 break;
             }
@@ -483,7 +471,7 @@ namespace sgns
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::trace );
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );

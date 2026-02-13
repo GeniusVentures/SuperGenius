@@ -206,6 +206,12 @@ namespace sgns
         return {};
     }
 
+    std::unordered_map<std::string, std::vector<UTXOManager::UTXOData>> UTXOManager::GetAllUTXOs() const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        return utxos_;
+    }
+
     outcome::result<void> UTXOManager::SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address )
     {
         // If not a full node and trying to set UTXOs for other addresses, reject
@@ -364,7 +370,7 @@ namespace sgns
         return real_amount == expected_amount && input_amount == params.first.size();
     }
 
-    outcome::result<bool> UTXOManager::LoadUTXOs( std::shared_ptr<crdt::GlobalDB> db )
+    outcome::result<bool> UTXOManager::LoadUTXOs( std::shared_ptr<storage::rocksdb> db )
     {
         if ( db == nullptr )
         {
@@ -377,8 +383,11 @@ namespace sgns
             logger_->warn( "UTXOs were already loaded" );
         }
         db_ = std::move( db );
+        utxos_.clear();
 
-        auto utxo_list = db_->QueryKeyValues( DB_PREFIX );
+        base::Buffer key_buf;
+        key_buf.put( DB_PREFIX );
+        auto utxo_list = db_->query( key_buf );
 
         if ( utxo_list.has_error() )
         {
@@ -399,7 +408,8 @@ namespace sgns
 
         for ( const auto &[key, params] : utxo_list.value() )
         {
-            OUTCOME_TRY( auto address, db_->KeyToString( key ) );
+            std::string address( key.subbuffer( DB_PREFIX.size() + 1 ).toString() );
+            logger_->info( "Loading UTXOs of address {}", address );
 
             SGTransaction::UTXOList utxos;
 
@@ -467,9 +477,13 @@ namespace sgns
             return std::errc::bad_message;
         }
 
-        crdt::HierarchicalKey key( std::string( DB_PREFIX ) + '/' + address );
+        std::string key( DB_PREFIX );
+        key.push_back( '/' );
+        key.append( address );
+        base::Buffer key_buf;
+        key_buf.put( key );
 
-        if ( auto result = db_->Put( key, buf, {} ); result.has_error() )
+        if ( auto result = db_->put( key_buf, buf ); result.has_error() )
         {
             logger_->error( "Error when storing UTXOs" );
             return result.error();

@@ -1,20 +1,23 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <unordered_set>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
-#include "pubsub_broadcaster_ext.hpp"
-#include "outcome/outcome.hpp"
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include "crdt/crdt_options.hpp"
-#include "crdt/crdt_datastore.hpp"
-#include "crdt/atomic_transaction.hpp"
-#include <libp2p/protocol/identify/identify.hpp>
-#include <libp2p/protocol/autonat/autonat.hpp>
-#include <libp2p/protocol/holepunch/holepunch_server.hpp>
-#include <libp2p/protocol/holepunch/holepunch_client.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <libp2p/protocol/autonat/autonat.hpp>
+#include <libp2p/protocol/holepunch/holepunch_client.hpp>
+#include <libp2p/protocol/holepunch/holepunch_server.hpp>
+#include <libp2p/protocol/identify/identify.hpp>
+
+#include "crdt/atomic_transaction.hpp"
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/crdt_options.hpp"
+#include "outcome/outcome.hpp"
+#include "pubsub_broadcaster_ext.hpp"
 
 namespace sgns::crdt
 {
@@ -64,7 +67,7 @@ namespace sgns::crdt
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
          */
-        enum class Error
+        enum class Error: uint8_t
         {
             ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
             IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created

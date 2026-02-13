@@ -9,7 +9,6 @@
 #include "account/TransactionManager.hpp"
 
 #include <utility>
-#include <algorithm>
 #include <thread>
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
@@ -175,11 +174,18 @@ namespace sgns
 
         if ( !stopped_.load() )
         {
-            QueryTransactions();
-        }
-        // First kick: keep self alive during the first dispatch only
-        if ( !stopped_.load() )
-        {
+            auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
+            if ( utxo_result.has_error() )
+            {
+                m_logger->error( "Failed to load UTXOs from storage" );
+            }
+            if ( utxo_result.has_error() || !utxo_result.value() )
+            {
+                m_logger->info( "Loading transactions to mount UTXOs" );
+                QueryTransactions();
+            }
+
+            // First kick: keep self alive during the first dispatch only
             boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
         }
     }

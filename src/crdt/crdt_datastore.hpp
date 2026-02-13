@@ -9,9 +9,20 @@
 #ifndef SUPERGENIUS_CRDT_DATASTORE_HPP
 #define SUPERGENIUS_CRDT_DATASTORE_HPP
 
+#include <shared_mutex>
+#include <future>
+#include <chrono>
+#include <queue>
+#include <unordered_set>
+#include <map>
+#include <condition_variable>
+#include <optional>
+
 #include <boost/asio/steady_timer.hpp>
-#include "base/logger.hpp"
+#include <ipfs_lite/ipld/ipld_node.hpp>
 #include <primitives/cid/cid.hpp>
+
+#include "base/logger.hpp"
 #include "crdt/crdt_set.hpp"
 #include "crdt/crdt_heads.hpp"
 #include "crdt/broadcaster.hpp"
@@ -19,17 +30,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
-
-#include <storage/rocksdb/rocksdb.hpp>
-#include <ipfs_lite/ipld/ipld_node.hpp>
-#include <shared_mutex>
-#include <future>
-#include <chrono>
-#include <queue>
-#include <set>
-#include <map>
-#include <condition_variable>
-#include <optional>
+#include "storage/rocksdb/rocksdb.hpp"
 
 namespace sgns
 {
