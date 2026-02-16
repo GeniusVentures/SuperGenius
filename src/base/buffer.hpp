@@ -28,7 +28,9 @@ namespace sgns::base {
     using const_pointer = typename std::vector<uint8_t>::const_pointer;
 
     /**
-     * @brief allocates buffer of size={@param size}, filled with {@param byte}
+     * @brief Allocates a buffer of the given size, filled with a byte value.
+     * @param size Buffer size in bytes.
+     * @param byte Fill value for all bytes.
      */
     Buffer(size_t size, uint8_t byte);
 
@@ -56,12 +58,14 @@ namespace sgns::base {
     Buffer &operator+=(const Buffer &other) noexcept;
 
     /**
-     * @brief Accessor of byte elements given {@param index} in bytearray
+     * @brief Accessor of byte elements given an index in the byte array.
+     * @param index Element index.
      */
     uint8_t operator[](size_t index) const;
 
     /**
-     * @brief Accessor of byte elements given {@param index} in bytearray
+     * @brief Accessor of byte elements given an index in the byte array.
+     * @param index Element index.
      */
     uint8_t &operator[](size_t index);
 
@@ -133,51 +137,52 @@ namespace sgns::base {
     [[nodiscard]] size_t size() const;
 
     /**
-     * @brief Put a 8-bit {@param n} in this buffer.
-     * @return this buffer, suitable for chaining.
+     * @brief Put an 8-bit value into this buffer.
+     * @param n Value to append.
+     * @return This buffer, suitable for chaining.
      */
     Buffer &putUint8(uint8_t n);
 
     /**
-     * @brief Put a 32-bit {@param n} number in this buffer. Will be serialized
-     * as big-endian number.
-     * @return this buffer, suitable for chaining.
+     * @brief Put a 32-bit value into this buffer.
+     * @param n Value to append (serialized as big-endian).
+     * @return This buffer, suitable for chaining.
      */
     Buffer &putUint32(uint32_t n);
 
     /**
-     * @brief Put a 64-bit {@param n} number in this buffer. Will be serialized
-     * as big-endian number.
-     * @return this buffer, suitable for chaining.
+     * @brief Put a 64-bit value into this buffer.
+     * @param n Value to append (serialized as big-endian).
+     * @return This buffer, suitable for chaining.
      */
     Buffer &putUint64(uint64_t n);
 
     /**
-     * @brief Put a string into byte buffer
-     * @param s arbitrary string
-     * @return this buffer, suitable for chaining.
+     * @brief Put a string into the byte buffer.
+     * @param str Arbitrary string.
+     * @return This buffer, suitable for chaining.
      */
     Buffer &put(std::string_view str);
 
     /**
-     * @brief Put a vector of bytes into byte buffer
-     * @param s arbitrary vector of bytes
-     * @return this buffer, suitable for chaining.
+     * @brief Put a vector of bytes into the byte buffer.
+     * @param v Arbitrary vector of bytes.
+     * @return This buffer, suitable for chaining.
      */
     Buffer &put(const std::vector<uint8_t> &v);
 
     /**
-     * @brief Put a sequence of bytes into byte buffer
-     * @param s arbitrary span of bytes
-     * @return this buffer, suitable for chaining.
+     * @brief Put a sequence of bytes into the byte buffer.
+     * @param s Arbitrary span of bytes.
+     * @return This buffer, suitable for chaining.
      */
     Buffer &put(gsl::span<const uint8_t> s);
 
     /**
-     * @brief Put a array of bytes bounded by pointers into byte buffer
-     * @param begin pointer to the array start
-     *        end pointer to the address after the last element
-     * @return this buffer, suitable for chaining.
+     * @brief Put an array of bytes bounded by pointers into the byte buffer.
+     * @param begin Pointer to the array start.
+     * @param end Pointer to the address after the last element.
+     * @return This buffer, suitable for chaining.
      */
     Buffer &putBytes(const uint8_t *begin, const uint8_t *end);
 

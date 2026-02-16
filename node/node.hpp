@@ -59,5 +59,11 @@ public:
 	std::shared_ptr<sgns::node> node;
 };
 std::unique_ptr<sgns::inactive_node> default_inactive_node (boost::filesystem::path const &, boost::program_options::variables_map const &);
+
+/**
+ * @brief Create a block store instance for the node.
+ * @return Newly created block store implementation.
+ */
+std::unique_ptr<sgns::block_store> make_store ();
 }
-#endif 
+#endif

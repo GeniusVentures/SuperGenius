@@ -23,7 +23,7 @@ namespace sgns::application {
     ~BlockProducingNodeApplication() override = default;
 
     /**
-     * @param sgns_config sgns configuration parameters
+     * @param app_config application configuration parameters
      */
     BlockProducingNodeApplication(const AppConfigPtr &app_config);
 

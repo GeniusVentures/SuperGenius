@@ -119,6 +119,10 @@ namespace sgns
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
+         * @param[in]   transaction_hash Transaction hash on the source chain.
+         * @param[in]   chainid Source chain identifier.
+         * @param[in]   tokenid Token identifier to mint.
+         * @param[in]   timeout Timeout for the mint operation.
          * @return      Outcome of mint token operation
          */
         outcome::result<std::pair<std::string, uint64_t>> MintTokens(

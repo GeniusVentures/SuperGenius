@@ -15,8 +15,12 @@ using namespace sgns;
 
 class ProcessingTaskQueue
 {
-    /** Distributed task queue interface
-*/
+    /**
+     * @brief Distributed task queue interface.
+     *
+     * Provides enqueue, retrieval, and completion tracking for tasks and their
+     * subtasks.
+     */
 public:
     virtual ~ProcessingTaskQueue() = default;
 
@@ -42,23 +46,22 @@ public:
 
     /** Handles task completion
     * @param taskId - task id
-    * @param task result
+    * @param result - task result
     */
     virtual outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
         const std::string              &taskId,
         const SGProcessing::TaskResult &result ) = 0;
 
     /**
-     * @brief       
-     * @param[in]   taskId 
-     * @return      A @ref true 
-     * @return      A @ref false 
+     * @brief Checks if the task is completed.
+     * @param[in] taskId Task id.
+     * @return true if the task is completed, false otherwise.
      */
     virtual bool IsTaskCompleted( const std::string &taskId ) = 0;
 
-     /**
-     * @brief Mark a task key as bad to be skipped.    
-     * @param[in]   taskKey 
+    /**
+     * @brief Mark a task key as bad to be skipped.
+     * @param[in] taskKey Task key to mark as bad.
      */
     virtual void MarkTaskBad( const std::string &taskKey ) = 0;
 };

@@ -57,11 +57,11 @@ namespace sgns
     }
 
     /**
-     * @brief       Converts a hexadecimal ASCII char array into a number
-     * @param[in]   p_char Hexadecimal ASCII char array
-     * @param[in]   num_nibbles_resolution How many nibbles will constitute a number
-     * @tparam      T uint8_t, uint16_t, uint32_t or uint64_t
-     * @return      The converted number (8-64 bit variable)
+     * @brief       Converts a little-endian byte vector into a number.
+     * @param[in]   bytes Byte vector to convert.
+     * @tparam      T uint8_t, uint16_t, uint32_t, uint64_t, or supported
+     *             multiprecision integer types.
+     * @return      The converted number.
      */
 
     template <typename T>
@@ -117,11 +117,11 @@ namespace sgns
     }
 
     /**
-     * @brief       Converts a hexadecimal ASCII char array into a number
-     * @param[in]   p_char Hexadecimal ASCII char array
-     * @param[in]   num_nibbles_resolution How many nibbles will constitute a number
+     * @brief       Converts a number into a byte vector (little-endian).
+     * @param[in]   num Number to convert.
+     * @param[in]   num_bytes_resolution Optional byte resolution (defaults to sizeof(T)).
      * @tparam      T uint8_t, uint16_t, uint32_t or uint64_t
-     * @return      The converted number (8-64 bit variable)
+     * @return      The converted byte vector.
      */
     template <typename T>
     static std::vector<uint8_t> Num2Vector( const T &num, std::size_t num_bytes_resolution = sizeof( T ) )

@@ -31,6 +31,7 @@ namespace sgns::storage::trie {
 
     /**
      * Creates a trie with the given root
+     * @param root root node for the trie
      * @param f functor that a trie uses to obtain a child of a branch. If
      * optional is none, the default one will be used
      */

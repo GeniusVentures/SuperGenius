@@ -18,17 +18,20 @@
 
 namespace sgns::processing
 {
-    /** Distributed subtask queue implementation
-    */
+    /**
+     * @brief Distributed subtask queue manager.
+     */
     class ProcessingSubTaskQueueManager : public std::enable_shared_from_this<ProcessingSubTaskQueueManager>
     {
     public:
         using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
 
-        /** Construct an empty queue
-        * @param queueChannel - task processing channel
-        * @param context - io context to handle timers
-        * @param localNodeId local processing node ID
+        /** Construct an empty queue manager.
+        * @param queueChannel - Task processing channel.
+        * @param context - IO context to handle timers.
+        * @param localNodeId - Local processing node ID.
+        * @param processingErrorSink - Callback for processing errors.
+        * @param delayBetweenProcessingMs - Delay between processing cycles (ms).
         */
         ProcessingSubTaskQueueManager( std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
                                        std::shared_ptr<boost::asio::io_context>       context,

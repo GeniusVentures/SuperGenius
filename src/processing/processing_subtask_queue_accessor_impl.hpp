@@ -19,17 +19,19 @@
 
 namespace sgns::processing
 {
-    /** Subtask storage implementation
-*/
+    /**
+     * @brief Subtask queue accessor implementation.
+     */
     class SubTaskQueueAccessorImpl : public SubTaskQueueAccessor,
                                      public std::enable_shared_from_this<SubTaskQueueAccessorImpl>
     {
     public:
-        /** Creates subtask queue accessor implementation object
-        * @param gossipPubSub pubsub host which is used to create subscriptions to result channel
-        * @param subTaskQueueManager - in-memory queue manager
-        * @param subTaskResultStorage - processing results storage
-        * @param taskResultProcessingSink - a callback which is called when a task processing is completed
+        /** Creates subtask queue accessor implementation object.
+        * @param gossipPubSub PubSub host used to subscribe to result channel.
+        * @param subTaskQueueManager In-memory queue manager.
+        * @param subTaskResultStorage Processing results storage.
+        * @param taskResultProcessingSink Callback invoked when task processing completes.
+        * @param processingErrorSink Callback invoked on processing errors.
         */
         SubTaskQueueAccessorImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,

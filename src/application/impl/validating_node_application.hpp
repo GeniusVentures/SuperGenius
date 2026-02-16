@@ -23,15 +23,7 @@ namespace sgns::application
         ~ValidatingNodeApplication() override = default;
 
         /**
-     * @param config_path genesis configs path
-     * @param keystore_path local peer's keys
-     * @param rocksdb_path storage path
-     * @param p2p_port port for p2p interactions
-     * @param rpc_http_endpoint endpoint for http based rpc
-     * @param rpc_ws_endpoint endpoint for ws based rpc
-     * @param is_only_finalizing true if this node should be the only finalizing
-     * node
-     * @param verbosity level of logging
+     * @param config application configuration
      */
         ValidatingNodeApplication( const std::shared_ptr<AppConfiguration> &config );
 

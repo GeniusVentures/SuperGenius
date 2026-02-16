@@ -13,6 +13,9 @@
 
 namespace sgns
 {
+    /**
+     * @brief Transaction for transferring funds between UTXO inputs and outputs.
+     */
     class TransferTransaction : public IGeniusTransactions
     {
     public:
@@ -25,15 +28,15 @@ namespace sgns
         ~TransferTransaction() override = default;
 
         /**
-         * @brief      
-         * @return      A @ref std::vector<uint8_t> 
+         * @brief      Serializes the transaction into a byte vector.
+         * @return     Serialized bytes.
          */
         std::vector<uint8_t> SerializeByteVector() override;
 
         /**
-         * @brief      
-         * @param[in]   data 
-         * @return      A @ref TransferTransaction 
+         * @brief      Deserializes a TransferTransaction from bytes.
+         * @param[in]  data Serialized bytes.
+         * @return     Shared pointer to the deserialized transaction.
          */
         static std::shared_ptr<TransferTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 
@@ -48,9 +51,10 @@ namespace sgns
     private:
         //TODO - El Gamal encrypt the amount. Now only copying
         /**
-         * @brief       Construct a new Transfer Transaction object
-         * @param[in]   amount: Raw amount of the transaction
-         * @param[in]   destination: Address of the destination
+         * @brief       Construct a new TransferTransaction object.
+         * @param[in]   destinations Destination outputs.
+         * @param[in]   inputs Input UTXOs.
+         * @param[in]   dag DAG struct describing the transaction graph.
          */
         TransferTransaction( std::vector<OutputDestInfo> destinations,
                              std::vector<InputUTXOInfo>  inputs,

@@ -45,7 +45,7 @@ namespace sgns::api {
 
     /**
      * @brief constructor
-     * @param socket socket instance
+     * @param context session context
      * @param config session configuration
      */
     HttpSession(Context &context, Configuration config);

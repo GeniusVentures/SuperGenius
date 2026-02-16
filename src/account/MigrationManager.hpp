@@ -50,6 +50,7 @@ namespace sgns
          * @param   generator     Shared GraphSync request ID generator.
          * @param   writeBasePath Base path for writing DB files.
          * @param   base58key     Key to build legacy paths.
+         * @param   account       GeniusAccount used during migration (if required).
          * @return  std::shared_ptr<MigrationManager> to the created instance.
          */
         static std::shared_ptr<MigrationManager> New(

@@ -122,7 +122,7 @@ namespace sgns::crypto {
    * @brief outputs object of type VRFOutput to stream
    * @tparam Stream output stream type
    * @param s stream reference
-   * @param v value to output
+   * @param o value to output
    * @return reference to stream
    */
   template <class Stream,
@@ -135,7 +135,7 @@ namespace sgns::crypto {
    * @brief decodes object of type VRFOutput from stream
    * @tparam Stream input stream type
    * @param s stream reference
-   * @param v value to output
+   * @param o value to output
    * @return reference to stream
    */
   template <class Stream,

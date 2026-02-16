@@ -16,7 +16,7 @@
 
 namespace sgns::scale {
   /**
-   * @class ScaleEncoderStream designed to scale-encode data to stream
+   * @brief Scale-encodes data into a byte stream.
    */
   class ScaleEncoderStream {
    public:

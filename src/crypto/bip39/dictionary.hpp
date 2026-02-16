@@ -15,8 +15,9 @@ namespace sgns::crypto::bip39 {
   };
 
   /**
-   * @class Dictionary keeps and provides correspondence between mnemonic words
-   * and entropy value. Only english dictionary is supported for now
+   * @brief Stores the BIP-39 word list and maps words to entropy tokens.
+   *
+   * Currently only the English word list is supported.
    */
   class Dictionary {
    public:

@@ -79,6 +79,7 @@ namespace sgns::crdt
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
          * @param[in] key The hierarchical key where the value should be stored.
          * @param[in] value The value to store.
+         * @param[in] topics Topics to publish to.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
         outcome::result<CID> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
@@ -86,6 +87,7 @@ namespace sgns::crdt
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
+         * @param[in]   topics Topics to publish to.
          * @return      outcome::failure on error or success otherwise
          */
         outcome::result<CID> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
@@ -98,12 +100,13 @@ namespace sgns::crdt
 
         /** Removes value for a given key.
         * @param key to remove from storage
+        * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
         outcome::result<CID> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
-        * @param prefix - keys prefix to match. An empty prefix matches any key.
+        * @param keyPrefix - keys prefix to match. An empty prefix matches any key.
         * @return list of key-value pairs matches prefix
         */
         outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );

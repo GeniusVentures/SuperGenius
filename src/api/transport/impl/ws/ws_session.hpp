@@ -74,8 +74,7 @@ namespace sgns::api {
 
     /**
      * @brief process received websocket frame, compose and execute response
-     * @tparam Body request body type
-     * @param request request
+     * @param data request payload
      */
     void handleRequest(std::string_view data);
 

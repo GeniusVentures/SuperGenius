@@ -20,8 +20,9 @@ namespace sgns::processing
     class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
-        /** Create a task queue
-        * @param db - CRDT globaldb to use
+        /** Create a task queue.
+        * @param db - CRDT GlobalDB to use.
+        * @param processing_topic - Topic prefix used for task keys.
         */
         ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic );
 
@@ -40,9 +41,8 @@ namespace sgns::processing
         */
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override;
 
-        /** Get task by task key, returns true if we got a task
-        * @param grabbedTaskKey - id to look for task 
-        * @param task - Reference of task
+        /** Get a task by key.
+        * @return Pair of task key and task if available.
         */
         outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override;
 
@@ -55,10 +55,9 @@ namespace sgns::processing
             const SGProcessing::TaskResult &taskResult ) override;
 
         /**
-         * @brief       
-         * @param[in]   taskId 
-         * @return      A @ref true 
-         * @return      A @ref false 
+         * @brief Checks whether a task is completed.
+         * @param[in] taskId Task id.
+         * @return true if completed, false otherwise.
          */
         bool IsTaskCompleted( const std::string &taskId ) override;
 

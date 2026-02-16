@@ -31,25 +31,24 @@ namespace sgns
     };
 
     /**
-   * @brief Convenient in-place compile-time visitor creation, from a set of
-   * lambdas
-   *
-   * @code{.cpp}
-   * make_visitor([](int a){ return 1; },
-   *              [](std::string b) { return 2; });
-   * @nocode
-   *
-   * is essentially the same as
-   *
-   * @code
-   * struct visitor : public boost::static_visitor<int> {
-   *   int operator()(int a) { return 1; }
-   *   int operator()(std::string b) { return 2; }
-   * }
-   * @nocode
-   *
-   * @return visitor
-   */
+     * @brief Creates a compile-time visitor from a set of lambdas.
+     *
+     * Example:
+     * @code{.cpp}
+     * make_visitor([](int a){ return 1; },
+     *              [](std::string b) { return 2; });
+     * @endcode
+     *
+     * This is essentially the same as:
+     * @code{.cpp}
+     * struct visitor : public boost::static_visitor<int> {
+     *   int operator()(int a) { return 1; }
+     *   int operator()(std::string b) { return 2; }
+     * };
+     * @endcode
+     *
+     * @return Visitor instance that dispatches to the provided lambdas.
+     */
     template <class... Fs> constexpr auto make_visitor( Fs &&...fs )
     {
         using visitor_type = lambda_visitor<std::decay_t<Fs>...>;
@@ -57,16 +56,17 @@ namespace sgns
     }
 
     /**
-   * @brief Inplace visitor for boost::variant.
-   * @code{.cpp}
-   *   boost::variant<int, std::string> value = "1234";
-   *
-   *   visit_in_place(value,
-   *                  [](int v) { std::cout << "(int)" << v; },
-   *                  [](std::string v) { std::cout << "(string)" << v;}
-   *                  );
-   * @nocode
-   */
+     * @brief Applies an in-place visitor to a boost::variant.
+     *
+     * Example:
+     * @code{.cpp}
+     * boost::variant<int, std::string> value = "1234";
+     *
+     * visit_in_place(value,
+     *                [](int v) { std::cout << "(int)" << v; },
+     *                [](std::string v) { std::cout << "(string)" << v; });
+     * @endcode
+     */
     template <typename TVariant, typename... TVisitors>
     constexpr decltype( auto ) visit_in_place( TVariant &&variant, TVisitors &&...visitors )
     {

@@ -14,6 +14,7 @@
 
 #include <queue>
 
+#ifndef __DOXYGEN__
 namespace sgns
 {
     template <>
@@ -40,6 +41,7 @@ namespace sgns
         value = { buffer->size (), const_cast<uint8_t *> (buffer->data ()) };
     }
 }
+#endif
 
 sgns::ipfs_lite_store::ipfs_lite_store(){    
 

@@ -35,19 +35,20 @@ namespace sgns::crypto {
     virtual SR25519Keypair generateKeypair(const SR25519Seed &seed) const = 0;
 
     /**
-     * Sign message \param msg using \param keypair. If computed value is less
-     * than \param threshold then return optional containing this value and
-     * proof. Otherwise none returned
-     * @param keypair pair of public and secret sr25519 keys
-     * @param message bytes to be signed
-     * @return signed message
+     * @brief Sign a message using the given keypair.
+     * @param keypair Pair of public and secret sr25519 keys.
+     * @param message Bytes to be signed.
+     * @return Signature of the message.
      */
     virtual outcome::result<SR25519Signature> sign(
         const SR25519Keypair &keypair, gsl::span<const uint8_t> message) const = 0;
 
     /**
-     * Verifies that \param message was derived using \param public_key on
-     * \param signature
+     * @brief Verifies that the message was signed by the given public key.
+     * @param signature Signature to verify.
+     * @param message Message bytes.
+     * @param public_key Public key to verify against.
+     * @return true if signature is valid, false otherwise.
      */
     virtual outcome::result<bool> verify(
         const SR25519Signature &signature,

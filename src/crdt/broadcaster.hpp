@@ -26,7 +26,7 @@ namespace sgns::crdt
         };
 
         /**
-         * Send {@param buff} payload to other replicas.
+         * Send buffer payload to other replicas.
          * @param buff       Buffer containing the data to broadcast.
          * @param topic      Topic to broadcast to.
          * @param peerInfo   Optional peer info to avoid repeated GetPeerInfo calls.

@@ -21,9 +21,11 @@ namespace sgns::crypto {
     virtual SR25519Keypair generateKeypair() const = 0;
 
     /**
-     * Sign message \param msg using \param keypair. If computed value is less
-     * than \param threshold then return optional containing this value and
-     * proof. Otherwise none returned
+     * @brief Sign message using the given keypair and threshold.
+     * @param msg Message bytes.
+     * @param keypair SR25519 keypair.
+     * @param threshold VRF threshold.
+     * @return Optional VRF output if threshold satisfied.
      */
     virtual boost::optional<VRFOutput> sign(
         const base::Buffer &msg,
@@ -31,8 +33,12 @@ namespace sgns::crypto {
         const VRFThreshold &threshold) const = 0;
 
     /**
-     * Verifies that \param output was derived using \param public_key on \param
-     * msg
+     * @brief Verify VRF output against message and public key.
+     * @param msg Message bytes.
+     * @param output VRF output to verify.
+     * @param public_key Public key to verify against.
+     * @param threshold VRF threshold.
+     * @return Verification output.
      */
     virtual VRFVerifyOutput verify(const base::Buffer &msg,
                         const VRFOutput &output,

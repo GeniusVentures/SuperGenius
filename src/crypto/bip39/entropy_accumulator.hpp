@@ -22,7 +22,9 @@ namespace sgns::crypto::bip39 {
   };
 
   /**
-   * @class EntropyAccumulator accumulates and provides entropy and checksum
+   * @brief Accumulates entropy tokens and exposes entropy + checksum.
+   *
+   * Used to assemble mnemonic-derived entropy and validate its checksum.
    */
   class EntropyAccumulator {
    public:

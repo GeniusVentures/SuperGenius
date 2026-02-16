@@ -5,7 +5,7 @@
 
 namespace sgns::runtime {
   /**
-   * @class WasmProvider keeps and provides wasm state code
+   * @brief Interface for accessing WASM state/runtime code.
    */
   class WasmProvider {
    public:

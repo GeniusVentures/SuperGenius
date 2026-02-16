@@ -59,10 +59,11 @@ namespace sgns
         using BlockchainCallback = std::function<void( outcome::result<void> )>;
 
         /**
-         * @brief Factory method to create Blockchain as shared_ptr
-         * @param global_db CRDT database instance
-         * @param account GeniusAccount instance
-         * @return shared_ptr to Blockchain instance
+         * @brief Factory method to create Blockchain as shared_ptr.
+         * @param global_db CRDT database instance.
+         * @param account GeniusAccount instance.
+         * @param callback Called when initialization completes.
+         * @return shared_ptr to Blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                 std::shared_ptr<GeniusAccount>  account,
@@ -71,8 +72,7 @@ namespace sgns
         ~Blockchain();
 
         /**
-         * @brief Start the blockchain with async genesis block handling
-         * @param callback Called when genesis block check/creation/retrieval completes
+         * @brief Start the blockchain with async genesis block handling.
          */
         outcome::result<void> Start();
         outcome::result<void> Stop();

@@ -36,6 +36,7 @@ namespace sgns
          * @brief       Constructor for the RecursiveTransferProof class.
          * @param[in]   balance The balance of the account for the transfer.
          * @param[in]   amount The amount to be transferred.
+         * @param[in]   snark The inner proof to be recursively wrapped.
          */
         explicit RecursiveTransferProof( uint64_t balance, uint64_t amount, GeniusProver::ProofSnarkType snark );
 

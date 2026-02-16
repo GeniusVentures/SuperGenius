@@ -12,18 +12,18 @@
 namespace sgns::processing
 {
 /**
-* Processing core interface.
-* An implementatin of the interface depends on specific processing algorithm
+* @brief Processing core interface.
+*
+* Implementations encapsulate specific processing algorithms for subtasks.
 */
 class ProcessingCore
 {
 public:
     virtual ~ProcessingCore() = default;
 
-    /** Process a single subtask
-    * @param subTask - subtask that needs to be processed
-    * @param result - subtask result
-    * @param initialHashCode - an initial hash code which is used to calculate result hash
+    /** Process a single subtask.
+    * @param subTask - Subtask that needs to be processed.
+    * @param initialHashCode - Initial hash code used to calculate result hash.
     */
     virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;

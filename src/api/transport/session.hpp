@@ -69,6 +69,7 @@ namespace sgns::api {
     /**
      * @brief process request message
      * @param request message to process
+     * @param session session instance
      */
     void processRequest(std::string_view request,
                         std::shared_ptr<Session> session) {

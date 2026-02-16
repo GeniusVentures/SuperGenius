@@ -106,7 +106,7 @@ namespace sgns::runtime::binaryen {
     /**
      * Resize memory and allocate memory segment of given size
      * @param size memory size to be allocated
-     * @return pointer to the allocated memory @or 0 if it is impossible to
+     * @return pointer to the allocated memory or 0 if it is impossible to
      * allocate this amount of memory
      */
     WasmPointer growAlloc(WasmSize size);

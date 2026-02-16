@@ -4,9 +4,24 @@
 #include "node_config.hpp"
 
 #include <boost/program_options.hpp>
+#include <string>
 
 namespace sgns
 {
+#ifdef __DOXYGEN__
+/**
+ * @brief Error message formatter for CLI errors.
+ */
+class error_cli_messages {
+ public:
+  /**
+   * @brief Convert an error code to a message string.
+   * @param ev Error code value.
+   * @return Error message string.
+   */
+  std::string message(int ev) const;
+};
+#endif
 /** Command line related error codes */
 enum class error_cli
 {

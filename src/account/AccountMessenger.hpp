@@ -121,6 +121,7 @@ namespace sgns
          * @brief       Request a block by CID from the network (retries until timeout)
          * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
          * @param[in]   cid CID to request
+         * @param[in]   callback Callback invoked with the CID result (or error)
          * @return      success on scheduled request, error otherwise
          */
         outcome::result<void> RequestRegularBlock( uint64_t                                            timeout_ms,
@@ -247,12 +248,14 @@ namespace sgns
 
         /**
          * @brief       Request a block (by index) from the network (no callback)
+         * @param[in]   req_id Request identifier
          * @param[in]   block_index index of the requested block (0 = genesis, 1 = account, ...)
          */
         outcome::result<void> RequestBlock( uint64_t req_id, uint8_t block_index );
 
         /**
          * @brief       Request a block (by CID) from the network (no callback)
+         * @param[in]   req_id Request identifier
          * @param[in]   cid CID to request
          */
         outcome::result<void> RequestBlockByCid( uint64_t req_id, const std::string &cid );
@@ -283,7 +286,7 @@ namespace sgns
         void HandleNonceRequest( const accountComm::SignedNonceRequest &req );
         /**
          * @brief       Handles the Nonce response package
-         * @param[in]   req The proto nonce response package
+         * @param[in]   resp The proto nonce response package
          */
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
 

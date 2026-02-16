@@ -52,10 +52,12 @@ namespace sgns
         static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
-         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
-         * @return      Valid pointer if succeeds, nullptr otherwise
+         * @brief       Factory constructor of new GeniusAccount.
+         * @param[in]   token_id Token ID of the account.
+         * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         * @return      Valid pointer if succeeds, nullptr otherwise.
          */
         static std::shared_ptr<GeniusAccount> New( TokenID               token_id,
                                                    const char           *eth_private_key,
@@ -70,9 +72,9 @@ namespace sgns
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
-         * @brief       Configures the block response handler
-         * @param[in]   broadcaster: the pubsub broadcaster which adds the block CID to be fetched
-         * @return      true if successfully configured, false otherwise
+         * @brief       Configures the block response handler.
+         * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
+         * @return      true if successfully configured, false otherwise.
          */
         bool ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db );
 
@@ -244,8 +246,10 @@ namespace sgns
         uint64_t GetNextNonceLocked() const;
 
         /**
-         * @brief       Private constructor a new Genius Account object
-         * @param[in]   token_id
+         * @brief       Private constructor for a new GeniusAccount.
+         * @param[in]   token_id Token ID for the account.
+         * @param[in]   storage Secure storage instance.
+         * @param[in]   full_node Whether this account is a full node.
          */
         GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
     };

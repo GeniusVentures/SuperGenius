@@ -26,7 +26,8 @@ namespace sgns::crdt
 
     HierarchicalKey() = default;
 
-    /** Constructs a key from {@param s}.
+    /** Constructs a key from a string.
+     * @param key Key string
     */
     HierarchicalKey( std::string key );
 

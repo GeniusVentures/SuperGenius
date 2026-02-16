@@ -11,3 +11,6 @@
 [submodule "SGProcessingManager"]
 	path = SGProcessingManager
 	url = ../SGProcessingManager.git
+[submodule "docs/hdoc"]
+	path = docs/hdoc
+	url = ../sg-hdoc

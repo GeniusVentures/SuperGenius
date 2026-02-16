@@ -28,20 +28,20 @@ namespace sgns::application {
      ~AppStateManager() override = default;
 
     /**
-     * @brief Execute \param cb at stage of prepare application
-     * @param cb
+     * @brief Execute a callback at the prepare stage.
+     * @param cb Callback to execute.
      */
     virtual void atPrepare(OnPrepare &&cb) = 0;
 
     /**
-     * @brief Execute \param cb immediately before start application
-     * @param cb
+     * @brief Execute a callback immediately before application start.
+     * @param cb Callback to execute.
      */
     virtual void atLaunch(OnLaunch &&cb) = 0;
 
     /**
-     * @brief Execute \param cb at stage of shutting down application
-     * @param cb
+     * @brief Execute a callback during shutdown.
+     * @param cb Callback to execute.
      */
     virtual void atShutdown(OnShutdown &&cb) = 0;
 

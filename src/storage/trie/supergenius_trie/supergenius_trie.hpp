@@ -30,8 +30,9 @@ namespace sgns::storage::trie {
     virtual NodePtr getRoot() const = 0;
 
     /**
-     * @returns a child node pointer of a provided \arg parent node
-     * at the index \idx
+     * @returns a child node pointer of a provided parent node at the given index
+     * @param parent Parent branch node
+     * @param idx Child index in the branch
      */
     virtual outcome::result<NodePtr> retrieveChild(BranchPtr parent,
                                                    uint8_t idx) const = 0;

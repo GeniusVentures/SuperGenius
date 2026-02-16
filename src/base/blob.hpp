@@ -142,8 +142,8 @@ namespace sgns::base {
 
     /**
      * Create Blob from span of uint8_t
-     * @param buffer
-     * @return
+     * @param span input byte span
+     * @return result containing Blob object if span has proper size
      */
     static outcome::result<Blob<size_>> fromSpan(
         const gsl::span<uint8_t> &span) {

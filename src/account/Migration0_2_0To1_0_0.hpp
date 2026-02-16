@@ -37,7 +37,6 @@ namespace sgns
     public:
         /**
          * @brief   Construct the step with all resources needed to open legacy DBs.
-         * @param   newDb         Shared pointer to the target GlobalDB.
          * @param   ioContext     Shared io_context for legacy DB access.
          * @param   pubSub        Shared GossipPubSub instance.
          * @param   graphsync     Shared GraphSync network object.

@@ -87,7 +87,6 @@ namespace sgns::crdt
          * @param[in]   aDagSyncer The MerkleDAG syncer to request content of CIDs
          * @param[in]   aBroadcaster The broadcaster to publish CIDs
          * @param[in]   aOptions Options to construct the object
-         * @param[in]   elem_filter_cb Filter callback to remove or not an element from a Delta
          * @return      A new instance of @ref CrdtDatastore
          */
         static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>     aDatastore,
@@ -150,6 +149,7 @@ namespace sgns::crdt
          * @brief Stores the given value in the CRDT store
          * @param aKey Hierarchical key to put
          * @param aValue Value to be stored
+         * @param topics Topics to publish to
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
         outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
@@ -164,6 +164,7 @@ namespace sgns::crdt
 
         /** Delete removes the value for given `key`.
         * @param aKey HierarchicalKey to delete from set
+        * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
         outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
@@ -172,6 +173,7 @@ namespace sgns::crdt
          * @brief Publishes a Delta.
          * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
          * @param aDelta Delta to publish
+         * @param topics Topics to publish to
          * @return returns outcome::success on success or outcome::failure otherwise
          */
         outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
@@ -195,7 +197,7 @@ namespace sgns::crdt
         static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key,
                                                                          const std::string &value );
 
-        /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
+        /** Returns a new delta-set removing the given keys with prefix /namespace/s/key
         * @param key - delta key to remove from datastore
         * @return pointer to delta or outcome::failure on error
         */
@@ -354,6 +356,7 @@ namespace sgns::crdt
         /** CreateIPLDNode add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
         * @param aDelta Delta to serialize into IPLD node
+        * @param topics Topics to add as links
         * @return IPLD node or outcome::failure on error
         */
         outcome::result<std::shared_ptr<IPLDNode>> CreateIPLDNode(
@@ -364,14 +367,13 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                                                  const std::set<std::string>  &topics );
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
-         *  @param aDelta   Pointer to Delta used for generating node and process it
-         *  @param topics   Vector of topic names; the new block will have one link per topic
+         *  @param node   Node to add and process
          *  @return         CID or outcome::failure on error
          */
         outcome::result<CID> AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node );
 
         /** SyncDatastore sync heads and set datastore
-        * @param: aKeyList all heads and the set entries related to the given prefix
+        * @param aKeyList all heads and the set entries related to the given prefix
         * @return returns outcome::success on success or outcome::failure otherwise
         */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );

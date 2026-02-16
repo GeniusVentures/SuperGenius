@@ -212,6 +212,7 @@ namespace sgns
         ipfs_dbi confirmation_height{ 0 };
 
     };
+#ifndef __DOXYGEN__
     template <>
     void * ipfs_val::data () const;
     template <>
@@ -221,5 +222,6 @@ namespace sgns
     template <>
     void ipfs_val::convert_buffer_to_value ();
     extern template class block_store_partial<IPFS_val, ipfs_lite_store>;
+#endif
 }
 #endif

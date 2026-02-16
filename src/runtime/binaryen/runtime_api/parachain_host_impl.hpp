@@ -9,10 +9,9 @@ namespace sgns::runtime::binaryen {
   class ParachainHostImpl : public RuntimeApi, public ParachainHost {
    public:
     /**
-     * @brief constructor
-     * @param state_code error or result code
-     * @param extension extension instance
-     * @param codec scale codec instance
+     * @brief Constructor.
+     * @param wasm_provider WASM provider instance.
+     * @param runtime_manager Runtime manager instance.
      */
     ParachainHostImpl(
         const std::shared_ptr<WasmProvider> &wasm_provider,

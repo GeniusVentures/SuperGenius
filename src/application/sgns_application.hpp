@@ -5,7 +5,10 @@
 namespace sgns::application {
 
   /**
-   * @class SgnsApplication sgns application interface
+   * @brief Application interface for starting the SuperGenius node.
+   *
+   * Implementations encapsulate initialization and run-loop behavior for the
+   * node application.
    */
   class SgnsApplication {
    public:

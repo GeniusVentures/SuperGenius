@@ -21,10 +21,10 @@ namespace sgns::api {
    public:
        ~AuthorApi() override = default;
        /**
-     * @brief validates and sends extrinsic to transaction pool
-     * @param bytes encoded extrinsic
-     * @return hash of successfully validated extrinsic
-     * or error if state is invalid or unknown
+     * @brief Validates and sends an extrinsic to the transaction pool.
+     * @param extrinsic Extrinsic to submit.
+     * @return Hash of the successfully validated extrinsic,
+     * or error if state is invalid or unknown.
      */
     virtual outcome::result<Hash256> submitExtrinsic(
         const Extrinsic &extrinsic) = 0;

@@ -12,14 +12,17 @@
 
 namespace sgns::processing
 {
-    /** Handles subtask processing and processing results accumulation
-    */
+    /**
+     * @brief Handles subtask processing and result aggregation.
+     */
     class ProcessingEngine : public std::enable_shared_from_this<ProcessingEngine>
     {
     public:
-        /** Create a processing engine object
-        * @param nodeId - current processing node ID
-        * @param processingCore specific processing core that process a subtask using specific algorithm
+        /** Create a processing engine object.
+        * @param nodeId - Current processing node ID.
+        * @param processingCore - Processing core used to execute subtasks.
+        * @param processingErrorSink - Callback for processing errors.
+        * @param processingDoneSink - Callback when processing finishes.
         */
         ProcessingEngine( std::string                                nodeId,
                           std::shared_ptr<ProcessingCore>            processingCore,

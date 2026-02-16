@@ -78,7 +78,7 @@ namespace sgns::crdt
         /**
          * @brief    Commits all pending operations atomically.
          *            Combines all pending operations into a single Delta and publishes it.
-         * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
+         * @param[in] topics Optional topic names for targeted publishing. If empty, default broadcast behavior is used.
          * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
         outcome::result<CID> Commit(const std::set<std::string>& topics);

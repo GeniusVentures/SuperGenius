@@ -80,10 +80,11 @@ namespace sgns
          */
         static outcome::result<bool> VerifyFullProof( const std::vector<uint8_t> &full_proof_data );
         /**
-         * @brief       Verifies the proof with the parameters and snark
-         * @param[in]   parameters The deserialized array of public parameters and zeroed private parameters
-         * @param[in]   snark The deserialized snark
-         * @return      If successful returns the validity of the proof. Otherwise it returns @ref IBasicProof::Error
+         * @brief       Verifies the proof with parameters and bytecode.
+         * @param[in]   parameters Deserialized public parameters and zeroed private parameters.
+         * @param[in]   proof_data Proof data to verify.
+         * @param[in]   proof_bytecode Serialized proof bytecode.
+         * @return      If successful returns the validity of the proof. Otherwise it returns IBasicProof::Error.
          */
         static outcome::result<bool> VerifyFullProof(
             const std::pair<boost::json::array, boost::json::array> &parameters,
