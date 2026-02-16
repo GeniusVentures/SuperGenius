@@ -647,30 +647,16 @@ namespace sgns
         return cert;
     }
 
-    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
-                                                                                 const std::vector<Vote> &votes ) const
+    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes(
+        const Proposal                    &proposal,
+        const std::vector<Vote>           &votes,
+        const ValidatorRegistry::Registry &registry,
+        const std::string                 &registry_cid ) const
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
+        ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
                                          __func__,
-                                         proposal.proposal_id(),
-                                         votes.size() );
-        if ( !registry_ )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: registry is null", __func__ );
-            return outcome::failure( std::errc::not_supported );
-        }
-
-        auto registry_result = registry_->LoadRegistry();
-        if ( registry_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: registry load error={}",
-                                             __func__,
-                                             registry_result.error().message() );
-            return outcome::failure( registry_result.error() );
-        }
-
-        const auto &registry     = registry_result.value();
-        const auto  registry_cid = registry_->GetRegistryCid();
+                                         proposal.registry_cid(),
+                                         registry_cid );
         if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
         {
             ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
@@ -688,7 +674,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        uint64_t              total_weight    = registry_->TotalWeight( registry );
+        uint64_t              total_weight    = ValidatorRegistry::TotalWeight( registry );
         uint64_t              approved_weight = 0;
         std::set<std::string> seen;
 
@@ -707,7 +693,7 @@ namespace sgns
                 continue;
             }
 
-            const auto *validator = registry_->FindValidator( registry, vote.voter_id() );
+            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
             if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
             {
                 continue;
@@ -741,6 +727,25 @@ namespace sgns
                                          total_weight,
                                          tally.has_quorum );
         return tally;
+    }
+
+    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
+                                                                                 const std::vector<Vote> &votes ) const
+    {
+        ConsensusManagerLogger()->trace( "{}: Tallying with current registry, proposal_id={} votes={}",
+                                         __func__,
+                                         proposal.proposal_id(),
+                                         votes.size() );
+
+        auto registry_result = registry_->LoadRegistry();
+        if ( registry_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: registry load error={}",
+                                             __func__,
+                                             registry_result.error().message() );
+            return outcome::failure( registry_result.error() );
+        }
+        return TallyVotes( proposal, votes, registry_result.value(), registry_->GetRegistryCid() );
     }
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::ProposalSigningBytes( const Proposal &proposal )
@@ -1160,7 +1165,7 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
             return;
         }
-        
+
         if ( !CheckCertificate( certificate ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
@@ -1219,6 +1224,17 @@ namespace sgns
                                              certificate.proposal_id() );
             return false;
         }
+        auto registry_ret = registry_->LoadRegistry( certificate.registry_cid() );
+        if ( registry_ret.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
+                                             __func__,
+                                             registry_ret.error().message(),
+                                             certificate.registry_cid(),
+                                             certificate.proposal_id() );
+            return false;
+        }
+        auto &registry = registry_ret.value();
         if ( !ValidateSubject( proposal.subject() ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
@@ -1255,7 +1271,7 @@ namespace sgns
         {
             votes.push_back( vote );
         }
-        auto tally = TallyVotes( proposal, votes );
+        auto tally = TallyVotes( proposal, votes, registry, certificate.registry_cid() );
         if ( tally.has_error() || !tally.value().has_quorum )
         {
             return false;
@@ -1407,8 +1423,8 @@ namespace sgns
             return;
         }
 
-        ProposalState & proposal_state;
-        auto fetch_proposal_state_ret = FetchProposalState( certificate );
+        ProposalState proposal_state;
+        auto          fetch_proposal_state_ret = FetchProposalState( certificate );
         if ( fetch_proposal_state_ret.has_value() )
         {
             proposal_state = fetch_proposal_state_ret.value();
@@ -1429,7 +1445,7 @@ namespace sgns
             return;
         }
 
-        ClearProposalState( proposal );
+        ClearProposalState( certificate.proposal() );
         ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
     }
 
@@ -1440,7 +1456,7 @@ namespace sgns
         auto            it = proposals_.find( certificate.proposal_id() );
         if ( it == proposals_.end() )
         {
-            return outcome::failure( std::errc::not_found );
+            return outcome::failure( std::errc::no_such_device );
         }
         return it->second;
     }
@@ -1866,7 +1882,7 @@ namespace sgns
         return true;
     }
 
-    bool ConsensusManager::CheckCertificate( const Certificate &certificate )
+    bool ConsensusManager::CheckCertificate( const Certificate &certificate ) const
     {
         if ( !ValidateCertificate( certificate ) )
         {
@@ -1887,3 +1903,4 @@ namespace sgns
 
         return true;
     }
+}

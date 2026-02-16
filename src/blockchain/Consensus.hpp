@@ -99,6 +99,10 @@ namespace sgns
 
         outcome::result<Certificate> CreateCertificate( const Proposal &proposal, const std::vector<Vote> &votes );
 
+        outcome::result<QuorumTally> TallyVotes( const Proposal                    &proposal,
+                                                 const std::vector<Vote>           &votes,
+                                                 const ValidatorRegistry::Registry &registry,
+                                                 const std::string                 &registry_cid ) const;
         outcome::result<QuorumTally> TallyVotes( const Proposal &proposal, const std::vector<Vote> &votes ) const;
 
         static outcome::result<std::vector<uint8_t>> ProposalSigningBytes( const Proposal &proposal );
@@ -188,7 +192,7 @@ namespace sgns
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
-        static bool CheckCertificate( const Certificate &certificate );
+        bool        CheckCertificate( const Certificate &certificate ) const;
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
         VoteBundleHandler                                         vote_bundle_handler_;
