@@ -258,7 +258,7 @@ namespace sgns
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
-        void OnConsensusCertificate( const ConsensusProposal &proposal, const ConsensusCertificate &certificate );
+        void OnConsensusCertificate( const std::string &tx_hash );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -367,7 +367,8 @@ namespace sgns
 
     public:
         outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject( const ConsensusManager::Subject &subject );
+        outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
+            const ConsensusManager::Subject &subject );
         bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
         bool CheckTransactionAuthorization( const IGeniusTransactions &tx ) const;

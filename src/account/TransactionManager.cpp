@@ -50,17 +50,15 @@ namespace sgns
 
         instance->blockchain_->RegisterCertificateHandler(
             SubjectType::SUBJECT_NONCE,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const std::string &subject_hash, const ConsensusCertificate &certificate )
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string          &subject_hash,
+                                                                         const ConsensusCertificate &certificate )
             {
-                (void)subject_hash;
+                (void)certificate;
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    if ( certificate.has_proposal() )
-                    {
-                        strong->OnConsensusCertificate( certificate.proposal(), certificate );
-                    }
+                    return strong->OnConsensusCertificate( subject_hash );
                 }
+                eturn outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
             SubjectType::SUBJECT_NONCE,
@@ -2997,10 +2995,7 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    void TransactionManager::OnConsensusCertificate( const ConsensusProposal    &proposal,
-                                                     const ConsensusCertificate &certificate )
-    {
-    }
+    void TransactionManager::OnConsensusCertificate( const std::string &tx_hash ) {}
 
     outcome::result<ConsensusManager::SubjectCheck> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
