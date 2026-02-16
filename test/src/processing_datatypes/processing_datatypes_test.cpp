@@ -446,4 +446,135 @@ namespace sgns
         ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
         ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
     }
+
+    TEST_F( ProcessingDatatypesTest, BoolValidationTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "./processing_datatypes/";
+
+        std::string   instance_file = data_path + "bool-processing-definition.json";
+        std::ifstream instance_stream( instance_file );
+        ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open instance file: " << instance_file;
+
+        std::string instance_str( ( std::istreambuf_iterator<char>( instance_stream ) ),
+                                  std::istreambuf_iterator<char>() );
+        instance_stream.close();
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
+                                                   << manager_result.error().message();
+
+        auto manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto processing = manager->GetProcessingData();
+        const auto &inputs = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::BOOL );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 8 );
+        ASSERT_EQ( dims.get_block_len().value(), 8 );
+        ASSERT_EQ( dims.get_chunk_stride().value(), 8 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+    }
+
+    TEST_F( ProcessingDatatypesTest, BoolProcessingTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "./processing_datatypes/";
+
+        std::string   instance_file = data_path + "bool-processing-definition.json";
+        std::ifstream instance_stream( instance_file );
+        ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open instance file: " << instance_file;
+
+        std::string instance_str( ( std::istreambuf_iterator<char>( instance_stream ) ),
+                                  std::istreambuf_iterator<char>() );
+        instance_stream.close();
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
+                                                   << manager_result.error().message();
+
+        auto manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto processing = manager->GetProcessingData();
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        sgns::ModelNode model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (bool)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+
+        if ( process_result.has_value() ) {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        } else {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        const std::string output_file = data_path + "bool_output.raw";
+        const std::string reference_file = data_path + "bool_output_pt.raw";
+
+        std::ifstream output_stream( output_file, std::ios::binary );
+        ASSERT_TRUE( output_stream.is_open() ) << "Failed to open output file: " << output_file;
+
+        std::ifstream reference_stream( reference_file, std::ios::binary );
+        if ( !reference_stream.is_open() )
+        {
+            GTEST_SKIP() << "Reference output file not found: " << reference_file;
+        }
+
+        output_stream.seekg( 0, std::ios::end );
+        reference_stream.seekg( 0, std::ios::end );
+        const auto output_size = output_stream.tellg();
+        const auto reference_size = reference_stream.tellg();
+        ASSERT_EQ( output_size, reference_size ) << "Output size mismatch";
+
+        output_stream.seekg( 0, std::ios::beg );
+        reference_stream.seekg( 0, std::ios::beg );
+
+        std::vector<float> output_data( static_cast<size_t>( output_size ) / sizeof( float ) );
+        std::vector<float> reference_data( static_cast<size_t>( reference_size ) / sizeof( float ) );
+
+        output_stream.read( reinterpret_cast<char *>( output_data.data() ), output_size );
+        reference_stream.read( reinterpret_cast<char *>( reference_data.data() ), reference_size );
+
+        double max_abs_diff = 0.0;
+        double mean_abs_diff = 0.0;
+        for ( size_t i = 0; i < output_data.size(); ++i )
+        {
+            const double diff = std::abs( static_cast<double>( output_data[i] ) -
+                                          static_cast<double>( reference_data[i] ) );
+            mean_abs_diff += diff;
+            if ( diff > max_abs_diff )
+            {
+                max_abs_diff = diff;
+            }
+        }
+        mean_abs_diff /= static_cast<double>( output_data.size() );
+
+        std::cout << "Bool output diff: mean=" << mean_abs_diff << " max=" << max_abs_diff << std::endl;
+
+        ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
+        ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
+    }
 }
