@@ -21,17 +21,15 @@ namespace sgns::crdt
         this->key_ = key;
     }
 
-    HierarchicalKey HierarchicalKey::ChildString( std::string_view s ) const
+    HierarchicalKey HierarchicalKey::ChildString(std::string_view s) const
     {
-        HierarchicalKey k( *this );
-
-        if ( !s.empty() && s[0] != '/' )
+        std::string result = this->key_;
+        if (!s.empty() && s[0] != '/')
         {
-            k.key_.push_back( '/' );
+            result += '/';
         }
-        k.key_.append( s );
-
-        return k;
+        result += s;
+        return {std::move(result)};
     }
 
     bool HierarchicalKey::IsTopLevel() const
