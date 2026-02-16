@@ -131,8 +131,8 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
     EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
-    sgns::test::assertWaitForCondition(
-        [full_node]()
+    test::assertWaitForCondition(
+        [full_node]
         { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
         "Full node not synced" );

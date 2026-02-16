@@ -119,7 +119,7 @@ namespace sgns::blockchain
 
         OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
         BOOST_OUTCOME_TRYV2( auto &&,
-                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, {"topic"} ) );
+                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
         BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
@@ -196,7 +196,9 @@ namespace sgns::blockchain
         //TODO - For now one block data per block header. Revisit this
         BOOST_OUTCOME_TRYV2(
             auto &&,
-            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" }, Buffer{ encoded_block_data }, {"topic"} ) );
+            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
+                                       Buffer{ encoded_block_data },
+                                       { "topic" } ) );
 
         //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
         //                          Prefix::BLOCK_DATA,
@@ -266,7 +268,7 @@ namespace sgns::blockchain
         OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, number ) );
 
         //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY(db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, {"topic"} ));
+        OUTCOME_TRY(db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
         return outcome::success();
     }
 
@@ -323,7 +325,7 @@ namespace sgns::blockchain
         hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         BOOST_OUTCOME_TRYV2(
             auto &&,
-            db_->Put( { storage::GetLastFinalizedBlockHashLookupKey() }, Buffer{ serialized_proto }, {"topic"} ) );
+            db_->Put( { storage::GetLastFinalizedBlockHashLookupKey() }, Buffer{ serialized_proto }, { "topic" } ) );
 
         return outcome::success();
     }

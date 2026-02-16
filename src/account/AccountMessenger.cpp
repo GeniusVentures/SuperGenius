@@ -136,7 +136,7 @@ namespace sgns
         head_request_handler_ = nullptr;
     }
 
-    outcome::result<void> AccountMessenger::RequestHeads( const std::set<std::string> &topics )
+    outcome::result<void> AccountMessenger::RequestHeads( const std::unordered_set<std::string> &topics )
     {
         if ( topics.empty() )
         {

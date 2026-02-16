@@ -9,9 +9,20 @@
 #ifndef SUPERGENIUS_CRDT_DATASTORE_HPP
 #define SUPERGENIUS_CRDT_DATASTORE_HPP
 
+#include <shared_mutex>
+#include <future>
+#include <chrono>
+#include <queue>
+#include <unordered_set>
+#include <map>
+#include <condition_variable>
+#include <optional>
+
 #include <boost/asio/steady_timer.hpp>
-#include "base/logger.hpp"
+#include <ipfs_lite/ipld/ipld_node.hpp>
 #include <primitives/cid/cid.hpp>
+
+#include "base/logger.hpp"
 #include "crdt/crdt_set.hpp"
 #include "crdt/crdt_heads.hpp"
 #include "crdt/broadcaster.hpp"
@@ -19,16 +30,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
-#include <storage/rocksdb/rocksdb.hpp>
-#include <ipfs_lite/ipld/ipld_node.hpp>
-#include <shared_mutex>
-#include <future>
-#include <chrono>
-#include <queue>
-#include <set>
-#include <map>
-#include <condition_variable>
-#include <optional>
+#include "storage/rocksdb/rocksdb.hpp"
 
 namespace sgns
 {
@@ -122,7 +124,7 @@ namespace sgns::crdt
         * @param aPrefix prefix to search, if empty string, return all
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix ) const;
+        outcome::result<QueryResult> QueryKeyValues( std::string_view aPrefix ) const;
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -143,7 +145,7 @@ namespace sgns::crdt
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        std::string GetValueSuffix() const;
+        static std::string GetValueSuffix();
 
         /**
          * @brief Stores the given value in the CRDT store
@@ -152,9 +154,9 @@ namespace sgns::crdt
          * @param topics Topics to publish to
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
-                                     const Buffer                &aValue,
-                                     const std::set<std::string> &topics );
+        outcome::result<CID> PutKey( const HierarchicalKey                 &aKey,
+                                     const Buffer                          &aValue,
+                                     const std::unordered_set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
@@ -167,7 +169,7 @@ namespace sgns::crdt
         * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
+        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::unordered_set<std::string> &topics );
 
         /**
          * @brief Publishes a Delta.
@@ -176,7 +178,8 @@ namespace sgns::crdt
          * @param topics Topics to publish to
          * @return returns outcome::success on success or outcome::failure otherwise
          */
-        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
+        outcome::result<CID> Publish( const std::shared_ptr<Delta>          &aDelta,
+                                      const std::unordered_set<std::string> &topics );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
         * @return returns outcome::success on success or outcome::failure otherwise
@@ -238,13 +241,13 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
-        std::set<std::string> GetTopicNames() const;
+        std::unordered_set<std::string> GetTopicNames() const;
 
     protected:
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
         friend class ::sgns::blockchain::ValidatorRegistry;
- 
+
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
@@ -362,10 +365,10 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<IPLDNode>> CreateIPLDNode(
             const std::vector<std::pair<CID, std::string>> &aHeads,
             const std::shared_ptr<Delta>                   &aDelta,
-            const std::set<std::string>                    &topics ) const;
+            const std::unordered_set<std::string>          &topics ) const;
 
-        outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta> &aDelta,
-                                                                                 const std::set<std::string>  &topics );
+        outcome::result<std::shared_ptr<IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta>          &aDelta,
+                                                                  const std::unordered_set<std::string> &topics );
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
          *  @param node   Node to add and process
          *  @return         CID or outcome::failure on error
@@ -443,13 +446,14 @@ namespace sgns::crdt
         CRDTDataFilter crdt_filter_;
         bool           started_ = false;
 
-        std::mutex              rebroadcastMutex_;
-        std::mutex              dagWorkerCvMutex_;
-        std::condition_variable rebroadcastCv_;
-        std::set<std::string>   topicNames_;
-        bool                    isFullNode = false;
-        std::mutex              pendingBroadcastMutex_;
-        std::set<std::string>   pendingBroadcastTopics_;
+        std::mutex                      rebroadcastMutex_;
+        std::mutex                      dagWorkerCvMutex_;
+        std::condition_variable         rebroadcastCv_;
+        std::unordered_set<std::string> topicNames_;
+        mutable std::mutex              topicNamesMutex_;
+        bool                            isFullNode = false;
+        std::mutex                      pendingBroadcastMutex_;
+        std::unordered_set<std::string> pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
 

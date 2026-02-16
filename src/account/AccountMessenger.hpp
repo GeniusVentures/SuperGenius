@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #pragma once
+
 #include <string>
 #include <cstdint>
 #include <memory>
@@ -17,14 +18,15 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 #include <chrono>
+
 #include <boost/optional.hpp>
+
 #include "base/logger.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 #include "account/proto/SGAccountComm.pb.h"
-#include "primitives/cid/cid.hpp"
 
 namespace sgns
 {
@@ -155,7 +157,7 @@ namespace sgns
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::set<std::string> &topics );
+        outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics );
 
     private:
         /// Basis of the account receiving topic
@@ -199,7 +201,7 @@ namespace sgns
         std::mutex         head_handler_mutex_;
 
         // Worker thread state
-        enum class RequestType
+        enum class RequestType: std::uint8_t
         {
             Nonce,
             Genesis,

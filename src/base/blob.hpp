@@ -146,7 +146,7 @@ namespace sgns::base {
      * @return result containing Blob object if span has proper size
      */
     static outcome::result<Blob<size_>> fromSpan(
-        const gsl::span<uint8_t> &span) {
+        gsl::span<uint8_t> span) {
       if (span.size() != size_) {
         return BlobError::INCORRECT_LENGTH;
       }

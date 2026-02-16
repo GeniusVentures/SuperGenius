@@ -96,7 +96,7 @@ namespace sgns
             }
             curr.txid_hash_  = maybe_hash.value();
             curr.output_idx_ = input_proto.output_index();
-            curr.signature_  = std::vector<uint8_t>(input_proto.signature().cbegin(), input_proto.signature().cend());
+            curr.signature_  = std::vector<uint8_t>( input_proto.signature().cbegin(), input_proto.signature().cend() );
             inputs.push_back( curr );
         }
         std::vector<OutputDestInfo> outputs;
@@ -148,4 +148,10 @@ namespace sgns
         return GetType();
     }
 
-} // namespace sgns
+    std::unordered_set<std::string> EscrowReleaseTransaction::GetTopics() const
+    {
+        auto topics = IGeniusTransactions::GetTopics();
+        topics.emplace( GetEscrowSource() );
+        return topics;
+    }
+}

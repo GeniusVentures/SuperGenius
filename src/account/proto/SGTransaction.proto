@@ -36,6 +36,17 @@ message UTXOTxParams
     repeated TransferUTXOInput inputs = 1; // 
     repeated TransferOutput outputs = 2; // 
 }
+message UTXO
+{
+    uint32 output_idx = 1;
+    uint64 amount = 2;
+    bytes hash = 3;
+    bytes token = 4;
+}
+message UTXOList
+{
+    repeated UTXO utxos = 1;
+}
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 

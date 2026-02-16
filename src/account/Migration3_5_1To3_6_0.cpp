@@ -99,7 +99,7 @@ namespace sgns
         OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
         auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 

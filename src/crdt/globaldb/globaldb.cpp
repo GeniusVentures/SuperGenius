@@ -237,7 +237,9 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<CID> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const HierarchicalKey                 &key,
+                                        const Buffer                          &value,
+                                        const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -245,10 +247,11 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
+        return m_crdtDatastore->PutKey( key, value, topics );
     }
 
-    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
+                                        const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -270,7 +273,7 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
+    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -281,7 +284,7 @@ namespace sgns::crdt
         return m_crdtDatastore->DeleteKey( key, topics );
     }
 
-    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( std::string_view keyPrefix )
     {
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
     }
@@ -410,7 +413,7 @@ namespace sgns::crdt
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
     }
 
-    outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const
+    outcome::result<std::unordered_set<std::string>> GlobalDB::GetMonitoredTopics() const
     {
         if ( !m_crdtDatastore )
         {

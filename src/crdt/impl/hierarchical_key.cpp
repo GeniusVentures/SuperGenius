@@ -1,5 +1,6 @@
 #include "crdt/hierarchical_key.hpp"
 #include <boost/algorithm/string.hpp>
+
 namespace sgns::crdt
 {
 
@@ -20,30 +21,32 @@ namespace sgns::crdt
         this->key_ = key;
     }
 
-  HierarchicalKey HierarchicalKey::ChildString(const std::string& s) const
-  {
-    std::string childString = s;
-    if ( !childString.empty() && childString[0] != '/' )
+    HierarchicalKey HierarchicalKey::ChildString( std::string_view s ) const
     {
-      childString.insert(childString.begin(), '/');
+        HierarchicalKey k( *this );
+
+        if ( !s.empty() && s[0] != '/' )
+        {
+            k.key_.push_back( '/' );
+        }
+        k.key_.append( s );
+
+        return k;
     }
 
-    return {this->key_ + childString};
-  }
-
-  bool HierarchicalKey::IsTopLevel() const
-  {
-    return GetList().size() == 1;
-  }
-
-  std::vector<std::string> HierarchicalKey::GetList() const
-  {
-    std::vector<std::string> listOfNames;
-    if (!this->key_.empty())
+    bool HierarchicalKey::IsTopLevel() const
     {
-      boost::split(listOfNames, this->key_, boost::is_any_of("/"));
-      listOfNames.erase(listOfNames.begin());
+        return GetList().size() == 1;
     }
-    return listOfNames;
-  }
+
+    std::vector<std::string> HierarchicalKey::GetList() const
+    {
+        std::vector<std::string> listOfNames;
+        if ( !this->key_.empty() )
+        {
+            boost::split( listOfNames, this->key_, boost::is_any_of( "/" ) );
+            listOfNames.erase( listOfNames.begin() );
+        }
+        return listOfNames;
+    }
 }

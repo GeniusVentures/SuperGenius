@@ -7,16 +7,25 @@
 
 #include <mutex>
 #include <stdexcept>
+#include <thread>
+#include <memory>
+#include <exception>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-
-#include <memory>
+#include <boost/uuid/uuid.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+
 #include "base/sgns_version.hpp"
-#include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
@@ -25,17 +34,6 @@
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <thread>
-#include <mutex>
-#include <stdexcept>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
-#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 #include <Generators.hpp>
 
 namespace
@@ -406,7 +404,7 @@ namespace sgns
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
@@ -431,6 +429,7 @@ namespace sgns
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -472,6 +471,7 @@ namespace sgns
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::trace );
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );

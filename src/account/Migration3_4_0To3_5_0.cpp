@@ -7,9 +7,12 @@
 
 #include "Migration3_4_0To3_5_0.hpp"
 
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TransferTransaction.hpp"
 
 namespace sgns
 {
@@ -228,7 +231,7 @@ namespace sgns
         }
 
         auto                  crdt_transaction_ = db_3_5_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
@@ -396,7 +399,7 @@ namespace sgns
                 OUTCOME_TRY( persist_record( record ) );
             }
         }
-        if ( migrated_count )
+        if ( migrated_count != 0 )
         {
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );

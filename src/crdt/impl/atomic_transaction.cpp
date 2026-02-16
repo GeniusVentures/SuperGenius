@@ -89,7 +89,7 @@ namespace sgns::crdt
         return modified_keys_.find( key.GetKey() ) != modified_keys_.end();
     }
 
-    outcome::result<CID> AtomicTransaction::Commit( const std::set<std::string> &topics )
+    outcome::result<CID> AtomicTransaction::Commit( const std::unordered_set<std::string> &topics )
     {
         if ( is_committed_ )
         {

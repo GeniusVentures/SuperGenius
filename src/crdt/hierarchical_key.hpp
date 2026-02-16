@@ -49,7 +49,7 @@ namespace sgns::crdt
      * NewKey("/Comedy/MontyPython").ChildString("Actor:JohnCleese")
      * NewKey("/Comedy/MontyPython/Actor:JohnCleese")
     */
-    HierarchicalKey ChildString(const std::string& s) const;
+    HierarchicalKey ChildString( std::string_view s ) const;
 
     /** List returns the `list` representation of this Key.
     *   NewKey("/Comedy/MontyPython/Actor:JohnCleese").List()

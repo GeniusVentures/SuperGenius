@@ -121,7 +121,7 @@ namespace sgns::crdt
         * @return list of key-value pairs matches prefix and suffix
         * \sa QuerySuffix
         */
-        outcome::result<QueryResult> QueryElements( const std::string &aPrefix,
+        outcome::result<QueryResult> QueryElements( std::string_view   aPrefix,
                                                     const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL ) const;
 
         /**
@@ -180,7 +180,7 @@ namespace sgns::crdt
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
-        HierarchicalKey KeysKey( const std::string &aKey ) const;
+        HierarchicalKey KeysKey( std::string_view aKey ) const;
 
         /** Get value full path prefix in namespace for a key
         * /namespace/k/key/v
