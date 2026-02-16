@@ -164,9 +164,10 @@ namespace sgns
         bool        IsBetterProposal( const Proposal &candidate, const Proposal &current ) const;
         bool        IsTimestampSane( uint64_t timestamp_ms ) const;
         bool        IsCurrentAggregator( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
-        std::vector<std::string> GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
-        uint64_t                 GetCurrentRound( uint64_t proposal_ts_ms ) const;
+        std::vector<std::string>       GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
+        uint64_t                       GetCurrentRound( uint64_t proposal_ts_ms ) const;
         outcome::result<ProposalState> FetchProposalState( const Certificate &certificate );
+        ProposalState                  CreateProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
         std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
         bool              HasQuorumForCertificate( const Proposal &proposal, const std::vector<Vote> &votes ) const;
@@ -187,6 +188,7 @@ namespace sgns
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
+        static bool CheckCertificate( const Certificate &certificate );
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
         VoteBundleHandler                                         vote_bundle_handler_;

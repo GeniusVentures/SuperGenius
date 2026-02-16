@@ -839,19 +839,6 @@ namespace sgns
             return result;
         }
 
-        if ( !db_ )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: db is null", __func__ );
-            return outcome::failure( std::errc::not_supported );
-        }
-        if ( !certificate.has_proposal() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: certificate missing proposal proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
         auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash_result.has_error() )
         {
@@ -1173,13 +1160,15 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
             return;
         }
-
-        HandleCertificate( certificate );
-
-        if ( !certificate.has_proposal() )
+        
+        if ( !CheckCertificate( certificate ) )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
             return;
         }
+
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash.has_error() )
         {
@@ -1410,7 +1399,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( !ValidateCertificate( certificate ) )
+        if ( !CheckCertificate( certificate ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
@@ -1418,24 +1407,24 @@ namespace sgns
             return;
         }
 
+        ProposalState & proposal_state;
         auto fetch_proposal_state_ret = FetchProposalState( certificate );
-        if ( fetch_proposal_state_ret.has_error() )
+        if ( fetch_proposal_state_ret.has_value() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: Proposal state already has a certificate, proposal_id={}",
+            proposal_state = fetch_proposal_state_ret.value();
+            ConsensusManagerLogger()->debug( "{}: fetched proposal state, proposal_id={}",
                                              __func__,
                                              certificate.proposal_id() );
-            return;
         }
-        auto &proposal_state = fetch_proposal_state_ret.value();
-        auto &proposal       = certificate.proposal();
+        else
+        {
+            ConsensusManagerLogger()->debug( "{}: proposal state not found, creating new one proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            proposal_state = CreateProposalState( certificate );
+        }
 
         if ( !ValidateCertificateBestProposal( proposal_state, certificate ) )
-        {
-            return;
-        }
-
-        auto votes = CollectCertificateVotes( certificate );
-        if ( !HasQuorumForCertificate( proposal, votes ) )
         {
             return;
         }
@@ -1449,11 +1438,15 @@ namespace sgns
     {
         std::lock_guard lock( proposals_mutex_ );
         auto            it = proposals_.find( certificate.proposal_id() );
-        if ( it != proposals_.end() )
+        if ( it == proposals_.end() )
         {
-            return it->second;
+            return outcome::failure( std::errc::not_found );
         }
+        return it->second;
+    }
 
+    ConsensusManager::ProposalState ConsensusManager::CreateProposalState( const Certificate &certificate )
+    {
         ProposalState new_state;
         new_state.proposal = certificate.proposal();
         new_state.slot_key = GetSlotKey( new_state.proposal );
@@ -1873,4 +1866,24 @@ namespace sgns
         return true;
     }
 
-}
+    bool ConsensusManager::CheckCertificate( const Certificate &certificate )
+    {
+        if ( !ValidateCertificate( certificate ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate, proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return false;
+        }
+
+        auto votes = CollectCertificateVotes( certificate );
+        if ( !HasQuorumForCertificate( certificate.proposal(), votes ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: Certificate without quorum, proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return false;
+        }
+
+        return true;
+    }
