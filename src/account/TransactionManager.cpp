@@ -172,70 +172,73 @@ namespace sgns
 
         ChangeState( State::INITIALIZING );
 
-        if ( !stopped_.load() )
+        if ( stopped_.load() )
         {
-            auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
-            if ( utxo_result.has_error() )
-            {
-                m_logger->error( "Failed to load UTXOs from storage" );
-            }
-            if ( utxo_result.has_error() || !utxo_result.value() )
-            {
-                m_logger->info( "Loading transactions to mount UTXOs" );
-                QueryTransactions();
-            }
-            else
-            {
-                auto utxo_map           = utxo_manager_.GetAllUTXOs();
-                auto monitored_networks = GetMonitoredNetworkIDs();
+            return;
+        }
 
-                for ( auto &[address, utxo_data_vector] : utxo_map )
+        auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
+        if ( utxo_result.has_error() )
+        {
+            m_logger->error( "Failed to load UTXOs from storage" );
+        }
+        if ( utxo_result.has_error() || !utxo_result.value() )
+        {
+            m_logger->info( "Loading transactions to mount UTXOs" );
+            QueryTransactions();
+        }
+        else
+        {
+            auto utxo_map           = utxo_manager_.GetAllUTXOs();
+            auto monitored_networks = GetMonitoredNetworkIDs();
+
+            for ( const auto &[address, utxo_data_vector] : utxo_map )
+            {
+                m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 utxo_data_vector.size(),
+                                 address.substr( 0, 8 ) );
+                for ( auto &utxo_data : utxo_data_vector )
                 {
-                    m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
+                    auto &[utxo_state, utxo] = utxo_data;
+                    m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
-                                     utxo_data_vector.size(),
-                                     address.substr( 0, 8 ) );
-                    for ( auto &utxo_data : utxo_data_vector )
+                                     static_cast<uint8_t>( utxo_state ),
+                                     utxo.GetTxID().toReadableString(),
+                                     utxo.GetOutputIdx(),
+                                     utxo.GetAmount() );
+
+                    if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
                     {
-                        auto &[utxo_state, utxo] = utxo_data;
-                        m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
+                        m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
                                          account_m->GetAddress().substr( 0, 8 ),
                                          full_node_m,
                                          static_cast<uint8_t>( utxo_state ),
-                                         utxo.GetTxID().toReadableString(),
-                                         utxo.GetOutputIdx(),
-                                         utxo.GetAmount() );
-
-                        if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
+                                         utxo.GetTxID().toReadableString() );
+                        continue;
+                    }
+                    
+                    for ( auto network_id : monitored_networks )
+                    {
+                        auto tx_path        = GetTransactionPath( network_id, utxo.GetTxID().toReadableString() );
+                        auto process_result = FetchAndProcessTransaction( tx_path );
+                        if ( !process_result.has_error() )
                         {
-                            m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
+                            m_logger->debug( "[{} - full: {}] Processed transaction in {}",
                                              account_m->GetAddress().substr( 0, 8 ),
                                              full_node_m,
-                                             static_cast<uint8_t>( utxo_state ),
-                                             utxo.GetTxID().toReadableString() );
-                            continue;
-                        }
-                        for ( auto network_id : monitored_networks )
-                        {
-                            auto tx_path        = GetTransactionPath( network_id, utxo.GetTxID().toReadableString() );
-                            auto process_result = FetchAndProcessTransaction( tx_path );
-                            if ( !process_result.has_error() )
-                            {
-                                m_logger->debug( "[{} - full: {}] Processed transaction in {}",
-                                                 account_m->GetAddress().substr( 0, 8 ),
-                                                 full_node_m,
-                                                 tx_path );
-                                break;
-                            }
+                                             tx_path );
+                            break;
                         }
                     }
                 }
             }
-
-            // First kick: keep self alive during the first dispatch only
-            boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
         }
+
+        // First kick: keep self alive during the first dispatch only
+        boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
     }
 
     // One “tick”: do work, then schedule the next tick via weak capture

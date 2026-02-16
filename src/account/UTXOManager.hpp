@@ -134,6 +134,9 @@ namespace sgns
 
         outcome::result<bool> LoadUTXOs( std::shared_ptr<storage::rocksdb> db );
 
+        /**
+         * @return True if loaded any UTXOs, false if loaded 0 UTXOs and error if one occurred
+         */
         outcome::result<void> StoreUTXOs( const std::string &address );
 
     private:
