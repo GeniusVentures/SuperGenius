@@ -255,9 +255,9 @@ namespace sgns
         return weight;
     }
 
-    uint64_t ValidatorRegistry::TotalWeight( const Registry &registry ) const
+    uint64_t ValidatorRegistry::TotalWeight( const Registry &registry )
     {
-        logger_->trace( "{}: entry validators={}", __func__, registry.validators().size() );
+        ValidatorRegistryLogger()->trace( "{}: entry validators={}", __func__, registry.validators().size() );
         uint64_t total_weight = 0;
         for ( const auto &entry : registry.validators() )
         {
@@ -267,29 +267,32 @@ namespace sgns
             }
             total_weight += entry.weight();
         }
-        logger_->debug( "{}: total_weight={}", __func__, total_weight );
+        ValidatorRegistryLogger()->debug( "{}: total_weight={}", __func__, total_weight );
         return total_weight;
     }
 
     uint64_t ValidatorRegistry::QuorumThreshold( uint64_t total_weight ) const
     {
-        logger_->trace( "{}: entry total_weight={}", __func__, total_weight );
+        ValidatorRegistryLogger()->trace( "{}: entry total_weight={}", __func__, total_weight );
         if ( total_weight == 0 )
         {
-            logger_->debug( "{}: total_weight is zero, threshold=0", __func__ );
+            ValidatorRegistryLogger()->debug( "{}: total_weight is zero, threshold=0", __func__ );
             return 0;
         }
         const uint64_t numerator = total_weight * quorum_numerator_;
         const uint64_t threshold = ( numerator + quorum_denominator_ - 1 ) / quorum_denominator_;
-        logger_->debug( "{}: threshold={}", __func__, threshold );
+        ValidatorRegistryLogger()->debug( "{}: threshold={}", __func__, threshold );
         return threshold;
     }
 
     bool ValidatorRegistry::IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const
     {
-        logger_->trace( "{}: entry accumulated={} total={}", __func__, accumulated_weight, total_weight );
+        ValidatorRegistryLogger()->trace( "{}: entry accumulated={} total={}",
+                                          __func__,
+                                          accumulated_weight,
+                                          total_weight );
         const bool is_quorum = accumulated_weight >= QuorumThreshold( total_weight );
-        logger_->debug( "{}: is_quorum={}", __func__, is_quorum );
+        ValidatorRegistryLogger()->debug( "{}: is_quorum={}", __func__, is_quorum );
         return is_quorum;
     }
 
@@ -458,6 +461,35 @@ namespace sgns
         return update_result.value().registry();
     }
 
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadRegistry( const std::string &cid ) const
+    {
+        ValidatorRegistryLogger()->trace( "{}: entry cid={}", __func__, cid );
+
+        OUTCOME_TRY( auto cid_content, db_->GetCIDContent( cid ) );
+        ValidatorRegistryLogger()->trace( "{}: Got CID content with {} entries ", __func__, cid_content.size() );
+        for ( auto &[key, registry_content] : cid_content )
+        {
+            ValidatorRegistryLogger()->trace( "{}: Processing CID content key={}", __func__, key );
+            if ( key != std::string( RegistryKey() ) )
+            {
+                ValidatorRegistryLogger()->debug( "{}: Skipping non-registry content key={}", __func__, key );
+                continue;
+            }
+            std::vector<uint8_t> bytes( registry_content.begin(), registry_content.end() );
+            auto decoded = DeserializeRegistryUpdate( bytes );
+            if ( decoded.has_error() )
+            {
+                ValidatorRegistryLogger()->error( "{}: failed to parse registry update ", __func__ );
+                continue;
+            }
+
+            ValidatorRegistryLogger()->debug( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
+            return decoded.value().registry();
+        }
+
+        return outcome::failure( std::errc::no_such_file_or_directory );
+    }
+
     outcome::result<ValidatorRegistry::RegistryUpdate> ValidatorRegistry::LoadRegistryUpdate() const
     {
         logger_->trace( "{}: entry", __func__ );
@@ -485,7 +517,7 @@ namespace sgns
             return outcome::failure( registry_result.error() );
         }
 
-        auto                                  current_registry = registry_result.value();
+        auto current_registry = registry_result.value();
         if ( !ValidateCertificateForUpdate( certificate, current_registry ) )
         {
             logger_->error( "{}: invalid certificate", __func__ );
@@ -698,8 +730,8 @@ namespace sgns
     }
 
     bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update,
-                                          const Registry      *current_registry,
-                                          bool                 enforce_time_window ) const
+                                          const Registry       *current_registry,
+                                          bool                  enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
@@ -765,7 +797,7 @@ namespace sgns
                 }
             }
 
-            auto votes = ExtractCertificateVotes( certificate, *current_registry );
+            auto     votes    = ExtractCertificateVotes( certificate, *current_registry );
             Registry expected = BuildRegistryFromCertificate( *current_registry,
                                                               certificate,
                                                               votes.registered_votes,
@@ -857,9 +889,8 @@ namespace sgns
         return false;
     }
 
-    bool ValidatorRegistry::ValidateCertificate(
-        const sgns::ConsensusCertificate &certificate,
-        const Registry                   &current_registry ) const
+    bool ValidatorRegistry::ValidateCertificate( const sgns::ConsensusCertificate &certificate,
+                                                 const Registry                   &current_registry ) const
     {
         logger_->trace( "{}: entry proposal_id={}", __func__, certificate.proposal_id() );
         if ( !certificate.has_proposal() )
@@ -885,9 +916,7 @@ namespace sgns
         if ( proposal.registry_epoch() != certificate.registry_epoch() ||
              proposal.registry_cid() != certificate.registry_cid() )
         {
-            logger_->error( "{}: registry metadata mismatch proposal_id={}",
-                            __func__,
-                            proposal.proposal_id() );
+            logger_->error( "{}: registry metadata mismatch proposal_id={}", __func__, proposal.proposal_id() );
             return false;
         }
         if ( proposal.registry_epoch() != current_registry.epoch() )
@@ -918,9 +947,8 @@ namespace sgns
         return true;
     }
 
-    bool ValidatorRegistry::ValidateCertificateForUpdate(
-        const sgns::ConsensusCertificate &certificate,
-        const Registry                   &current_registry ) const
+    bool ValidatorRegistry::ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
+                                                          const Registry                   &current_registry ) const
     {
         const uint64_t window_ms = weight_config_.certificate_timestamp_window_ms_;
         if ( window_ms > 0 )
@@ -943,7 +971,7 @@ namespace sgns
         const sgns::ConsensusCertificate &certificate,
         const Registry                   &current_registry ) const
     {
-        CertificateVotes result;
+        CertificateVotes                result;
         uint64_t                        total_weight    = TotalWeight( current_registry );
         uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
@@ -1050,7 +1078,7 @@ namespace sgns
         return next;
     }
 
-    void ValidatorRegistry::InsertNewValidators( Registry &registry,
+    void ValidatorRegistry::InsertNewValidators( Registry                                    &registry,
                                                  const std::unordered_map<std::string, bool> &unregistered_votes ) const
     {
         std::vector<std::string> new_ids;
@@ -1077,7 +1105,7 @@ namespace sgns
             entry->set_role( Role::REGULAR );
             entry->set_status( Status::ACTIVE );
             entry->set_weight( ComputeWeight( entry->role() ) );
-            auto it = unregistered_votes.find( validator_id );
+            auto       it      = unregistered_votes.find( validator_id );
             const bool approve = ( it != unregistered_votes.end() ) ? it->second : true;
             entry->set_penalty_score( approve ? 0 : 1 );
             entry->set_missed_epochs( 0 );
@@ -1085,9 +1113,8 @@ namespace sgns
         }
     }
 
-    void ValidatorRegistry::ApplyVoteEffects(
-        std::vector<ValidatorEntry>                  &entries,
-        const std::unordered_map<std::string, bool> &registered_votes ) const
+    void ValidatorRegistry::ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
+                                              const std::unordered_map<std::string, bool> &registered_votes ) const
     {
         for ( auto &entry : entries )
         {
@@ -1145,8 +1172,9 @@ namespace sgns
             {
                 if ( entry.status() == Status::BLACKLISTED )
                 {
-                    const uint32_t bumped =
-                        std::min( cap, static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
+                    const uint32_t bumped = std::min(
+                        cap,
+                        static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
                     penalty = bumped;
                 }
                 else
@@ -1158,8 +1186,9 @@ namespace sgns
                     if ( penalty >= weight_config_.penalty_threshold_ )
                     {
                         entry.set_status( Status::BLACKLISTED );
-                        const uint32_t bumped =
-                            std::min( cap, static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
+                        const uint32_t bumped = std::min(
+                            cap,
+                            static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
                         penalty = bumped;
                     }
                 }
@@ -1168,7 +1197,7 @@ namespace sgns
         }
     }
 
-    void ValidatorRegistry::ApplyInactivityDecay( std::vector<ValidatorEntry> &entries,
+    void ValidatorRegistry::ApplyInactivityDecay( std::vector<ValidatorEntry>           &entries,
                                                   const std::unordered_set<std::string> &participants ) const
     {
         for ( auto &entry : entries )
@@ -1215,14 +1244,13 @@ namespace sgns
             }
         }
 
-        const uint64_t weight_cap =
-            weight_config_.genesis_weight_ * weight_config_.total_weight_cap_multiplier_;
+        const uint64_t weight_cap = weight_config_.genesis_weight_ * weight_config_.total_weight_cap_multiplier_;
         if ( weight_cap == 0 || total_active <= weight_cap )
         {
             return;
         }
 
-        uint64_t scaled_sum = 0;
+        uint64_t            scaled_sum = 0;
         std::vector<size_t> active_indices;
         active_indices.reserve( entries.size() );
         for ( size_t i = 0; i < entries.size(); ++i )
@@ -1258,11 +1286,11 @@ namespace sgns
         {
             entries[active_indices[idx]].set_weight( entries[active_indices[idx]].weight() + 1 );
             remainder -= 1;
-            idx = ( idx + 1 ) % active_indices.size();
+            idx        = ( idx + 1 ) % active_indices.size();
         }
     }
 
-void ValidatorRegistry::NormalizeRegistry( Registry &registry )
+    void ValidatorRegistry::NormalizeRegistry( Registry &registry )
     {
         std::vector<ValidatorEntry> entries;
         entries.reserve( static_cast<size_t>( registry.validators_size() ) );

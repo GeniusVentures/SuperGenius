@@ -51,21 +51,21 @@ namespace sgns
 
         struct WeightConfig
         {
-            uint64_t genesis_weight_              = 50000;
-            uint64_t full_weight_                 = 1000;
-            uint64_t regular_weight_              = 1;
-            uint64_t sharded_weight_              = 1;
-            uint64_t genesis_max_weight_          = 50000;
-            uint64_t full_max_weight_             = 5000;
-            uint64_t regular_max_weight_          = 100;
-            uint64_t sharded_max_weight_          = 100;
-            uint64_t approval_increment_          = 1;
-            uint32_t penalty_threshold_           = 10;
-            uint32_t penalty_cap_                 = 100;
-            uint32_t blacklist_bump_              = 10;
-            uint32_t missed_epoch_threshold_      = 5;
-            uint32_t inactivity_decrement_        = 1;
-            uint64_t total_weight_cap_multiplier_ = 4;
+            uint64_t genesis_weight_                  = 50000;
+            uint64_t full_weight_                     = 1000;
+            uint64_t regular_weight_                  = 1;
+            uint64_t sharded_weight_                  = 1;
+            uint64_t genesis_max_weight_              = 50000;
+            uint64_t full_max_weight_                 = 5000;
+            uint64_t regular_max_weight_              = 100;
+            uint64_t sharded_max_weight_              = 100;
+            uint64_t approval_increment_              = 1;
+            uint32_t penalty_threshold_               = 10;
+            uint32_t penalty_cap_                     = 100;
+            uint32_t blacklist_bump_                  = 10;
+            uint32_t missed_epoch_threshold_          = 5;
+            uint32_t inactivity_decrement_            = 1;
+            uint64_t total_weight_cap_multiplier_     = 4;
             uint64_t certificate_timestamp_window_ms_ = 300000;
         };
 
@@ -78,15 +78,16 @@ namespace sgns
                                                        InitCallback                    init_callback = nullptr );
         ~ValidatorRegistry();
 
-        uint64_t ComputeWeight( Role role ) const;
-        uint64_t TotalWeight( const Registry &registry ) const;
-        uint64_t QuorumThreshold( uint64_t total_weight ) const;
-        bool     IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
+        uint64_t        ComputeWeight( Role role ) const;
+        static uint64_t TotalWeight( const Registry &registry );
+        uint64_t        QuorumThreshold( uint64_t total_weight ) const;
+        bool            IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
         Registry                        CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
         outcome::result<void>           StoreGenesisRegistry( const std::string &genesis_validator_id,
                                                               std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         outcome::result<Registry>       LoadRegistry() const;
+        outcome::result<Registry>       LoadRegistry( const std::string &cid ) const;
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
         bool                            RegisterFilter();
@@ -144,27 +145,27 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         void RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
-        bool        VerifyUpdate( const RegistryUpdate &update,
-                                  const Registry      *current_registry,
-                                  bool                 enforce_time_window ) const;
-        bool        ValidateCertificate( const sgns::ConsensusCertificate &certificate,
-                                         const Registry                   &current_registry ) const;
-        bool        ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
-                                                  const Registry                   &current_registry ) const;
+        bool                                  VerifyUpdate( const RegistryUpdate &update,
+                                                            const Registry       *current_registry,
+                                                            bool                  enforce_time_window ) const;
+        bool                                  ValidateCertificate( const sgns::ConsensusCertificate &certificate,
+                                                                   const Registry                   &current_registry ) const;
+        bool             ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
+                                                       const Registry                   &current_registry ) const;
         CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
                                                   const Registry                   &current_registry ) const;
-        Registry    BuildRegistryFromCertificate( const Registry                              &current_registry,
-                                                  const sgns::ConsensusCertificate            &certificate,
-                                                  const std::unordered_map<std::string, bool> &registered_votes,
-                                                  const std::unordered_map<std::string, bool> &unregistered_votes ) const;
-        void        InsertNewValidators( Registry &registry,
-                                         const std::unordered_map<std::string, bool> &unregistered_votes ) const;
-        void        ApplyVoteEffects( std::vector<ValidatorEntry>                     &entries,
-                                      const std::unordered_map<std::string, bool>    &registered_votes ) const;
-        void        ApplyInactivityDecay( std::vector<ValidatorEntry> &entries,
-                                          const std::unordered_set<std::string> &participants ) const;
-        void        ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
-        static void NormalizeRegistry( Registry &registry );
+        Registry         BuildRegistryFromCertificate( const Registry                              &current_registry,
+                                                       const sgns::ConsensusCertificate            &certificate,
+                                                       const std::unordered_map<std::string, bool> &registered_votes,
+                                                       const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void             InsertNewValidators( Registry                                    &registry,
+                                              const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void             ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
+                                           const std::unordered_map<std::string, bool> &registered_votes ) const;
+        void             ApplyInactivityDecay( std::vector<ValidatorEntry>           &entries,
+                                               const std::unordered_set<std::string> &participants ) const;
+        void             ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
+        static void      NormalizeRegistry( Registry &registry );
 
         void InitializeCache();
         void NotifyInitialized( bool success ) const;
