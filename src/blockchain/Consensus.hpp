@@ -41,9 +41,6 @@ namespace sgns
         using Subject     = ConsensusSubject;
 
         using Signer            = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
-        using ProposalHandler   = std::function<void( const Proposal &proposal )>;
-        using VoteHandler       = std::function<void( const Vote &vote )>;
-        using VoteBundleHandler = std::function<void( const VoteBundle &bundle )>;
         enum class SubjectCheck
         {
             Approve,
@@ -74,8 +71,6 @@ namespace sgns
         void UnregisterCertificateHandler( SubjectType type );
 
         outcome::result<void> Publish( const ConsensusMessage &message );
-
-        void SetVoteBundleHandler( VoteBundleHandler handler );
 
         outcome::result<Proposal>        CreateProposal( const Subject     &subject,
                                                          const std::string &proposer_id,
@@ -174,7 +169,6 @@ namespace sgns
         ProposalState                  CreateProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
         std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
-        bool              HasQuorumForCertificate( const Proposal &proposal, const std::vector<Vote> &votes ) const;
         void              ClearProposalState( const Proposal &proposal );
         outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
         void                         ContinueProposalAfterSubject( const Proposal &proposal );
@@ -192,10 +186,8 @@ namespace sgns
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
-        bool        CheckCertificate( const Certificate &certificate ) const;
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
-        VoteBundleHandler                                         vote_bundle_handler_;
         std::unordered_map<int, SubjectHandler>                   subject_handlers_;
         mutable std::shared_mutex                                 subject_handlers_mutex_;
         std::unordered_map<int, CertificateSubjectHandler>        certificate_subject_handlers_;

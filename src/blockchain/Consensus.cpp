@@ -174,12 +174,6 @@ namespace sgns
 
         return outcome::success();
     }
-
-    void ConsensusManager::SetVoteBundleHandler( VoteBundleHandler handler )
-    {
-        vote_bundle_handler_ = std::move( handler );
-    }
-
     bool ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
     {
         if ( !handler )
@@ -1166,14 +1160,6 @@ namespace sgns
             return;
         }
 
-        if ( !CheckCertificate( certificate ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return;
-        }
-
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash.has_error() )
         {
@@ -1400,10 +1386,7 @@ namespace sgns
                                          __func__,
                                          bundle.proposal_id(),
                                          bundle.votes_size() );
-        if ( vote_bundle_handler_ )
-        {
-            vote_bundle_handler_( bundle );
-        }
+
         for ( const auto &vote : bundle.votes() )
         {
             ConsensusManagerLogger()->trace( "{}: processing voter_id={}", __func__, vote.voter_id() );
@@ -1415,7 +1398,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( !CheckCertificate( certificate ) )
+        if ( !ValidateCertificate( certificate ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
@@ -1507,22 +1490,6 @@ namespace sgns
             votes.push_back( vote );
         }
         return votes;
-    }
-
-    bool ConsensusManager::HasQuorumForCertificate( const Proposal &proposal, const std::vector<Vote> &votes ) const
-    {
-        auto tally_result = TallyVotes( proposal, votes );
-        if ( tally_result.has_error() || !tally_result.value().has_quorum )
-        {
-            if ( tally_result.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: aborted: tally error={}",
-                                                 __func__,
-                                                 tally_result.error().message() );
-            }
-            return false;
-        }
-        return true;
     }
 
     void ConsensusManager::ClearProposalState( const Proposal &proposal )
@@ -1882,25 +1849,4 @@ namespace sgns
         return true;
     }
 
-    bool ConsensusManager::CheckCertificate( const Certificate &certificate ) const
-    {
-        if ( !ValidateCertificate( certificate ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate, proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return false;
-        }
-
-        auto votes = CollectCertificateVotes( certificate );
-        if ( !HasQuorumForCertificate( certificate.proposal(), votes ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: Certificate without quorum, proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return false;
-        }
-
-        return true;
-    }
 }
