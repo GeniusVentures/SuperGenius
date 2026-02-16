@@ -1767,4 +1767,27 @@ namespace sgns::crdt
         std::lock_guard lock( topicNamesMutex_ );
         return topicNames_;
     }
+
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetILPDNodeContent(
+        const std::string &cid_string )
+    {
+        OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+
+        OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
+
+        //TODO - Check if filtering is needed here. Currently not filtering.
+        OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
+
+        //TODO - Maybe check tombstones, right now just grabbing elements.
+        std::vector elements( delta.elements().begin(), delta.elements().end() );
+
+        std::vector<std::pair<std::string, base::Buffer>> result;
+        for ( const auto &elem : elements )
+        {
+            Buffer valueBuffer;
+            valueBuffer.put( elem.value() );
+            result.emplace_back( elem.key(), valueBuffer );
+        }
+        return result;
+    }
 }

@@ -242,11 +242,14 @@ namespace sgns::crdt
 
         std::unordered_set<std::string> GetTopicNames() const;
 
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetILPDNodeContent(
+            const std::string &cid_string );
+
     protected:
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
         friend class ::sgns::ValidatorRegistry;
- 
+
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process

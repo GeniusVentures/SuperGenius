@@ -444,4 +444,15 @@ namespace sgns::crdt
         return m_crdtDatastore;
     }
 
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GlobalDB::GetCIDContent(
+        const std::string &cid_string )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return m_crdtDatastore->GetILPDNodeContent( cid_string );
+    }
+
 }

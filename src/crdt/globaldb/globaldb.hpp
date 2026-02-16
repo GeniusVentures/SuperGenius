@@ -178,6 +178,9 @@ namespace sgns::crdt
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
 
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetCIDContent(
+            const std::string &cid_string );
+
     private:
         /**
          * @brief       Constructs a new Global D B object
