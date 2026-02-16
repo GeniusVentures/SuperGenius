@@ -214,11 +214,11 @@ namespace sgns
                                          std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
         GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path );
 
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
+        outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
                                          std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
         GenerateGeniusAddress( const Credentials& credentials, boost::filesystem::path base_path );
 
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
+        outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
                                          std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
         GenerateGeniusAddress( boost::filesystem::path base_path );
 

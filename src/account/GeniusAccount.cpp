@@ -401,6 +401,9 @@ namespace sgns
         auto        hashed = TW::Hash::sha256( s );
         auto        hexed  = base::hex_lower( hashed );
 
+        storage_->Save("email", credentials.email);
+        storage_->Save("password", credentials.password);
+
         return GenerateGeniusAddress( hexed.data(), std::move( base_path ) );
     }
 
