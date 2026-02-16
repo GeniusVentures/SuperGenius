@@ -56,9 +56,8 @@ namespace sgns
                 (void)certificate;
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    return strong->OnConsensusCertificate( subject_hash );
+                    strong->OnConsensusCertificate( subject_hash );
                 }
-                eturn outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
             SubjectType::SUBJECT_NONCE,
@@ -2171,6 +2170,21 @@ namespace sgns
         return std::nullopt;
     }
 
+    std::optional<TransactionManager::TrackedTx> TransactionManager::GetTrackedTxByHash(
+        const std::string &tx_hash ) const
+    {
+        //TODO - Check for all monitored networks
+        auto tx_path = GetTransactionPath( tx_hash );
+
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        auto                                maybe_tracked = tx_processed_m.find( tx_path );
+        if ( maybe_tracked != tx_processed_m.end() )
+        {
+            return maybe_tracked->second;
+        }
+        return std::nullopt;
+    }
+
     TransactionManager::TransactionStatus TransactionManager::GetOutgoingStatusByTxId( const std::string &txId ) const
     {
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
@@ -2995,7 +3009,67 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    void TransactionManager::OnConsensusCertificate( const std::string &tx_hash ) {}
+    void TransactionManager::OnConsensusCertificate( const std::string &tx_hash )
+    {
+        auto tracked_tx_ret = GetTrackedTxByHash( tx_hash );
+        if ( !tracked_tx_ret )
+        {
+            m_logger->error( "[{} - full: {}] {}: Tracked transaction not found for hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash );
+            return;
+        }
+        auto &tracked_tx = tracked_tx_ret.value();
+        if ( tracked_tx.status != TransactionStatus::FAILED && tracked_tx.status != TransactionStatus::INVALID &&
+             tracked_tx.status != TransactionStatus::CONFIRMED )
+        {
+            m_logger->debug( "[{} - full: {}] {}: Transaction {} is {}, updating status to CONFIRMED",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash,
+                             static_cast<int>( tracked_tx.status ) );
+            tracked_tx.status = TransactionStatus::CONFIRMED;
+            if ( tracked_tx.tx )
+            {
+                m_logger->debug( "[{} - full: {}] {}: Parsing transaction {} after consensus certificate",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx_hash );
+                auto parse_result = ParseTransaction( tracked_tx.tx );
+                if ( parse_result.has_error() )
+                {
+                    m_logger->error(
+                        "[{} - full: {}] {}: Failed to parse transaction {} after consensus certificate: {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        tx_hash,
+                        parse_result.error().message() );
+                }
+            }
+            else
+            {
+                m_logger->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx_hash );
+            }
+        }
+        else
+        {
+            m_logger->debug( "[{} - full: {}] {}: Transaction {} has status {}, not updating to APPROVED",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             tx_hash,
+                             static_cast<int>( tracked_tx.status ) );
+        }
+    }
 
     outcome::result<ConsensusManager::SubjectCheck> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
